@@ -1,0 +1,40 @@
+# ROS 2 Build artifacts
+build/
+install/
+log/
+devel/
+.colcon/
+
+# Compiled Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ROS
+*.dae
+CATKIN_IGNORE
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Other
+*.bag
+*.rviz

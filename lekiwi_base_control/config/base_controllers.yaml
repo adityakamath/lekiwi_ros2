@@ -1,0 +1,61 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    omni_wheel_controller:
+      type: omni_wheel_drive_controller/OmniWheelDriveController
+
+joint_state_broadcaster:
+  ros__parameters:
+    joints:
+      - left_wheel_joint
+      - back_wheel_joint
+      - right_wheel_joint
+    interfaces:
+      - position
+      - velocity
+
+omni_wheel_controller:
+  ros__parameters:
+    # Wheel geometry - 3 wheels at 60°, 180°, 300° from +X axis
+    wheel_offset: 1.0471975511965976  # 60° in radians (π/3 exactly)
+    wheel_names:
+      - left_wheel_joint   # 60° from +X
+      - back_wheel_joint   # 180° from +X (60° + 120°)
+      - right_wheel_joint  # 300° from +X (60° + 240°)
+
+    # Robot dimensions
+    robot_radius: 0.1322  # meters (distance from center to wheel contact point)
+    wheel_radius: 0.051  # meters
+
+    # Frame IDs
+    odom_frame_id: odom
+    base_frame_id: base_link
+
+    # Odometry settings
+    enable_odom_tf: true
+    open_loop: false  # Use wheel feedback for odometry
+    position_feedback: true  # Use position-based odometry
+
+    # Command timeout
+    cmd_vel_timeout: 0.5  # seconds
+
+    # Velocity and Acceleration limits (based on omnidirectional kinematics)
+    # NOTE: These values must match (or be less than) the URDF calculations in base.urdf.xacro
+    # NOTE: These values can be overridden in the launch file
+    linear:
+      x:
+        max_velocity: 0.246  # m/s (X-axis can go faster than Y)
+        max_acceleration: 2.29  # m/s²
+      y:
+        max_velocity: 0.213  # m/s (Y-axis is limiting direction)
+        max_acceleration: 1.99  # m/s² (Y-axis is limiting direction)
+    angular:
+      z:
+        max_velocity: 1.61  # rad/s (92.25 deg/s)
+        max_acceleration: 15.03  # rad/s² (861 deg/s²)
+
+

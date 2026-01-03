@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Color properties for base and wheels (RGBA) -->
+  <xacro:property name="light_grey_rgba" value="0.8 0.8 0.8 1.0"/> <!-- light grey -->
+  <xacro:property name="charcoal_rgba" value="0.15 0.15 0.15 1.0"/> <!-- charcoal/dark grey -->
+  
+  <!-- Base offsets -->
+  <xacro:property name="base_offset_rz" value="${3*pi/2}"/> <!-- Base mesh rotation about Z (rad) -->
+
+  <!-- Wheel offsets -->
+  <xacro:property name="wheel_base_radius" value="0.132239"/>
+  <xacro:property name="wheel_base_offset_z" value="0.01036"/>
+  <xacro:property name="wheel_offset_rx" value="${pi}"/> <!-- Wheel mesh rotation about X (rad) -->
+
+  <!-- LD06 laser offsets from base_link -->
+  <xacro:property name="laser_base_offset_x" value="-0.045042"/>
+  <xacro:property name="laser_base_offset_z" value="0.0915"/>
+  <xacro:property name="laser_offset_rx" value="${pi/2}"/> <!-- LIDAR mesh rotation about X (rad) -->
+
+  <!-- HD camera offsets from base_link -->
+  <xacro:property name="camera_base_offset_x" value="0.114"/>
+  <xacro:property name="camera_base_offset_z" value="0.026"/>
+  <xacro:property name="camera_offset_ry" value="${pi/2}"/> <!-- Camera mesh/joint rotation about Y (rad) -->
+
+  <!-- Wheel geometry for omnidirectional control -->
+  <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
+  <xacro:property name="offset" value="${pi/3}"/>  <!-- 60° -->
+  <xacro:property name="theta" value="${2*pi/3}"/>  <!-- 120° between wheels -->
+
+  <!-- Base footprint offset from base_link -->
+  <xacro:property name="base_footprint_offset_z" value="${wheel_radius - wheel_base_offset_z}"/>
+
+  <!-- Motor IDs -->
+  <xacro:property name="left_motor_id" value="7"/>
+  <xacro:property name="back_motor_id" value="8"/>
+  <xacro:property name="right_motor_id" value="9"/>
+
+  <!-- Motor control parameters -->
+  <xacro:property name="operating_mode" value="1"/>  <!-- Velocity mode -->
+  <xacro:property name="serial_port" value="/dev/ttySERVO"/>
+  <xacro:property name="baud_rate" value="1000000"/>
+
+  <!-- Maximum allowable speed/acceleration for each motor -->
+  <xacro:property name="max_velocity_steps" value="2720"/> <!-- steps/second (80% of 3400 hardware max) -->
+  <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/> <!-- rad/s -->
+  <xacro:property name="max_acceleration_steps" value="${254*100}"/> <!-- steps/second² (100% hardware max) -->
+  <xacro:property name="max_acceleration_rads" value="${max_acceleration_steps*2*pi/4096}"/> <!-- rad/s² -->
+
+  <!-- Omnidirectional Kinematics Calculations -->
+  <!-- For 3-wheel omni drive: ω_i = (-sin(θ_i)·v_x + cos(θ_i)·v_y + R·ω_z) / r -->
+
+  <!-- Maximum allowable linear velocity per axis -->
+  <xacro:property name="max_linear_velocity_x" value="${wheel_radius * max_velocity_rads / (sqrt(3)/2)}"/>
+  <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
+  <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_offset}"/>
+
+  <!-- Maximum allowable linear acceleration per axis -->
+  <xacro:property name="max_linear_acceleration_x" value="${wheel_radius * max_acceleration_rads / (sqrt(3)/2)}"/>
+  <xacro:property name="max_linear_acceleration_y" value="${wheel_radius * max_acceleration_rads / 1.0}"/>
+  <xacro:property name="max_angular_acceleration_z" value="${wheel_radius * max_acceleration_rads / wheel_base_offset}"/>
+
+</robot>
