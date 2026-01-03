@@ -12,10 +12,10 @@ def generate_launch_description():
                 'video_device': '/dev/video0',
                 'image_width': 640,
                 'image_height': 480,
-                'pixel_format': 'MJPG',  # Native format, no conversion overhead
+                'pixel_format': 'MJPG',
                 'camera_frame_id': 'camera_link',
                 'camera_info_url': '',
-                'framerate': 15.0,  # Lower framerate = lower latency
+                'framerate': 15.0,
             }],
         ),
     ])
