@@ -108,6 +108,7 @@ def generate_launch_description():
     )
 
     nodes = [
+
         robot_state_publisher_node,
         controller_manager,
         delayed_joint_state_broadcaster_spawner,

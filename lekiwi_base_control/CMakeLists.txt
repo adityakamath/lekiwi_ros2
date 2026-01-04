@@ -12,7 +12,6 @@ find_package(ament_cmake REQUIRED)
 install(DIRECTORY
   launch
   config
-  urdf
   docs
   DESTINATION share/${PROJECT_NAME}/
 )

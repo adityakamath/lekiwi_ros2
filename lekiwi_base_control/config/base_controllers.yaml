@@ -1,6 +1,18 @@
 controller_manager:
   ros__parameters:
     update_rate: 50  # Hz
+    statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
+    
+    # Command and error handling
+    enforce_command_limits: true  # Clamp commands to URDF effort/velocity limits
+    handle_exceptions: true       # Graceful error handling
+    
+    # Hardware component initialization
+    defaults:
+      switch_controller:
+        strictness: strict
+      allow_controller_activation_with_inactive_hardware: false
+      deactivate_controllers_on_hardware_self_deactivate: true
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -17,6 +29,11 @@ joint_state_broadcaster:
     interfaces:
       - position
       - velocity
+      - effort
+      - voltage
+      - temperature
+      - current
+      - is_moving
 
 omni_wheel_controller:
   ros__parameters:

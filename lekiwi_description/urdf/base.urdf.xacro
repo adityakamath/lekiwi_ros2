@@ -192,6 +192,7 @@
     <child link="left_wheel_link"/>
     <origin xyz="${wheel_base_radius * cos(offset)} ${wheel_base_radius * sin(offset)} ${wheel_base_offset_z}" rpy="0 ${pi/2} ${offset}"/>
     <axis xyz="0 0 1"/>
+    <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
   </joint>
 
   <!-- back wheel joint: 180 degrees anti-clockwise from +X at radius base_radius -->
@@ -200,6 +201,7 @@
     <child link="back_wheel_link"/>
     <origin xyz="${wheel_base_radius * cos(offset + theta)} ${wheel_base_radius * sin(offset + theta)} ${wheel_base_offset_z}" rpy="0 ${pi/2} ${offset + theta}"/>
     <axis xyz="0 0 1"/>
+    <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
   </joint>
 
   <!-- right wheel joint: 300 degrees (or -60 degrees) anti-clockwise from +X at radius base_radius -->
@@ -208,6 +210,7 @@
     <child link="right_wheel_link"/>
     <origin xyz="${wheel_base_radius * cos(offset - theta)} ${wheel_base_radius * sin(offset - theta)} ${wheel_base_offset_z}" rpy="0 ${pi/2} ${offset - theta}"/>
     <axis xyz="0 0 1"/>
+    <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
   </joint>
 
   <!-- ROS 2 CONTROL -->
@@ -226,12 +229,11 @@
     <joint name="left_wheel_joint">
       <param name="motor_id">${left_motor_id}</param>
       <param name="operating_mode">${operating_mode}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
       <command_interface name="velocity"/>
       <command_interface name="acceleration"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
-      <state_interface name="load"/>
+      <state_interface name="effort"/>
       <state_interface name="voltage"/>
       <state_interface name="temperature"/>
       <state_interface name="current"/>
@@ -241,12 +243,11 @@
     <joint name="back_wheel_joint">
       <param name="motor_id">${back_motor_id}</param>
       <param name="operating_mode">${operating_mode}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
       <command_interface name="velocity"/>
       <command_interface name="acceleration"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
-      <state_interface name="load"/>
+      <state_interface name="effort"/>
       <state_interface name="voltage"/>
       <state_interface name="temperature"/>
       <state_interface name="current"/>
@@ -256,12 +257,11 @@
     <joint name="right_wheel_joint">
       <param name="motor_id">${right_motor_id}</param>
       <param name="operating_mode">${operating_mode}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
       <command_interface name="velocity"/>
       <command_interface name="acceleration"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
-      <state_interface name="load"/>
+      <state_interface name="effort"/>
       <state_interface name="voltage"/>
       <state_interface name="temperature"/>
       <state_interface name="current"/>
