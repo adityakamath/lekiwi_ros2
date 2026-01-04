@@ -18,12 +18,14 @@ flowchart TB
         CMD[/cmd_vel/]
         ODOM[/odom/]
         JS[/joint_states/]
+        DIAG[/dynamic_joint_states/diagnostics]
     end
 
     subgraph Control["ros2_control Layer"]
         CM[Controller Manager]
         OWC[Omni Wheel Controller]
         JSB[Joint State Broadcaster]
+        MD[Motor Diagnostics]
     end
 
     subgraph Hardware["Hardware Interface"]
@@ -38,8 +40,9 @@ flowchart TB
     MOTORS -->|feedback| HW
     HW -->|state| CM
     CM -->|state| JSB
-    CM -->|state| OWC
+    CM -->|state| MD
     JSB -->|joint states| JS
+    MD -->|health status| DIAG
     OWC -->|odometry + TF| ODOM
 ```
 
@@ -78,6 +81,15 @@ flowchart TB
 
 - Publishes `/joint_states` from hardware feedback
 - Reports wheel positions and velocities
+- Publishes to `/dynamic_joint_states` with 7 motor state interfaces: position, velocity, effort, voltage, temperature, current, is_moving
+
+**Motor Diagnostics Node**:
+
+- Monitors motor health in real-time
+- Detects internal stalls (motor stopped but high effort/current)
+- Checks temperature, voltage, and current limits
+- Publishes diagnostics to `/dynamic_joint_states/diagnostics`
+- Parametrized thresholds for easy tuning
 
 ## Robot Kinematics
 
@@ -156,7 +168,19 @@ Shared robot properties (single source of truth):
 
 1. **Command Path**: `/cmd_vel` → Omni Wheel Controller → Hardware Interface → Motors
 2. **Feedback Path**: Motors → Hardware Interface → Controllers → `/odom` + `/joint_states`
-3. **Control Loop**: 50 Hz update cycle managed by Controller Manager
+3. **Diagnostics Path**: Motors → Hardware Interface → Motor Diagnostics → `/dynamic_joint_states/diagnostics`
+4. **Control Loop**: 50 Hz update cycle managed by Controller Manager
+
+## Motor Health Monitoring
+
+The Motor Diagnostics Node continuously monitors motor health and publishes a `/dynamic_joint_states/diagnostics` message with:
+
+- **Temperature**: Warns at 60°C, errors at 75°C
+- **Voltage**: Ensures 6-14V (STS motor operating range)
+- **Current**: Alerts on overcurrent (>3A safety limit)
+- **Internal Stalls**: Detects when motor stops but effort/current remains high (effort >0.5 N⋅m or current >1.5 A)
+
+All thresholds are configurable via `motor_diagnostics_config.yaml`.
 
 ## Design Decisions
 
@@ -251,16 +275,19 @@ Additional sensors can be added via:
 
 ```
 lekiwi_base_control/
+├── src/
+│   └── motor_diagnostics_node.cpp    # Motor health monitoring
 ├── urdf/
-│   ├── base_properties.xacro    # Single source of truth for all properties
-│   └── base.urdf.xacro           # Robot structure (includes properties)
+│   ├── base_properties.xacro         # Single source of truth for all properties
+│   └── base.urdf.xacro               # Robot structure (includes properties)
 ├── config/
-│   └── base_controllers.yaml     # Controller configuration
+│   ├── base_controllers.yaml         # Controller configuration
+│   └── motor_diagnostics_config.yaml # Diagnostic thresholds
 ├── launch/
-│   └── base_control.launch.py   # Main launch file
+│   └── base_control.launch.py        # Main launch file
 └── docs/
-    ├── architecture.md           # This file
-    └── getting_started.md        # Setup and usage guide
+    ├── architecture.md               # This file
+    └── getting_started.md            # Setup and usage guide
 ```
 
 ## Further Reading

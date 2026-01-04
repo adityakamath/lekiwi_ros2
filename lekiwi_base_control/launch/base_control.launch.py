@@ -72,6 +72,9 @@ def generate_launch_description():
                 [FindPackageShare("lekiwi_base_control"), "config", "base_controllers.yaml"]
             ),
         ],
+        remappings=[
+            ("/diagnostics", "/controller_manager/diagnostics"),
+        ],
         output="log",
         name="controller_manager",
         emulate_tty=True,
@@ -96,6 +99,21 @@ def generate_launch_description():
         output="both",
     )
 
+    # Motor diagnostics node - starts after controller_manager is ready
+    motor_diagnostics_node = Node(
+        package="lekiwi_base_control",
+        executable="motor_diagnostics",
+        output="log",
+        parameters=[
+            PathJoinSubstitution(
+                [FindPackageShare("lekiwi_base_control"), "config", "motor_diagnostics_config.yaml"]
+            ),
+        ],
+        remappings=[
+            ("/diagnostics", "/dynamic_joint_states/diagnostics"),
+        ],
+    )
+
     # Delay spawners to ensure controller_manager and hardware are fully initialized
     delayed_joint_state_broadcaster_spawner = TimerAction(
         period=2.0,
@@ -107,12 +125,18 @@ def generate_launch_description():
         actions=[omni_wheel_controller_spawner],
     )
 
-    nodes = [
+    # Delay motor diagnostics node to ensure joint states are being published
+    delayed_motor_diagnostics_node = TimerAction(
+        period=3.0,
+        actions=[motor_diagnostics_node],
+    )
 
+    nodes = [
         robot_state_publisher_node,
         controller_manager,
         delayed_joint_state_broadcaster_spawner,
         delayed_omni_wheel_controller_spawner,
+        delayed_motor_diagnostics_node,
     ]
 
     return LaunchDescription(nodes)

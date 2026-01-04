@@ -10,6 +10,9 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <!-- Runtime dependencies -->
+  <depend>rclcpp</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>control_msgs</depend>
   <exec_depend>sts_hardware_interface</exec_depend>
   <exec_depend>controller_manager</exec_depend>
   <exec_depend>ros2_control</exec_depend>

@@ -107,7 +107,20 @@ Shows robot pose and velocity estimates based on position feedback.
 ros2 run tf2_ros tf2_echo odom base_link
 ```
 
-### 3. Controller Status
+### 3. Monitor Motor Health
+
+**View Motor Diagnostics**:
+
+```bash
+ros2 topic echo /dynamic_joint_states/diagnostics
+```
+
+Shows real-time health information for each motor:
+- Temperature, voltage, current levels
+- Internal stall detection
+- Overall motor status (OK, WARN, ERROR)
+
+### 4. Controller Status
 
 **List Active Controllers**:
 
@@ -149,7 +162,35 @@ Commands exceeding these limits will be automatically clamped by the controller 
 
 ## Configuration
 
-All robot parameters are centralized in `urdf/base_properties.xacro`:
+### Motor Diagnostics Thresholds
+
+All diagnostic thresholds are configurable in `config/motor_diagnostics_config.yaml`:
+
+```yaml
+motor_diagnostics_node:
+  ros__parameters:
+    effort_threshold: 0.5          # N⋅m - stall detection threshold
+    current_threshold: 1.5         # A - stall detection threshold
+    voltage_min: 6.0               # V - minimum acceptable voltage
+    voltage_max: 14.0              # V - maximum acceptable voltage
+    temp_warn: 60.0                # °C - warning temperature
+    temp_error: 75.0               # °C - error temperature
+    current_max: 3.0               # A - maximum current limit
+```
+
+**When to Adjust**:
+- **Stall Detection**: Lower thresholds detect stalls earlier but may have false positives
+- **Temperature**: Adjust based on your operating environment and motor tolerance
+- **Voltage**: Only change if your power supply differs from STS motor specifications (6-14V)
+- **Current**: Lower to be more conservative, raise if your application requires higher loads
+
+To change thresholds:
+
+1. Edit `config/motor_diagnostics_config.yaml`
+2. Rebuild: `colcon build --packages-select lekiwi_base_control`
+3. Relaunch the robot
+
+### Robot Parameters
 
 - **Wheel geometry**: radius, thickness, base offset
 - **Motor configuration**: IDs, operating mode, serial port
@@ -165,7 +206,42 @@ To change motor limits:
 3. Manually update corresponding values in `base_controllers.yaml` (m/s, rad/s)
 4. Rebuild: `colcon build --packages-select lekiwi_base_control`
 
-## Troubleshooting
+### Motor Diagnostics Issues
+
+**No diagnostics published**:
+
+1. Check that motor diagnostics node is running:
+
+   ```bash
+   ros2 node list | grep motor_diagnostics
+   ```
+
+2. Verify the topic exists:
+
+   ```bash
+   ros2 topic list | grep diagnostics
+   ```
+
+3. Check node logs:
+
+   ```bash
+   ros2 node info /motor_diagnostics_node
+   ```
+
+**False stall warnings**:
+
+- Increase `effort_threshold` and `current_threshold` in `motor_diagnostics_config.yaml`
+- Consider your application's normal load levels
+
+**Temperature warnings at startup**:
+
+- Motors may warm up initially during calibration
+- Monitor for sustained high temperatures (>75°C error level)
+
+**Voltage warnings**:
+
+- Check power supply voltage (should be 6-14V for STS motors)
+- Verify cable connections are secure
 
 ### Motors Not Responding
 
@@ -285,6 +361,10 @@ colcon test-result --verbose
 | `right_motor_id` | `base_properties.xacro` | 9 | Right wheel motor ID |
 | `update_rate` | `base_controllers.yaml` | 50 | Control loop frequency (Hz) |
 | `cmd_vel_timeout` | `base_controllers.yaml` | 0.5 | Command timeout (seconds) |
+| `effort_threshold` | `motor_diagnostics_config.yaml` | 0.5 | Stall detection effort (N⋅m) |
+| `current_threshold` | `motor_diagnostics_config.yaml` | 1.5 | Stall detection current (A) |
+| `temp_warn` | `motor_diagnostics_config.yaml` | 60.0 | Temperature warning (°C) |
+| `temp_error` | `motor_diagnostics_config.yaml` | 75.0 | Temperature error (°C) |
 
 ## Additional Resources
 
