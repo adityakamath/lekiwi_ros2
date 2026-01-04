@@ -1,21 +1,36 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.substitutions import PathJoinSubstitution, PythonExpression
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
+    config_file = PathJoinSubstitution([
+        FindPackageShare('lekiwi_bringup'),
+        'config',
+        'webcam_config.yaml'
+    ])
+    
+    camera_info_file = PathJoinSubstitution([
+        FindPackageShare('lekiwi_bringup'),
+        'config',
+        'webcam_calibration.yaml'
+    ])
+    
+    # Create the file:// URL using PythonExpression
+    camera_info_url = ['file://', camera_info_file]
+    
+    webcam_node = Node(
+        package='camera_ros',
+        executable='camera_node',
+        name='webcam_node',
+        output='log',
+        respawn=True,
+        parameters=[
+            config_file,
+            {'camera_info_url': camera_info_url}
+        ]
+    )
+
     return LaunchDescription([
-        Node(
-            package='v4l2_camera',
-            executable='v4l2_camera_node',
-            name='usb_camera',
-            output='screen',
-            parameters=[{
-                'video_device': '/dev/video0',
-                'image_width': 640,
-                'image_height': 480,
-                'pixel_format': 'MJPG',
-                'camera_frame_id': 'camera_link',
-                'camera_info_url': '',
-                'framerate': 15.0,
-            }],
-        ),
+        webcam_node
     ])

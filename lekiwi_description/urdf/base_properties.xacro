@@ -23,6 +23,9 @@
   <xacro:property name="camera_base_offset_z" value="0.026"/>
   <xacro:property name="camera_offset_ry" value="${pi/2}"/> <!-- Camera mesh/joint rotation about Y (rad) -->
 
+  <!-- LDLidar frame offsets from laser_link -->
+  <xacro:property name="laser_frame_offset_z" value="0.027"/>
+
   <!-- Wheel geometry for omnidirectional control -->
   <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
   <xacro:property name="offset" value="${pi/3}"/>  <!-- 60° -->

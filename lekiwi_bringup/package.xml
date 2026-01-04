@@ -10,7 +10,8 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <!-- Runtime dependencies -->
-  <exec_depend>v4l2_camera</exec_depend>
+  <exec_depend>camera_ros</exec_depend>
+  <exec_depend>ldlidar_ros2</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

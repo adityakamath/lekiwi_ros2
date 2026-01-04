@@ -26,35 +26,43 @@ All configuration is loaded from the package's URDF and YAML files.
 """
 
 import os
-from launch import LaunchDescription
+import sys
+from launch import LaunchDescription, LaunchContext
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
+from launch.actions import RegisterEventHandler, TimerAction, OpaqueFunction, SetEnvironmentVariable
+from launch.event_handlers import OnProcessStart
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
     """Generate the launch description for the LeKiwi base control stack."""
+    
     # Get URDF via xacro
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare("lekiwi_base_control"), "urdf", "base.urdf.xacro"]
+                [FindPackageShare("lekiwi_description"), "urdf", "base.urdf.xacro"]
             ),
         ]
     )
-    robot_description = {"robot_description": robot_description_content}
+    robot_description = {"robot_description": ParameterValue(robot_description_content, value_type=str)}
 
-    # Robot state publisher
+    # Robot state publisher (set to WARN to reduce verbose logging)
     robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        output="both",
+        output="log",
         parameters=[robot_description],
+        name="robot_state_publisher",
+        emulate_tty=True,
+        arguments=["--ros-args", "--log-level", "WARN"],
     )
 
-    # Controller manager
+    # Controller manager (set to WARN to reduce verbose logging)
     controller_manager = Node(
         package="controller_manager",
         executable="ros2_control_node",
@@ -64,31 +72,46 @@ def generate_launch_description():
                 [FindPackageShare("lekiwi_base_control"), "config", "base_controllers.yaml"]
             ),
         ],
-        output="both",
+        output="log",
+        name="controller_manager",
+        emulate_tty=True,
     )
 
-    # Joint state broadcaster spawner
+    # Joint state broadcaster spawner - starts 2s after launch to ensure controller_manager is initialized
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["joint_state_broadcaster"],
+        arguments=["joint_state_broadcaster", "-c", "/controller_manager"],
+        output="both",
     )
 
-    # Omni wheel drive controller spawner
+    # Omni wheel drive controller spawner - starts 2.5s after launch
     omni_wheel_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["omni_wheel_controller"],
+        arguments=["omni_wheel_controller", "-c", "/controller_manager"],
         remappings=[
             ("/omni_wheel_controller/cmd_vel", "/cmd_vel"),
         ],
+        output="both",
+    )
+
+    # Delay spawners to ensure controller_manager and hardware are fully initialized
+    delayed_joint_state_broadcaster_spawner = TimerAction(
+        period=2.0,
+        actions=[joint_state_broadcaster_spawner],
+    )
+
+    delayed_omni_wheel_controller_spawner = TimerAction(
+        period=2.5,
+        actions=[omni_wheel_controller_spawner],
     )
 
     nodes = [
         robot_state_publisher_node,
         controller_manager,
-        joint_state_broadcaster_spawner,
-        omni_wheel_controller_spawner,
+        delayed_joint_state_broadcaster_spawner,
+        delayed_omni_wheel_controller_spawner,
     ]
 
     return LaunchDescription(nodes)
