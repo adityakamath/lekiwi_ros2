@@ -1,0 +1,855 @@
+<!--
+  CODEPEN VERSION - Lekiwi Robot Viewer with URDF Loader
+
+  To use on CodePen:
+  1. In Settings > JavaScript > Add External Scripts, add these URLs in order:
+     - https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js
+     - https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js
+     - https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js
+     - https://cdn.jsdelivr.net/npm/urdf-loader@0.12.6/umd/URDFLoader.js
+  2. Copy the HTML section to the HTML panel
+  3. Copy the CSS section to the CSS panel
+  4. Copy the JavaScript section to the JS panel (NO preprocessor needed!)
+
+  The URDF will be loaded from GitHub - it should work out of the box!
+-->
+
+<!-- ==================== HTML ==================== -->
+<div id="canvas-container"></div>
+
+<div id="controls">
+  <h3>LeKiwi</h3>
+  
+  <div style="margin-top: 15px;">
+    
+    <div style="display: flex; flex-direction: column; align-items: center; gap: var(--key-gap);">
+      <!-- Top row: Q W E -->
+      <div style="display: flex; gap: var(--key-gap);">
+        <div class="key" id="key-q">
+          <span class="key-letter">Q</span>
+          <span class="key-symbol">↺</span>
+        </div>
+        <div class="key movement-key" id="key-w">
+          <span class="key-letter">W</span>
+          <span class="key-symbol">↑</span>
+        </div>
+        <div class="key" id="key-e">
+          <span class="key-letter">E</span>
+          <span class="key-symbol">↻</span>
+        </div>
+      </div>
+      <!-- Bottom row: A S D -->
+      <div style="display: flex; gap: var(--key-gap);">
+        <div class="key movement-key" id="key-a">
+          <span class="key-letter">A</span>
+          <span class="key-symbol">←</span>
+        </div>
+        <div class="key movement-key" id="key-s">
+          <span class="key-letter">S</span>
+          <span class="key-symbol">↓</span>
+        </div>
+        <div class="key movement-key" id="key-d">
+          <span class="key-letter">D</span>
+          <span class="key-symbol">→</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Velocity Sliders -->
+    <div style="margin-top: 10px; padding: 8px 0; display: flex; flex-direction: column; align-items: center;">
+      <div style="margin-bottom: 8px; width: var(--content-width);">
+        <label for="linearVelocitySlider" style="display: block; font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 5px; text-align: center;">
+          Linear Velocity: <span id="linearVelocityValue">0.10</span> m/s
+        </label>
+        <input type="range" id="linearVelocitySlider" min="0" max="0.2" step="0.01" value="0.1" style="width: 100%;">
+      </div>
+      <div style="width: var(--content-width);">
+        <label for="angularVelocitySlider" style="display: block; font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 5px; text-align: center;">
+          Angular Velocity: <span id="angularVelocityValue">0.79</span> rad/s
+        </label>
+        <input type="range" id="angularVelocitySlider" min="0" max="1.57" step="0.01" value="0.785398" style="width: 100%;">
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: var(--button-gap); margin-top: 15px; margin-bottom: 6px; width: var(--content-width); margin-left: auto; margin-right: auto;">
+      <button id="axesButton" class="toggle-button" style="flex: 1;">Axes</button>
+      <button id="gridButton" class="toggle-button" style="flex: 1;">Grid</button>
+      <button id="resetButton" style="flex: 1;">Reset</button>
+    </div>
+    
+    <div style="display: flex; gap: var(--button-gap); margin-top: 6px; width: var(--content-width); margin-left: auto; margin-right: auto;">
+      <button id="themeButton" class="toggle-button" style="flex: 1;">☀</button>
+    </div>
+  </div>
+  
+  <div id="loadingStatus" style="margin-top: 10px; font-size: 12px; color: #666;">
+    Loading models...
+  </div>
+</div>
+
+<div id="info">
+  © 2026 Kamath Robotics
+</div>
+
+
+<!-- ==================== CSS ==================== -->
+<!--
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  font-weight: 300;
+  --bg-color: #263238;
+  --text-color: white;
+  --panel-bg: rgba(0, 0, 0, 0.5);
+  --info-text: rgba(255, 255, 255, 0.7);
+  --label-text: rgba(255, 255, 255, 0.7);
+  --loading-text: rgba(255, 255, 255, 0.6);
+  color: var(--text-color);
+  background: var(--bg-color);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+body.light-mode {
+  --bg-color: #e8eaf6;
+  --text-color: #263238;
+  --panel-bg: rgba(255, 255, 255, 0.85);
+  --info-text: rgba(0, 0, 0, 0.6);
+  --label-text: rgba(0, 0, 0, 0.7);
+  --loading-text: rgba(0, 0, 0, 0.5);
+}
+
+#canvas-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: var(--panel-bg);
+  --panel-padding: 6px;
+  --content-width: 120px;
+  --key-gap: 4px;
+  --button-gap: 4px;
+  padding: var(--panel-padding);
+  border-radius: 3px;
+  z-index: 10;
+  min-width: calc(var(--content-width) + 2 * var(--panel-padding));
+  max-width: min(280px, calc(100vw - 40px));
+  transition: background 0.3s ease;
+}
+
+#controls h3 {
+  margin: 0 auto 10px auto;
+  width: var(--content-width);
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+#controls label {
+  display: block;
+  margin: 10px 0;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 300;
+}
+
+#controls button, #controls .toggle-button {
+  margin: 0;
+  padding: 3px 5px;
+  background: linear-gradient(135deg, rgba(79, 79, 79, 0.85) 0%, rgba(65, 65, 65, 0.85) 100%);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 300;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 8px rgba(255, 255, 255, 0.02);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+#controls button::before, #controls .toggle-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03), transparent 70%);
+  pointer-events: none;
+}
+
+#controls button:hover, #controls .toggle-button:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 8px rgba(255, 255, 255, 0.04);
+}
+
+#controls .toggle-button.active {
+  background: linear-gradient(135deg, rgba(100, 100, 100, 0.95) 0%, rgba(85, 85, 85, 0.95) 100%);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 1);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 8px rgba(255, 255, 255, 0.05);
+}
+
+#controls .toggle-button.active::before {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 70%);
+}
+
+#info {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  color: var(--info-text);
+  font-size: 11px;
+  font-weight: 300;
+  transition: color 0.3s ease;
+}
+
+#loadingStatus {
+  margin-top: 15px;
+  font-size: 11px;
+  color: var(--loading-text) !important;
+  font-weight: 300;
+  transition: color 0.3s ease;
+}
+
+.key {
+  width: calc((var(--content-width) - 2 * var(--key-gap)) / 3);
+  height: calc((var(--content-width) - 2 * var(--key-gap)) / 3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: linear-gradient(135deg, rgba(79, 79, 79, 0.85) 0%, rgba(65, 65, 65, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 8px rgba(255, 255, 255, 0.02);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  position: relative;
+}
+
+.key-letter {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1;
+  margin-bottom: 1px;
+}
+
+.key-symbol {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.key.movement-key {
+  background: linear-gradient(135deg, rgba(52, 88, 98, 0.85), rgba(42, 72, 82, 0.85));
+}
+
+.key::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03), transparent 70%);
+  pointer-events: none;
+}
+
+.key.active {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.3),
+    0 0 40px rgba(255, 255, 255, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    inset 0 0 15px rgba(255, 255, 255, 0.15),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(0.5px);
+}
+
+.key.active .key-letter {
+  color: rgba(255, 255, 255, 1);
+}
+
+.key.active .key-symbol {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.key.active::before {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.15), transparent 70%);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4.5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.1);
+}
+-->
+
+
+<!-- ==================== JavaScript ==================== -->
+<!--
+// GitHub repository base URL
+const GITHUB_REPO_BASE = 'https://raw.githubusercontent.com/adityakamath/lekiwi_ros2/main/';
+
+// Scene setup
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x263238);
+
+const camera = new THREE.PerspectiveCamera(
+  45,
+  window.innerWidth / window.innerHeight,
+  0.01,
+  1000
+);
+// ROS convention: Z-up, so position camera accordingly
+camera.position.set(0.75, -0.75, 0.75);
+camera.up.set(0, 0, 1); // Set Z as up direction
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+// Controls
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.target.set(0, 0, 0.05);
+// Update controls to work with Z-up
+controls.screenSpacePanning = false;
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
+directionalLight1.position.set(2, 2, 8); // Light from above and slightly to the side (Z-up)
+directionalLight1.castShadow = true;
+directionalLight1.shadow.mapSize.width = 2048;
+directionalLight1.shadow.mapSize.height = 2048;
+directionalLight1.shadow.camera.near = 0.1;
+directionalLight1.shadow.camera.far = 20;
+directionalLight1.shadow.camera.left = -1;
+directionalLight1.shadow.camera.right = 1;
+directionalLight1.shadow.camera.top = 1;
+directionalLight1.shadow.camera.bottom = -1;
+directionalLight1.shadow.bias = -0.0001;
+scene.add(directionalLight1);
+
+const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+directionalLight2.position.set(-1, -1, 3);
+scene.add(directionalLight2);
+
+// Infinite grid on ground plane (Z=0 plane for ROS, XY plane)
+// Create a large plane with grid shader
+const gridSize = 100;
+const gridDivisions = 100;
+
+const gridGeometry = new THREE.PlaneGeometry(gridSize, gridSize);
+const gridMaterial = new THREE.ShaderMaterial({
+  side: THREE.DoubleSide,
+  uniforms: {
+    uScale: { value: 0.1 },
+    uDivisions: { value: 10 },
+    uColor: { value: new THREE.Color(0x555555) },
+    uDistance: { value: 100 }
+  },
+  transparent: true,
+  vertexShader: `
+    varying vec3 worldPosition;
+    void main() {
+      vec4 worldPos = modelMatrix * vec4(position, 1.0);
+      worldPosition = worldPos.xyz;
+      gl_Position = projectionMatrix * viewMatrix * worldPos;
+    }
+  `,
+  fragmentShader: `
+    varying vec3 worldPosition;
+    uniform float uScale;
+    uniform float uDivisions;
+    uniform vec3 uColor;
+    uniform float uDistance;
+
+    float getGrid(float size) {
+      vec2 coord = worldPosition.xy / size;
+      vec2 grid = abs(fract(coord - 0.5) - 0.5) / fwidth(coord);
+      float line = min(grid.x, grid.y);
+      return 1.0 - min(line, 1.0);
+    }
+
+    void main() {
+      float d = distance(cameraPosition, worldPosition);
+      float g1 = getGrid(uScale);
+      float g2 = getGrid(uScale * uDivisions);
+
+      float grid = max(g1 * 0.3, g2 * 0.6);
+
+      // Fade out with distance
+      float fade = 1.0 - smoothstep(0.0, uDistance, d);
+      grid *= fade;
+
+      gl_FragColor = vec4(uColor, grid * 0.5);
+      if (gl_FragColor.a < 0.01) discard;
+    }
+  `
+});
+
+const gridHelper = new THREE.Mesh(gridGeometry, gridMaterial);
+gridHelper.position.z = 0; // At Z=0 (ground plane in ROS)
+gridHelper.visible = false; // Hidden by default
+scene.add(gridHelper);
+
+// Add a shadow-receiving ground plane
+const shadowPlaneGeometry = new THREE.PlaneGeometry(10, 10);
+const shadowPlaneMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+const shadowPlane = new THREE.Mesh(shadowPlaneGeometry, shadowPlaneMaterial);
+shadowPlane.position.z = 0.001; // Slightly above grid to prevent z-fighting
+shadowPlane.receiveShadow = true;
+scene.add(shadowPlane);
+
+// ROS-style axes helper
+// ROS convention: X=red (forward), Y=green (left), Z=blue (up)
+const axesHelper = new THREE.AxesHelper(0.25);
+axesHelper.visible = false; // Hidden by default
+// Color the axes: X=red, Y=green, Z=blue (default for AxesHelper)
+scene.add(axesHelper);
+
+// URDF Loader setup
+const manager = new THREE.LoadingManager();
+const loader = new URDFLoader(manager);
+
+// Configure fetch options for CORS
+loader.fetchOptions = { mode: 'cors' };
+
+// Configure the loader to handle ROS package:// URLs
+// The URDF file uses package:// URIs, which we need to translate to GitHub URLs
+loader.loadMeshCb = (path, manager, onComplete) => {
+  let finalPath;
+  
+  if (path.startsWith('package://lekiwi_description/')) {
+    // Convert ROS package URI to GitHub URL
+    finalPath = path.replace('package://lekiwi_description/', GITHUB_REPO_BASE + 'lekiwi_description/');
+  } else if (path.startsWith('http://') || path.startsWith('https://')) {
+    // Already an absolute URL
+    finalPath = path;
+  } else {
+    // Relative path - prepend base URL
+    finalPath = GITHUB_REPO_BASE + path;
+  }
+  
+  console.log('Loading mesh:', path, '->', finalPath);
+  
+  const stlLoader = new THREE.STLLoader(manager);
+  stlLoader.load(
+    finalPath,
+    (geometry) => {
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0xcccccc,
+        flatShading: false 
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      onComplete(mesh);
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading mesh:', finalPath, error);
+      onComplete(null);
+    }
+  );
+};
+
+// Track loading progress
+let loadProgress = 0;
+let itemsLoaded = 0;
+let itemsTotal = 0;
+
+manager.onStart = (url, loaded, total) => {
+  console.log('Started loading:', url);
+  document.getElementById('loadingStatus').textContent = 'Loading robot...';
+};
+
+manager.onProgress = (url, loaded, total) => {
+  itemsLoaded = loaded;
+  itemsTotal = total;
+  loadProgress = (loaded / total) * 100;
+  console.log(`Loading: ${loaded}/${total} - ${url}`);
+  document.getElementById('loadingStatus').textContent = `Loading... ${loaded}/${total}`;
+};
+
+manager.onLoad = () => {
+  console.log('All items loaded successfully!');
+  document.getElementById('loadingStatus').textContent = '✓ Robot loaded';
+  setTimeout(() => {
+    document.getElementById('loadingStatus').style.display = 'none';
+  }, 2000);
+};
+
+manager.onError = (url) => {
+  console.error('Error loading:', url);
+  document.getElementById('loadingStatus').textContent = '⚠️ Error: Check console';
+  document.getElementById('loadingStatus').style.color = '#ff5555';
+};
+
+// Load the robot directly from GitHub
+let robot;
+let robotAxes;  // Axes helper for robot base_link
+let velX = 0;  // Linear velocity in X direction (m/s)
+let velY = 0;  // Linear velocity in Y direction (m/s)
+let velAngular = 0;  // Angular velocity around Z axis (rad/s)
+let lastTime = performance.now();
+
+// Robot pose tracking (for 3D movement)
+let robotPose = {
+  x: 0,        // Position in world X (meters)
+  y: 0,        // Position in world Y (meters)
+  theta: 0     // Orientation around Z axis (radians)
+};
+
+const urdfURL = GITHUB_REPO_BASE + 'lekiwi_description/urdf/base.urdf';
+
+console.log('Loading URDF from:', urdfURL);
+
+// Test: Try to fetch the URDF directly first
+fetch(urdfURL)
+  .then(response => {
+    console.log('URDF fetch response:', response.status, response.statusText);
+    return response.text();
+  })
+  .then(text => {
+    console.log('URDF content length:', text.length);
+    console.log('URDF first 200 chars:', text.substring(0, 200));
+  })
+  .catch(err => {
+    console.error('Direct fetch error:', err);
+  });
+
+loader.load(
+  urdfURL,
+  (urdfRobot) => {
+    robot = urdfRobot;
+
+    console.log('URDF loaded successfully!');
+    console.log('Robot object:', robot);
+    console.log('Robot children:', robot.children);
+
+    // Log all meshes found
+    let meshCount = 0;
+    robot.traverse(child => {
+      if (child.isMesh) {
+        meshCount++;
+        console.log('Found mesh:', child.name, child.geometry);
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+      if (child.isObject3D) {
+        console.log('Found object:', child.name || child.type, 'at position', child.position);
+      }
+    });
+
+    console.log(`Total meshes found: ${meshCount}`);
+
+    // Add a small axes helper to the robot's base_link (50% of world axes size)
+    robotAxes = new THREE.AxesHelper(0.125);
+    robotAxes.visible = false; // Hidden by default
+    robot.add(robotAxes);
+    console.log('Added axes helper to robot base_link');
+
+    scene.add(robot);
+    console.log('Robot added to scene');
+  },
+  (progress) => {
+    // Progress callback - handle null progress events
+    if (progress && progress.lengthComputable) {
+      console.log('Loading progress:', (progress.loaded / progress.total * 100).toFixed(0) + '%');
+    }
+  },
+  (error) => {
+    // Error callback
+    console.error('Error loading URDF:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error ? error.message : 'Unknown error');
+    console.error('Error stack:', error ? error.stack : 'No stack trace');
+
+    const errorMsg = error && error.message ? error.message : 'Failed to load robot model';
+    document.getElementById('loadingStatus').textContent = '⚠️ Error: ' + errorMsg;
+    document.getElementById('loadingStatus').style.color = '#ff5555';
+  }
+);
+
+// Keyboard Controls with slider-based velocities
+let keyboardVelocity = 0.1; // m/s for WASD (controlled by slider)
+let keyboardAngular = Math.PI / 4; // rad/s for Q/E (controlled by slider, π/4)
+const keysPressed = {};
+
+// Slider event listeners
+document.getElementById('linearVelocitySlider').addEventListener('input', (e) => {
+  keyboardVelocity = parseFloat(e.target.value);
+  document.getElementById('linearVelocityValue').textContent = keyboardVelocity.toFixed(2);
+  updateKeyboardVelocity();
+});
+
+document.getElementById('angularVelocitySlider').addEventListener('input', (e) => {
+  keyboardAngular = parseFloat(e.target.value);
+  document.getElementById('angularVelocityValue').textContent = keyboardAngular.toFixed(2);
+  updateKeyboardVelocity();
+});
+
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  if (['w', 'a', 's', 'd', 'q', 'e'].includes(key) && !keysPressed[key]) {
+    keysPressed[key] = true;
+    const keyElement = document.getElementById(`key-${key}`);
+    if (keyElement) {
+      keyElement.classList.add('active');
+    }
+    updateKeyboardVelocity();
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  const key = e.key.toLowerCase();
+  if (['w', 'a', 's', 'd', 'q', 'e'].includes(key)) {
+    keysPressed[key] = false;
+    const keyElement = document.getElementById(`key-${key}`);
+    if (keyElement) {
+      keyElement.classList.remove('active');
+    }
+    updateKeyboardVelocity();
+  }
+});
+
+function updateKeyboardVelocity() {
+  velX = 0;
+  velY = 0;
+  velAngular = 0;
+  
+  if (keysPressed['w']) velX += keyboardVelocity;
+  if (keysPressed['s']) velX -= keyboardVelocity;
+  if (keysPressed['a']) velY += keyboardVelocity;
+  if (keysPressed['d']) velY -= keyboardVelocity;
+  if (keysPressed['q']) velAngular += keyboardAngular;
+  if (keysPressed['e']) velAngular -= keyboardAngular;
+}
+
+// Other controls
+document.getElementById('axesButton').addEventListener('click', (e) => {
+  const button = e.target;
+  button.classList.toggle('active');
+  const isActive = button.classList.contains('active');
+  axesHelper.visible = isActive;
+  if (robotAxes) {
+    robotAxes.visible = isActive;
+  }
+});
+
+document.getElementById('gridButton').addEventListener('click', (e) => {
+  const button = e.target;
+  button.classList.toggle('active');
+  gridHelper.visible = button.classList.contains('active');
+});
+
+document.getElementById('resetButton').addEventListener('click', () => {
+  // Reset camera
+  camera.position.set(0.75, -0.75, 0.75);
+  controls.target.set(0, 0, 0.05);
+  controls.update();
+  
+  // Reset robot pose
+  robotPose.x = 0;
+  robotPose.y = 0;
+  robotPose.theta = 0;
+  
+  if (robot) {
+    robot.position.set(0, 0, 0);
+    robot.rotation.z = 0;
+  }
+  
+  // Reset velocities
+  velX = 0;
+  velY = 0;
+  velAngular = 0;
+  
+  // Reset sliders to defaults
+  keyboardVelocity = 0.1;
+  keyboardAngular = Math.PI / 4; // π/4
+  
+  document.getElementById('linearVelocitySlider').value = 0.1;
+  document.getElementById('angularVelocitySlider').value = Math.PI / 4;
+  document.getElementById('linearVelocityValue').textContent = '0.10';
+  document.getElementById('angularVelocityValue').textContent = '0.79';
+});
+
+// Theme toggle
+let isDarkMode = localStorage.getItem('theme') !== 'light';
+if (!isDarkMode) {
+  document.body.classList.add('light-mode');
+  scene.background = new THREE.Color(0xe8eaf6);
+  document.getElementById('themeButton').textContent = '☾';
+}
+
+document.getElementById('themeButton').addEventListener('click', () => {
+  isDarkMode = !isDarkMode;
+  document.body.classList.toggle('light-mode');
+  
+  if (isDarkMode) {
+    scene.background = new THREE.Color(0x263238);
+    document.getElementById('themeButton').textContent = '☀';
+    localStorage.setItem('theme', 'dark');
+  } else {
+    scene.background = new THREE.Color(0xe8eaf6);
+    document.getElementById('themeButton').textContent = '☾';
+    localStorage.setItem('theme', 'light');
+  }
+});
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  
+  // Update joint rotations and robot pose based on velocity
+  if (robot && (velX !== 0 || velY !== 0 || velAngular !== 0)) {
+    const currentTime = performance.now();
+    const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+    lastTime = currentTime;
+    
+    // Inverse kinematics for 3-wheeled omni robot
+    // Robot geometry (from URDF)
+    const wheelRadius = 0.051; // 51mm wheel radius (from URDF)
+    const robotRadius = 0.132239; // Distance from center to wheel contact point (from URDF)
+    
+    // Motor limits from URDF: max_velocity_steps = 2720, converted to rad/s
+    const maxWheelVelocity = (2720 * 2 * Math.PI) / 4096; // ~4.17 rad/s
+    
+    // Calculate individual wheel velocities from robot velocities
+    // Using standard formula: wheel_vel = (cos(θ) * vx + sin(θ) * vy + r * ω) / wheel_radius
+    
+    // Wheel 1 (left): 150° from X-axis
+    // cos(150°) = -0.866, sin(150°) = 0.5
+    let leftWheelVel = (0.866 * velX - 0.5 * velY - robotRadius * velAngular) / wheelRadius;
+    
+    // Wheel 2 (back): 270° from X-axis
+    // cos(270°) = 0, sin(270°) = -1
+    let backWheelVel = (0.0 * velX + 1.0 * velY - robotRadius * velAngular) / wheelRadius;
+    
+    // Wheel 3 (right): 30° from X-axis
+    // cos(30°) = 0.866, sin(30°) = 0.5
+    let rightWheelVel = (-0.866 * velX - 0.5 * velY - robotRadius * velAngular) / wheelRadius;
+    
+    // Clamp wheel velocities to motor limits
+    leftWheelVel = Math.max(-maxWheelVelocity, Math.min(maxWheelVelocity, leftWheelVel));
+    backWheelVel = Math.max(-maxWheelVelocity, Math.min(maxWheelVelocity, backWheelVel));
+    rightWheelVel = Math.max(-maxWheelVelocity, Math.min(maxWheelVelocity, rightWheelVel));
+    
+    // Update wheel joints if they exist
+    if (robot.joints) {
+      if (robot.joints.left_wheel_joint) {
+        const currentAngle = robot.joints.left_wheel_joint.angle || 0;
+        robot.joints.left_wheel_joint.setJointValue(currentAngle + leftWheelVel * deltaTime);
+      }
+      if (robot.joints.back_wheel_joint) {
+        const currentAngle = robot.joints.back_wheel_joint.angle || 0;
+        robot.joints.back_wheel_joint.setJointValue(currentAngle + backWheelVel * deltaTime);
+      }
+      if (robot.joints.right_wheel_joint) {
+        const currentAngle = robot.joints.right_wheel_joint.angle || 0;
+        robot.joints.right_wheel_joint.setJointValue(currentAngle + rightWheelVel * deltaTime);
+      }
+    }
+    
+    // Update robot pose in 3D space
+    // velX and velY are in robot's local frame, need to transform to world frame
+    const cos_theta = Math.cos(robotPose.theta);
+    const sin_theta = Math.sin(robotPose.theta);
+    
+    // Transform local velocities to world frame
+    const worldVelX = velX * cos_theta - velY * sin_theta;
+    const worldVelY = velX * sin_theta + velY * cos_theta;
+    
+    // Update position and orientation
+    robotPose.x += worldVelX * deltaTime;
+    robotPose.y += worldVelY * deltaTime;
+    robotPose.theta += velAngular * deltaTime;
+    
+    // Apply the pose to the robot model
+    robot.position.set(robotPose.x, robotPose.y, 0);
+    robot.rotation.z = robotPose.theta;
+  } else {
+    lastTime = performance.now();
+  }
+  
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+animate();
+-->
