@@ -89,14 +89,14 @@
   <!-- Left wheel link -->
   <link name="left_wheel_link">
     <visual>
-      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 0"/>
+      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 ${wheel_offset_rz}"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 0"/>
+      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 ${wheel_offset_rz}"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
@@ -110,14 +110,14 @@
   <!-- Back wheel link -->
   <link name="back_wheel_link">
     <visual>
-      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 0"/>
+      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 ${wheel_offset_rz}"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 0"/>
+      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 ${wheel_offset_rz}"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
@@ -131,14 +131,14 @@
   <!-- Right wheel link -->
   <link name="right_wheel_link">
     <visual>
-      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 0"/>
+      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 ${wheel_offset_rz}"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 0"/>
+      <origin xyz="0 0 0" rpy="${wheel_offset_rx} 0 ${wheel_offset_rz}"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>

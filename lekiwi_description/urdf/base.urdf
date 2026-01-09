@@ -107,14 +107,14 @@
   <!-- Back wheel link -->
   <link name="back_wheel_link">
     <visual>
-      <origin xyz="0 0 0" rpy="3.14159265358979 0 0"/>
+      <origin xyz="0 0 0" rpy="3.14159265358979 0 3.14159265358979"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="3.14159265358979 0 0"/>
+      <origin xyz="0 0 0" rpy="3.14159265358979 0 3.14159265358979"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
@@ -128,14 +128,14 @@
   <!-- Right wheel link -->
   <link name="right_wheel_link">
     <visual>
-      <origin xyz="0 0 0" rpy="3.14159265358979 0 0"/>
+      <origin xyz="0 0 0" rpy="3.14159265358979 0 3.14159265358979"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="3.14159265358979 0 0"/>
+      <origin xyz="0 0 0" rpy="3.14159265358979 0 3.14159265358979"/>
       <geometry>
         <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>

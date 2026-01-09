@@ -12,6 +12,7 @@
   <xacro:property name="wheel_base_radius" value="0.132239"/>
   <xacro:property name="wheel_base_offset_z" value="0.01036"/>
   <xacro:property name="wheel_offset_rx" value="${pi}"/> <!-- Wheel mesh rotation about X (rad) -->
+  <xacro:property name="wheel_offset_rz" value="${pi}"/> <!-- Wheel mesh rotation about Z (rad) -->
 
   <!-- LD06 laser offsets from base_link -->
   <xacro:property name="laser_base_offset_x" value="-0.045042"/>
