@@ -1,0 +1,34 @@
+/**:
+  ros__parameters:
+    # Joy node parameters
+    device_id: 0
+    deadzone: 0.1
+    autorepeat_rate: 20.0
+    
+    # Teleop twist joy parameters
+    # For holonomic (omni-wheel) robot control
+    axis_linear:
+      x: 1  # Left stick vertical (forward/backward)
+      y: 0  # Left stick horizontal (strafe left/right)
+    scale_linear:
+      x: 0.24  # m/s - matches base_controller max_velocity for X
+      y: 0.20  # m/s - matches base_controller max_velocity for Y
+    scale_linear_turbo:
+      x: 0.29  # m/s - full speed
+      y: 0.24  # m/s - full speed
+      
+    axis_angular:
+      yaw: 2  # Right stick horizontal (rotation)
+    scale_angular:
+      yaw: 1.5708  # rad/s (π/2) - matches base_controller max_velocity for Z
+    scale_angular_turbo:
+      yaw: 2.0  # rad/s - full speed
+      
+    enable_button: 9  # L1
+    enable_turbo_button: -1  # -1 = Disabled
+    
+    # Inverted axes (set to true if needed)
+    inverted_reverse: false
+    
+    # Publish TwistStamped instead of Twist
+    publish_stamped_twist: true

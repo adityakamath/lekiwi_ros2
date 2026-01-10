@@ -4,7 +4,7 @@ controller_manager:
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
     
     # Command and error handling
-    enforce_command_limits: true  # Clamp commands to URDF effort/velocity limits
+    enforce_command_limits: false  # Allow controller to manage limits (relaxed enforcement)
     handle_exceptions: true       # Graceful error handling
     
     # Hardware component initialization
@@ -17,7 +17,7 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-    omni_wheel_controller:
+    base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
 
 joint_state_broadcaster:
@@ -35,7 +35,7 @@ joint_state_broadcaster:
       - current
       - is_moving
 
-omni_wheel_controller:
+base_controller:
   ros__parameters:
     # Wheel geometry - 3 wheels at 60°, 180°, 300° from +X axis
     wheel_offset: 1.0471975511965976  # 60° in radians (π/3 exactly)
@@ -65,12 +65,12 @@ omni_wheel_controller:
     # NOTE: These values can be overridden in the launch file
     linear:
       x:
-        max_velocity: 0.246  # m/s (X-axis can go faster than Y)
-        max_acceleration: 2.29  # m/s²
+        max_velocity: 0.245  # m/s
+        max_acceleration: 2  # m/s^2
       y:
-        max_velocity: 0.213  # m/s (Y-axis is limiting direction)
-        max_acceleration: 1.99  # m/s² (Y-axis is limiting direction)
+        max_velocity: 0.215  # m/s
+        max_acceleration: 1.5  # m/s^2
     angular:
       z:
-        max_velocity: 1.61  # rad/s (92.25 deg/s)
-        max_acceleration: 15.03  # rad/s² (861 deg/s²)
+        max_velocity: 1.57  # rad/s (π/2, rounded down)
+        max_acceleration: 12.5  # rad/s^2

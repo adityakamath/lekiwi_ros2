@@ -29,8 +29,9 @@ import os
 import sys
 from launch import LaunchDescription, LaunchContext
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
-from launch.actions import RegisterEventHandler, TimerAction, OpaqueFunction, SetEnvironmentVariable
+from launch.actions import RegisterEventHandler, TimerAction, OpaqueFunction, SetEnvironmentVariable, IncludeLaunchDescription
 from launch.event_handlers import OnProcessStart
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -89,13 +90,10 @@ def generate_launch_description():
     )
 
     # Omni wheel drive controller spawner - starts 2.5s after launch
-    omni_wheel_controller_spawner = Node(
+    base_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["omni_wheel_controller", "-c", "/controller_manager"],
-        remappings=[
-            ("/omni_wheel_controller/cmd_vel", "/cmd_vel"),
-        ],
+        arguments=["base_controller", "-c", "/controller_manager"],
         output="both",
     )
 
@@ -120,9 +118,9 @@ def generate_launch_description():
         actions=[joint_state_broadcaster_spawner],
     )
 
-    delayed_omni_wheel_controller_spawner = TimerAction(
+    delayed_base_controller_spawner = TimerAction(
         period=2.5,
-        actions=[omni_wheel_controller_spawner],
+        actions=[base_controller_spawner],
     )
 
     # Delay motor diagnostics node to ensure joint states are being published
@@ -131,12 +129,24 @@ def generate_launch_description():
         actions=[motor_diagnostics_node],
     )
 
+    # Include teleop launch file
+    teleop_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('lekiwi_base_control'),
+                'launch',
+                'teleop.launch.py'
+            ])
+        ])
+    )
+
     nodes = [
         robot_state_publisher_node,
         controller_manager,
         delayed_joint_state_broadcaster_spawner,
-        delayed_omni_wheel_controller_spawner,
+        delayed_base_controller_spawner,
         delayed_motor_diagnostics_node,
+        teleop_launch,
     ]
 
     return LaunchDescription(nodes)
