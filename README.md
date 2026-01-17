@@ -1,7 +1,7 @@
 # LeKiwi ROS 2
 
 [![ROS 2](https://img.shields.io/badge/ROS_2-Kilted-blue?logo=ros)](https://docs.ros.org)
-[![License](https://img.shields.io/github/license/adityakamath/lekiwi_ros2)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-kamathrobotics.com-blue)](https://kamathrobotics.com)
 
 > This repository is a work in progress and includes experimental and AI-generated content. Proceed with caution.
