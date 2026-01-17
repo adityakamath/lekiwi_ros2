@@ -25,8 +25,8 @@ ros2 launch lekiwi_bringup base.launch.py
 
 ## Dependencies
 
-- **ROS 2**: Tested with Kilted, but should work on other ROS 2 distributions
-- **ros2_control** framework with standard controllers
+- **[ROS 2 Kilted](https://docs.ros.org/en/kilted/)**: Tested with Kilted, but should work on other ROS 2 distributions
+- **[ros2_control](https://control.ros.org/)** framework with standard controllers
 - **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)**: Hardware interface for Feetech STS servos
 - **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)**: LD06 LiDAR driver with bug fixes
 - **[camera_ros](https://github.com/ros-drivers/camera_ros)**: USB camera driver
