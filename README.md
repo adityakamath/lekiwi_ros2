@@ -3,7 +3,6 @@
 [![ROS 2](https://img.shields.io/badge/ROS_2-Humble+-blue?logo=ros)](https://docs.ros.org)
 ![GitHub License](https://img.shields.io/github/license/adityakamath/lekiwi_ros2)
 [![Website](https://img.shields.io/badge/Website-kamathrobotics.com-blue)](https://kamathrobotics.com)
-![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/kamathsblog)
 
 > This repository is a work in progress and includes experimental and some(unreviewed, untested) AI-generated content. Proceed with caution.
 
