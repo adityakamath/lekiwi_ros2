@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Launch file for teleop_twist_joy node."""
+"""
+Launch joystick teleoperation for LeKiwi robot.
+
+Starts teleop_twist_joy node to convert joystick inputs to velocity commands.
+"""
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -9,7 +13,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    """Generate launch description for teleop_twist_joy."""
+    """Generate launch description with configurable teleop parameters."""
     # Declare launch arguments
     config_file_arg = DeclareLaunchArgument(
         'config_file',

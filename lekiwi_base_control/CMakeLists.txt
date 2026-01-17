@@ -20,11 +20,18 @@ install(TARGETS motor_diagnostics
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Platform-specific RPATH handling (macOS workaround for Pixi environments)
+if(APPLE)
+  set_target_properties(motor_diagnostics PROPERTIES
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+    BUILD_WITH_INSTALL_RPATH FALSE
+  )
+endif()
+
 # Install launch files, config, URDF, and documentation
 install(DIRECTORY
   launch
   config
-  docs
   DESTINATION share/${PROJECT_NAME}/
 )
 

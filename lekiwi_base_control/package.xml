@@ -9,16 +9,19 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Runtime dependencies -->
+  <!-- Build and runtime dependencies for C++ node -->
   <depend>rclcpp</depend>
   <depend>diagnostic_msgs</depend>
   <depend>control_msgs</depend>
-  <exec_depend>sts_hardware_interface</exec_depend>
+
+  <!-- Runtime dependencies for launch files -->
+  <exec_depend>lekiwi_description</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
   <exec_depend>controller_manager</exec_depend>
-  <exec_depend>ros2_control</exec_depend>
-  <exec_depend>ros2_controllers</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>omni_wheel_drive_controller</exec_depend>
+  <exec_depend>sts_hardware_interface</exec_depend>
   <exec_depend>teleop_twist_joy</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

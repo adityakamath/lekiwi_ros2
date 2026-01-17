@@ -1,9 +1,18 @@
+#!/usr/bin/env python3
+"""
+Launch HD webcam for LeKiwi robot.
+
+Starts camera_node with configuration and calibration from webcam config files.
+"""
+
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution, PythonExpression
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
+
 def generate_launch_description():
+    """Generate launch description for HD webcam."""
     config_file = PathJoinSubstitution([
         FindPackageShare('lekiwi_bringup'),
         'config',
@@ -15,8 +24,8 @@ def generate_launch_description():
         'config',
         'webcam_calibration.yaml'
     ])
-    
-    # Create the file:// URL using PythonExpression
+
+    # Create file:// URL for camera calibration
     camera_info_url = ['file://', camera_info_file]
     
     webcam_node = Node(

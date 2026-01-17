@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+"""
+Launch complete LeKiwi robot system.
+
+Starts base control (motors, controllers), webcam, and laser scanner.
+"""
+
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -5,6 +12,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
+    """Generate launch description for complete robot bringup."""
     # Get package share directories
     lekiwi_bringup_share = FindPackageShare('lekiwi_bringup')
     lekiwi_base_control_share = FindPackageShare('lekiwi_base_control')

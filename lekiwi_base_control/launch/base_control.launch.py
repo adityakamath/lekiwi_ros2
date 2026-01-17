@@ -1,36 +1,14 @@
 #!/usr/bin/env python3
-# Copyright 2025 LeKiwi Robotics
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
-Launches the full ROS 2 stack for the LeKiwi omnidirectional robot.
+Launch the complete LeKiwi robot control stack.
 
-This launch file starts:
-- Robot State Publisher (URDF from xacro)
-- Controller Manager (ros2_control_node)
-- Joint State Broadcaster
-- Omni Wheel Drive Controller
-
-All configuration is loaded from the package's URDF and YAML files.
+Starts robot_state_publisher, controller_manager, controllers (joint_state_broadcaster,
+base_controller), motor diagnostics, and teleop with timed sequencing for initialization.
 """
 
-import os
-import sys
-from launch import LaunchDescription, LaunchContext
+from launch import LaunchDescription
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
-from launch.actions import RegisterEventHandler, TimerAction, OpaqueFunction, SetEnvironmentVariable, IncludeLaunchDescription
-from launch.event_handlers import OnProcessStart
+from launch.actions import TimerAction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
@@ -38,7 +16,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    """Generate the launch description for the LeKiwi base control stack."""
+    """Generate launch description with sequenced node startup."""
     
     # Get URDF via xacro
     robot_description_content = Command(

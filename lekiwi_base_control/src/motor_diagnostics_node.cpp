@@ -1,3 +1,11 @@
+/**
+ * @file motor_diagnostics_node.cpp
+ * @brief Real-time motor health monitoring for LeKiwi robot
+ *
+ * Monitors motor temperature, voltage, current, and detects internal stalls
+ * by analyzing dynamic joint state feedback from the hardware interface.
+ */
+
 #include <rclcpp/rclcpp.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -7,8 +15,18 @@
 #include <memory>
 #include <cstdio>
 
+/**
+ * @class MotorDiagnosticsNode
+ * @brief Node for monitoring motor health and detecting failure conditions
+ *
+ * Subscribes to /dynamic_joint_states and publishes diagnostic messages
+ * when motors exceed temperature, voltage, current, or stall thresholds.
+ */
 class MotorDiagnosticsNode : public rclcpp::Node {
 public:
+  /**
+   * @brief Constructor - initializes parameters and creates pub/sub
+   */
   MotorDiagnosticsNode() : Node("motor_diagnostics_node") {
     // Declare parameters with defaults
     this->declare_parameter("effort_threshold", 0.5);
@@ -44,18 +62,21 @@ public:
   }
 
 private:
-  // Parameters
-  double effort_threshold_;
-  double current_threshold_;
-  double voltage_min_;
-  double voltage_max_;
-  double temp_warn_;
-  double temp_error_;
-  double current_max_;
+  double effort_threshold_; // Effort threshold for stall detection (N⋅m)
+  double current_threshold_; // Current threshold for stall detection (A)
+  double voltage_min_; // Minimum acceptable voltage (V)
+  double voltage_max_; // Maximum acceptable voltage (V)
+  double temp_warn_; // Temperature warning threshold (°C)
+  double temp_error_; // Temperature error threshold (°C)
+  double current_max_; // Maximum current limit (A)
 
-  rclcpp::Subscription<control_msgs::msg::DynamicJointState>::SharedPtr subscription_;
-  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_pub_;
+  rclcpp::Subscription<control_msgs::msg::DynamicJointState>::SharedPtr subscription_; // Subscription to dynamic joint states
+  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_pub_; // Publisher for diagnostic messages
 
+  /**
+   * @brief Process joint states and publish diagnostics
+   * @param msg Dynamic joint state message from hardware interface
+   */
   void joint_states_callback(const control_msgs::msg::DynamicJointState::SharedPtr msg) {
     auto diagnostics = std::make_shared<diagnostic_msgs::msg::DiagnosticArray>();
     diagnostics->header.stamp = this->now();
@@ -97,6 +118,11 @@ private:
     diagnostics_pub_->publish(*diagnostics);
   }
 
+  /**
+   * @brief Check motor temperature against warning and error thresholds
+   * @param status Diagnostic status to update
+   * @param values_dict Map of interface names to values
+   */
   void check_temperature(diagnostic_msgs::msg::DiagnosticStatus& status,
                           const std::unordered_map<std::string, double>& values_dict) {
     auto temp_it = values_dict.find("temperature");
@@ -116,6 +142,11 @@ private:
     }
   }
 
+  /**
+   * @brief Check motor voltage is within acceptable range
+   * @param status Diagnostic status to update
+   * @param values_dict Map of interface names to values
+   */
   void check_voltage(diagnostic_msgs::msg::DiagnosticStatus& status,
                      const std::unordered_map<std::string, double>& values_dict) {
     auto voltage_it = values_dict.find("voltage");
@@ -137,6 +168,11 @@ private:
     }
   }
 
+  /**
+   * @brief Check for overcurrent conditions
+   * @param status Diagnostic status to update
+   * @param values_dict Map of interface names to values
+   */
   void check_overcurrent(diagnostic_msgs::msg::DiagnosticStatus& status,
                          const std::unordered_map<std::string, double>& values_dict) {
     auto current_it = values_dict.find("current");
@@ -153,6 +189,11 @@ private:
     }
   }
 
+  /**
+   * @brief Detect internal motor stalls (motor stopped with high effort/current)
+   * @param status Diagnostic status to update
+   * @param values_dict Map of interface names to values
+   */
   void check_stalls(diagnostic_msgs::msg::DiagnosticStatus& status,
                     const std::unordered_map<std::string, double>& values_dict) {
     // Get values
@@ -186,6 +227,12 @@ private:
   }
 };
 
+/**
+ * @brief Main entry point for motor diagnostics node
+ * @param argc Argument count
+ * @param argv Argument values
+ * @return Exit status
+ */
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<MotorDiagnosticsNode>());
