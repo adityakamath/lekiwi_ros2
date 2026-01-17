@@ -44,7 +44,7 @@
   <xacro:property name="baud_rate" value="1000000"/>
 
   <!-- Maximum allowable speed/acceleration/torque for each motor -->
-  <xacro:property name="max_velocity_steps" value="2720"/> <!-- steps/second (80% of 3400 hardware max) -->
+  <xacro:property name="max_velocity_steps" value="2750"/> <!-- steps/second (81% of 3400 hardware max, +1% margin) -->
   <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/> <!-- rad/s -->
   <xacro:property name="max_acceleration_steps" value="${254*100}"/> <!-- steps/second² (100% hardware max) -->
   <xacro:property name="max_acceleration_rads" value="${max_acceleration_steps*2*pi/4096}"/> <!-- rad/s² -->
