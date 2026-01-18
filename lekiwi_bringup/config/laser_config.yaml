@@ -1,6 +1,6 @@
 laser_node:
   ros__parameters:
-    product_name: LDLiDAR_LD06
+    product_name: LDLiDAR_LD19
     laser_scan_topic_name: scan
     point_cloud_2d_topic_name: ''
     frame_id: laser_frame
