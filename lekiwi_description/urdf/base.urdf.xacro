@@ -222,7 +222,6 @@
       <param name="serial_port">${serial_port}</param>
       <param name="baud_rate">${baud_rate}</param>
       <param name="use_sync_write">true</param>
-      <param name="enable_multi_turn">true</param>
       <param name="enable_mock_mode">false</param>
     </hardware>
     <!-- Left wheel joint (Motor ID 7) -->
