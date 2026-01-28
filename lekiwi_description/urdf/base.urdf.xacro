@@ -2,7 +2,12 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="lekiwi">
 
   <!-- Include robot properties -->
-  <xacro:include filename="$(find lekiwi_description)/urdf/base_properties.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/base.common.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/base.control.xacro"/>
+
+  <!-- Arguments -->
+  <xacro:arg name="serial_port" default="${serial_port}"/>
+  <xacro:arg name="use_mock" default="${use_mock}"/>
 
   <!-- Define custom materials for base and wheels using color properties -->
   <material name="light_grey">
@@ -155,7 +160,7 @@
   <joint name="base_footprint_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
-    <origin xyz="0 0 ${base_footprint_offset_z}" rpy="0 0 0"/>
+    <origin xyz="0 0 ${wheel_radius - wheel_base_offset_z}" rpy="0 0 0"/>
   </joint>
 
   <!-- laser fixed joint -->
@@ -219,11 +224,10 @@
     <hardware>
       <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
       <!-- Serial communication parameters -->
-      <param name="serial_port">${serial_port}</param>
+      <param name="serial_port">$(arg serial_port)</param>
       <param name="baud_rate">${baud_rate}</param>
-      <param name="use_sync_write">true</param>
-      <param name="enable_multi_turn">true</param>
-      <param name="enable_mock_mode">false</param>
+      <param name="use_sync_write">${use_sync_write}</param>
+      <param name="enable_mock_mode">$(arg use_mock)</param>
     </hardware>
     <!-- Left wheel joint (Motor ID 7) -->
     <joint name="left_wheel_joint">

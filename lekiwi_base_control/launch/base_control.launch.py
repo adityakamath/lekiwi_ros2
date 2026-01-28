@@ -7,8 +7,8 @@ base_controller), motor diagnostics, and teleop with timed sequencing for initia
 """
 
 from launch import LaunchDescription
-from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
-from launch.actions import TimerAction, IncludeLaunchDescription
+from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration
+from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
@@ -18,6 +18,29 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     """Generate launch description with sequenced node startup."""
     
+    declared_arguments = []
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'serial_port',
+            default_value='/dev/ttySERVO',
+            description='Serial port for STS motor communication'
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_mock',
+            default_value='false',
+            description='Use mock/simulation mode (no hardware required)'
+        )
+    )
+    
+    # Initialize Arguments
+    serial_port = LaunchConfiguration('serial_port')
+    baud_rate = LaunchConfiguration('baud_rate')
+    use_mock = LaunchConfiguration('use_mock')
+    
     # Get URDF via xacro
     robot_description_content = Command(
         [
@@ -26,6 +49,10 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [FindPackageShare("lekiwi_description"), "urdf", "base.urdf.xacro"]
             ),
+            ' ',
+            'serial_port:=', serial_port,
+            ' ',
+            'use_mock:=', use_mock,
         ]
     )
     robot_description = {"robot_description": ParameterValue(robot_description_content, value_type=str)}
@@ -127,4 +154,4 @@ def generate_launch_description():
         teleop_launch,
     ]
 
-    return LaunchDescription(nodes)
+    return LaunchDescription(declared_arguments + nodes)

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Hardware interface parameters -->
+  <xacro:property name="serial_port" default="/dev/ttySERVO"/>
+  <xacro:property name="baud_rate" default="1000000"/>
+  <xacro:property name="use_mock" default="false"/>
+  <xacro:property name="use_sync_write" default="true"/>
+
+  <!-- Motor IDs and mode -->
+  <xacro:property name="left_motor_id" value="7"/>
+  <xacro:property name="back_motor_id" value="8"/>
+  <xacro:property name="right_motor_id" value="9"/>
+  <xacro:property name="operating_mode" value="1"/>  <!-- Velocity mode -->
+
+  <!-- Wheel geometry for omnidirectional control -->
+  <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
+  <xacro:property name="offset" value="${pi/3}"/>  <!-- 60° -->
+  <xacro:property name="theta" value="${2*pi/3}"/>  <!-- 120° between wheels -->
+
+  <!-- Maximum allowable speed/acceleration/torque for each motor -->
+  <xacro:property name="max_velocity_steps" value="2750"/> <!-- steps/second (81% of 3400 hardware max, +1% margin) -->
+  <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/> <!-- rad/s -->
+  <xacro:property name="max_torque_nm" value="2.942"/> <!-- N⋅m (30 kgf⋅cm for STS3215) -->
+
+  <!-- Omnidirectional Kinematics Calculations -->
+  <!-- For 3-wheel omni drive: ω_i = (-sin(θ_i)·v_x + cos(θ_i)·v_y + R·ω_z) / r -->
+
+  <!-- Maximum allowable linear velocity per axis -->
+  <xacro:property name="max_linear_velocity_x" value="${wheel_radius * max_velocity_rads / (sqrt(3)/2)}"/>
+  <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
+  <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_offset}"/>
+
+</robot>

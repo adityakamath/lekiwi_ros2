@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Color properties for base and wheels (RGBA) -->
+  <xacro:property name="light_grey_rgba" value="0.8 0.8 0.8 1.0"/>
+  <xacro:property name="charcoal_rgba" value="0.15 0.15 0.15 1.0"/>
+
+  <!-- Base offsets -->
+  <xacro:property name="base_offset_rz" value="${3*pi/2}"/> <!-- Base mesh rotation about Z (rad) -->
+
+  <!-- Wheel offsets -->
+  <xacro:property name="wheel_base_radius" value="0.132239"/>
+  <xacro:property name="wheel_base_offset_z" value="0.01036"/>
+
+  <!-- LD06 laser offsets from base_link -->
+  <xacro:property name="laser_base_offset_x" value="-0.045042"/>
+  <xacro:property name="laser_base_offset_z" value="0.0915"/>
+  <xacro:property name="laser_offset_rx" value="${pi/2}"/> <!-- LIDAR mesh rotation about X (rad) -->
+
+  <!-- HD camera offsets from base_link -->
+  <xacro:property name="camera_base_offset_x" value="0.114"/>
+  <xacro:property name="camera_base_offset_z" value="0.026"/>
+  <xacro:property name="camera_offset_ry" value="${pi/2}"/> <!-- Camera mesh/joint rotation about Y (rad) -->
+
+  <!-- LDLidar frame offsets from laser_link -->
+  <xacro:property name="laser_frame_offset_z" value="0.027"/>
+
+</robot>
