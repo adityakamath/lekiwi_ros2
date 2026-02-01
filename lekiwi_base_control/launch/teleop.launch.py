@@ -2,7 +2,8 @@
 """
 Launch joystick teleoperation for LeKiwi robot.
 
-Starts teleop_twist_joy node to convert joystick inputs to velocity commands.
+Starts teleop_twist_joy node to convert joystick inputs to velocity commands
+and estop relay node for emergency stop functionality.
 """
 
 from launch import LaunchDescription
@@ -24,19 +25,28 @@ def generate_launch_description():
         ]),
         description='Path to the teleop configuration file'
     )
-    
+
     # Teleop twist joy node
     teleop_node = Node(
         package='teleop_twist_joy',
         executable='teleop_node',
-        name='teleop_twist_joy_node',
+        name='teleop_node',
         parameters=[LaunchConfiguration('config_file')],
         remappings=[
             ('/cmd_vel', '/base_controller/cmd_vel')
         ]
     )
-    
+
+    # Emergency stop relay node
+    estop_node = Node(
+        package='lekiwi_base_control',
+        executable='estop',
+        name='estop_node',
+        parameters=[LaunchConfiguration('config_file')]
+    )
+
     return LaunchDescription([
         config_file_arg,
         teleop_node,
+        estop_node,
     ])

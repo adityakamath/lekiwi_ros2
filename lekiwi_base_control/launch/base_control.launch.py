@@ -38,7 +38,6 @@ def generate_launch_description():
     
     # Initialize Arguments
     serial_port = LaunchConfiguration('serial_port')
-    baud_rate = LaunchConfiguration('baud_rate')
     use_mock = LaunchConfiguration('use_mock')
     
     # Get URDF via xacro
