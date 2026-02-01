@@ -77,11 +77,8 @@ def generate_launch_description():
                 [FindPackageShare("lekiwi_base_control"), "config", "base_controllers.yaml"]
             ),
         ],
-        remappings=[
-            ("/diagnostics", "/controller_manager/diagnostics"),
-        ],
+        arguments=["--ros-args", "-r", "/diagnostics:=/controller_manager/diagnostics"],
         output="log",
-        name="controller_manager",
         emulate_tty=True,
     )
 

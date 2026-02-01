@@ -228,6 +228,8 @@
       <param name="baud_rate">${baud_rate}</param>
       <param name="use_sync_write">${use_sync_write}</param>
       <param name="enable_mock_mode">$(arg use_mock)</param>
+      <!-- Motor-specific parameter (adjust for different STS motor models) -->
+      <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
     </hardware>
     <!-- Left wheel joint (Motor ID 7) -->
     <joint name="left_wheel_joint">
