@@ -26,9 +26,10 @@ joint_state_broadcaster:
       - left_wheel_joint
       - back_wheel_joint
       - right_wheel_joint
-    # Standard state interfaces (position, velocity, effort) are automatically mapped
-    # Only list custom interfaces here
     interfaces:
+      - position
+      - velocity
+      - effort
       - voltage
       - temperature
       - current

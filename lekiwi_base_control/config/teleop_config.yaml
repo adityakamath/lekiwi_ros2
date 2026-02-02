@@ -32,10 +32,3 @@ teleop_node:
 
     # Publish TwistStamped instead of Twist
     publish_stamped_twist: true
-
-estop_node:
-  ros__parameters:
-    # Emergency stop relay mode
-    # "toggle": Push button mode - each press toggles estop state
-    # "direct": Switch mode - estop directly follows input state
-    mode: "direct"

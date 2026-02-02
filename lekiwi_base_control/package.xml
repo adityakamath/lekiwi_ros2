@@ -13,7 +13,6 @@
   <depend>rclcpp</depend>
   <depend>diagnostic_msgs</depend>
   <depend>control_msgs</depend>
-  <depend>std_msgs</depend>
 
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_description</exec_depend>
