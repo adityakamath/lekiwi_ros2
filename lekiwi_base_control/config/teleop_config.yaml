@@ -38,4 +38,4 @@ estop_node:
     # Emergency stop relay mode
     # "toggle": Push button mode - each press toggles estop state
     # "direct": Switch mode - estop directly follows input state
-    mode: "toggle"
+    mode: "direct"
