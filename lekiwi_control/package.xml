@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>lekiwi_base_control</name>
+  <name>lekiwi_control</name>
   <version>0.1.0</version>
-  <description>High-level control nodes and diagnostics for LeKiwi 3-wheel omnidirectional robot</description>
+  <description>High-level control nodes and diagnostics for LeKiwi robot</description>
   <maintainer email="adityakamath@live.com">adityakamath</maintainer>
   <license>Apache-2.0</license>
 
@@ -13,7 +13,6 @@
   <depend>rclcpp</depend>
   <depend>diagnostic_msgs</depend>
   <depend>control_msgs</depend>
-  <depend>std_msgs</depend>
 
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_description</exec_depend>

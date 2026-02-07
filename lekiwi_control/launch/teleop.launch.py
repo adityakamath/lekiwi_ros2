@@ -12,14 +12,13 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-
 def generate_launch_description():
     """Generate launch description with configurable teleop parameters."""
     # Declare launch arguments
     config_file_arg = DeclareLaunchArgument(
         'config_file',
         default_value=PathJoinSubstitution([
-            FindPackageShare('lekiwi_base_control'),
+            FindPackageShare('lekiwi_control'),
             'config',
             'teleop_config.yaml'
         ]),
@@ -37,16 +36,7 @@ def generate_launch_description():
         ]
     )
 
-    # Emergency stop relay node
-    estop_node = Node(
-        package='lekiwi_base_control',
-        executable='estop',
-        name='estop_node',
-        parameters=[LaunchConfiguration('config_file')]
-    )
-
     return LaunchDescription([
         config_file_arg,
         teleop_node,
-        estop_node,
     ])

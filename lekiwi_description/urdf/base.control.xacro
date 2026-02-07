@@ -7,6 +7,10 @@
   <xacro:property name="use_mock" default="false"/>
   <xacro:property name="use_sync_write" default="true"/>
 
+  <!-- Motor-specific parameter (STS3215 default) -->
+  <!-- Adjust for other motor models: STS3032 max=2900, STS3235 max=3400 -->
+  <xacro:property name="sts_max_velocity_steps" value="3400"/>  <!-- Max hardware velocity in steps/s -->
+
   <!-- Motor IDs and mode -->
   <xacro:property name="left_motor_id" value="7"/>
   <xacro:property name="back_motor_id" value="8"/>
