@@ -74,7 +74,7 @@ def generate_launch_description():
         parameters=[
             robot_description,
             PathJoinSubstitution(
-                [FindPackageShare("lekiwi_base_control"), "config", "base_controllers.yaml"]
+                [FindPackageShare("lekiwi_control"), "config", "base_controllers.yaml"]
             ),
         ],
         arguments=["--ros-args", "--remap", "/diagnostics:=/controller_manager/diagnostics"],
@@ -100,12 +100,12 @@ def generate_launch_description():
 
     # Motor diagnostics node - starts after controller_manager is ready
     motor_diagnostics_node = Node(
-        package="lekiwi_base_control",
+        package="lekiwi_control",
         executable="motor_diagnostics",
         output="log",
         parameters=[
             PathJoinSubstitution(
-                [FindPackageShare("lekiwi_base_control"), "config", "motor_diagnostics_config.yaml"]
+                [FindPackageShare("lekiwi_control"), "config", "motor_diagnostics_config.yaml"]
             ),
         ],
         remappings=[
@@ -134,7 +134,7 @@ def generate_launch_description():
     teleop_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
-                FindPackageShare('lekiwi_base_control'),
+                FindPackageShare('lekiwi_control'),
                 'launch',
                 'teleop.launch.py'
             ])

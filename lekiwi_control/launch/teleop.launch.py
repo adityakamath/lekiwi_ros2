@@ -18,7 +18,7 @@ def generate_launch_description():
     config_file_arg = DeclareLaunchArgument(
         'config_file',
         default_value=PathJoinSubstitution([
-            FindPackageShare('lekiwi_base_control'),
+            FindPackageShare('lekiwi_control'),
             'config',
             'teleop_config.yaml'
         ]),

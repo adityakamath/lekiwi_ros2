@@ -15,12 +15,12 @@ def generate_launch_description():
     """Generate launch description for complete robot bringup."""
     # Get package share directories
     lekiwi_bringup_share = FindPackageShare('lekiwi_bringup')
-    lekiwi_base_control_share = FindPackageShare('lekiwi_base_control')
+    lekiwi_control_share = FindPackageShare('lekiwi_control')
 
     # Include base control launch file
     base_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            lekiwi_base_control_share, '/launch/base_control.launch.py'
+            lekiwi_control_share, '/launch/base.launch.py'
         ]),
         launch_arguments={'log_level': 'warn'}.items()
     )

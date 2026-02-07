@@ -18,7 +18,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 cd ~/ros2_ws/src
 git clone https://github.com/adityakamath/lekiwi_ros2.git
 cd ~/ros2_ws
-colcon build --packages-select lekiwi_base_control lekiwi_description lekiwi_bringup
+colcon build --packages-select lekiwi_control lekiwi_description lekiwi_bringup
 source install/setup.bash
 ros2 launch lekiwi_bringup base.launch.py
 ```
@@ -35,9 +35,9 @@ ros2 launch lekiwi_bringup base.launch.py
 
 ```text
 lekiwi_ros2/
-├── lekiwi_base_control/    # Control, diagnostics, launch files
-├── lekiwi_description/     # URDF models and meshes
-└── lekiwi_bringup/         # System integration launch files
+├── lekiwi_control/      # Control, diagnostics, launch files
+├── lekiwi_description/  # URDF models and meshes
+└── lekiwi_bringup/      # System integration launch files
 ```
 
 ## License
