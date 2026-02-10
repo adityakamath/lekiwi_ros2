@@ -1,6 +1,6 @@
 image_width: 640
 image_height: 480
-camera_name: webcam_node
+camera_name: USBCamera_USBCamera__base_axi_pcie_120000_rp1_usb_300000_1_1_0_32e6_9221_640x480
 camera_matrix:
   rows: 3
   cols: 3
