@@ -5,4 +5,3 @@ webcam_node:
     width: 640
     height: 480
     framerate: 15.0
-    camera_frame_id: camera_frame

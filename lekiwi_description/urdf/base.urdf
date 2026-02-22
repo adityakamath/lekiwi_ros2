@@ -85,7 +85,7 @@
     </inertial>
   </link>
   <!-- Camera frame-->
-  <link name="camera_frame"/>
+  <link name="camera"/>
   <!-- Left wheel link -->
   <link name="left_wheel_link">
     <visual>
@@ -174,7 +174,7 @@
   <!-- camera_frame fixed joint -->
   <joint name="camera_frame_joint" type="fixed">
     <parent link="camera_link"/>
-    <child link="camera_frame"/>
+    <child link="camera"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
   </joint>
   <!-- left wheel joint: 60 degrees anti-clockwise from +X at radius wheel_base_radius -->
