@@ -9,7 +9,7 @@
 
   <!-- Motor-specific parameter (STS3215 default) -->
   <!-- Adjust for other motor models: STS3032 max=2900, STS3235 max=3400 -->
-  <xacro:property name="sts_max_velocity_steps" value="3400"/>  <!-- Max hardware velocity in steps/s -->
+  <xacro:property name="sts_max_velocity_steps" value="3400"/>  <!-- Max hardware velocity in steps/s (absolute motor limit, do not exceed) -->
 
   <!-- Motor IDs and mode -->
   <xacro:property name="left_motor_id" value="7"/>
@@ -23,7 +23,7 @@
   <xacro:property name="theta" value="${2*pi/3}"/>  <!-- 120° between wheels -->
 
   <!-- Maximum allowable speed/acceleration/torque for each motor -->
-  <xacro:property name="max_velocity_steps" value="2750"/> <!-- steps/second (81% of 3400 hardware max, +1% margin) -->
+  <xacro:property name="max_velocity_steps" value="2890"/> <!-- steps/second (85% of 3400 hardware max, 15% safety margin) -->
   <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/> <!-- rad/s -->
   <xacro:property name="max_torque_nm" value="2.942"/> <!-- N⋅m (30 kgf⋅cm for STS3215) -->
 
