@@ -4,7 +4,7 @@ controller_manager:
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
     
     # Command and error handling
-    enforce_command_limits: false  # Allow controller to manage limits (relaxed enforcement)
+    enforce_command_limits: true  # Enforce URDF joint limits via JointSaturationLimiter
     handle_exceptions: true       # Graceful error handling
     
     # Hardware component initialization
@@ -63,14 +63,20 @@ base_controller:
     # Velocity and Acceleration limits (based on omnidirectional kinematics)
     # NOTE: These values must match (or be less than) the URDF calculations in base.urdf.xacro
     # NOTE: These values can be overridden in the launch file
+    # Derived from max_velocity_steps=2890: wheel_omega=4.43 rad/s, wheel_radius=0.051m, robot_radius=0.132239m
+    #
+    # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
+    #   The hardware (STS3215) acceleration register receives 0 (= maximum hardware slew rate, no ramp limiting),
+    #   because OmniWheelDriveController does not write the acceleration command interface.
+    #   These values therefore fully control how quickly the robot responds to velocity commands.
     linear:
       x:
-        max_velocity: 0.245  # m/s
-        max_acceleration: 2  # m/s^2
+        max_velocity: 0.261  # m/s  (0.051 * 4.43 / sin(60°))
+        max_acceleration: 2.61  # m/s^2  (~100ms ramp to full speed)
       y:
-        max_velocity: 0.215  # m/s
-        max_acceleration: 1.5  # m/s^2
+        max_velocity: 0.226  # m/s  (0.051 * 4.43)
+        max_acceleration: 2.26  # m/s^2  (~100ms ramp to full speed)
     angular:
       z:
-        max_velocity: 1.57  # rad/s (π/2, rounded down)
-        max_acceleration: 12.5  # rad/s^2
+        max_velocity: 1.71  # rad/s  (0.051 * 4.43 / 0.132239)
+        max_acceleration: 17.1  # rad/s^2  (~100ms ramp to full speed)
