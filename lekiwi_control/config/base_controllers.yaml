@@ -72,11 +72,11 @@ base_controller:
     linear:
       x:
         max_velocity: 0.261  # m/s  (0.051 * 4.43 / sin(60°))
-        max_acceleration: 2.61  # m/s^2  (~100ms ramp to full speed)
+        max_acceleration: 1.0 # 2.61 m/s^2  (~100ms ramp to full speed)
       y:
         max_velocity: 0.226  # m/s  (0.051 * 4.43)
-        max_acceleration: 2.26  # m/s^2  (~100ms ramp to full speed)
+        max_acceleration: 1.0 # 2.26 m/s^2  (~100ms ramp to full speed)
     angular:
       z:
         max_velocity: 1.71  # rad/s  (0.051 * 4.43 / 0.132239)
-        max_acceleration: 17.1  # rad/s^2  (~100ms ramp to full speed)
+        max_acceleration: 10.0 # 17.1 rad/s^2  (~100ms ramp to full speed)
