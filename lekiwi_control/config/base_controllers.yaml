@@ -63,22 +63,35 @@ base_controller:
     # Velocity and Acceleration limits (based on omnidirectional kinematics)
     # NOTE: These values must match (or be less than) the URDF calculations in base.urdf.xacro
     # NOTE: These values can be overridden in the launch file
-    # Derived from max_velocity_steps=2890: wheel_omega=4.43 rad/s, wheel_radius=0.051m, robot_radius=0.132239m
+    #
+    # COMBINED-MOTION SAFETY CONSTRAINT:
+    #   The joint limit is 4.433 rad/s = 0.226 m/s / wheel_radius.
+    #   OmniWheel IK superposes all DoFs on each wheel, so limits must be set such that
+    #   the worst-case 2-DoF combination stays within the joint limit.
+    #
+    #   Back wheel (vy+ωz worst case):
+    #     (vy_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
+    #     → 0.15 + 0.132239 * 0.575 = 0.226 m/s → 4.43 rad/s  ✓
+    #
+    #   Left/right wheel (vx+ωz worst case):
+    #     (sin(60°) * vx_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
+    #     → 0.866 * 0.17 + 0.132239 * 0.575 = 0.223 m/s → 4.37 rad/s  ✓
     #
     # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
-    #   The sts_hardware_interface uses proportional per-wheel ACC so all wheels finish ramping in equal time.
-    #   This requires the per-cycle velocity step to be large enough that the hardware ramp spans at least one
-    #   control cycle (20ms at 50Hz). Values below ~2 m/s² make per-cycle steps so small (~0.78 rad/s back wheel,
-    #   ~0.39 rad/s front wheels) that hardware finishes in <5ms regardless of ACC, negating the proportional ACC effect. 
-    #   Use physics-derived values (~100ms to full speed).
+    #   sts_hardware_interface uses proportional per-wheel ACC (see base.control.xacro: proportional_acc_max /
+    #   proportional_acc_deadband) so all wheels finish ramping in equal wall-clock time regardless of
+    #   their individual velocity deltas. Slower ramps (200ms) reduce per-cycle velocity deltas and
+    #   improve motor tracking synchronisation, minimising rotation artefacts during strafing.
+    #   NOTE: per-cycle step must exceed proportional_acc_deadband (0.05 rad/s) to activate ACC.
+    #   At 50 Hz with max_acc=0.75 m/s²: step = 0.015 m/s → 0.294 rad/s at back wheel >> 0.05 ✓
     linear:
       x:
-        max_velocity: 0.261  # m/s  (0.051 * 4.43 / sin(60°))
-        max_acceleration: 2.61  # m/s^2  (~100ms ramp to full speed)
+        max_velocity: 0.17   # m/s  (reduced from 0.261 to keep vx+ωz within joint limit)
+        max_acceleration: 0.85  # m/s^2  (~200ms ramp to full speed, reduced for smoother tracking)
       y:
-        max_velocity: 0.226  # m/s  (0.051 * 4.43)
-        max_acceleration: 2.26  # m/s^2  (~100ms ramp to full speed)
+        max_velocity: 0.15   # m/s  (reduced from 0.226 to leave budget for ωz: 0.15 + R*0.575 = 0.226)
+        max_acceleration: 0.75  # m/s^2  (~200ms ramp to full speed, reduced for smoother tracking)
     angular:
       z:
-        max_velocity: 1.71  # rad/s  (0.051 * 4.43 / 0.132239)
-        max_acceleration: 17.1  # rad/s^2  (~100ms ramp to full speed)
+        max_velocity: 0.575  # rad/s  (0.076 m/s wheel contribution: 0.226 - 0.15 = 0.076; 0.076/0.132239)
+        max_acceleration: 2.88  # rad/s^2  (~200ms ramp to full speed, reduced for smoother tracking)

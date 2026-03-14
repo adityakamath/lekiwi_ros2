@@ -11,18 +11,18 @@ teleop_node:
       x: 1  # Left stick vertical (forward/backward)
       y: 0  # Left stick horizontal (strafe left/right)
     scale_linear:
-      x: 0.26  # m/s - matches base_controller max_velocity for X
-      y: 0.22  # m/s - matches base_controller max_velocity for Y
+      x: 0.17  # m/s - matches base_controller max_velocity for X
+      y: 0.15  # m/s - matches base_controller max_velocity for Y
     scale_linear_turbo:
-      x: 0.26  # m/s - full speed (clamped by base_controller)
-      y: 0.23  # m/s - full speed (clamped by base_controller)
+      x: 0.17  # m/s - full speed (matches base_controller limit)
+      y: 0.15  # m/s - full speed (matches base_controller limit)
 
     axis_angular:
       yaw: 2  # Right stick horizontal (rotation)
     scale_angular:
-      yaw: 1.71  # rad/s - matches base_controller max_velocity for Z
+      yaw: 0.575  # rad/s - matches base_controller max_velocity for Z
     scale_angular_turbo:
-      yaw: 2.0  # rad/s - clamped by base_controller to 1.71
+      yaw: 0.575  # rad/s - matches base_controller max_velocity for Z
 
     enable_button: 9  # L1
     enable_turbo_button: -1  # -1 = Disabled
