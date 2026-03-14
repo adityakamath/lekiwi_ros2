@@ -66,17 +66,19 @@ base_controller:
     # Derived from max_velocity_steps=2890: wheel_omega=4.43 rad/s, wheel_radius=0.051m, robot_radius=0.132239m
     #
     # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
-    #   The hardware (STS3215) acceleration register receives 0 (= maximum hardware slew rate, no ramp limiting),
-    #   because OmniWheelDriveController does not write the acceleration command interface.
-    #   These values therefore fully control how quickly the robot responds to velocity commands.
+    #   The hardware (sts_hardware_interface) uses proportional per-wheel ACC so all wheels finish
+    #   ramping in equal time. This requires the per-cycle velocity step to be large enough that the
+    #   hardware ramp spans at least one control cycle (20ms at 50Hz). Values below ~2 m/s² make
+    #   per-cycle steps so small (~0.39 rad/s back wheel) that hardware finishes in <5ms regardless
+    #   of ACC, negating the proportional ACC effect. Use physics-derived values (~100ms to full speed).
     linear:
       x:
         max_velocity: 0.261  # m/s  (0.051 * 4.43 / sin(60°))
-        max_acceleration: 1.0 # 2.61 m/s^2  (~100ms ramp to full speed)
+        max_acceleration: 2.61  # m/s^2  (~100ms ramp to full speed)
       y:
         max_velocity: 0.226  # m/s  (0.051 * 4.43)
-        max_acceleration: 1.0 # 2.26 m/s^2  (~100ms ramp to full speed)
+        max_acceleration: 2.26  # m/s^2  (~100ms ramp to full speed)
     angular:
       z:
         max_velocity: 1.71  # rad/s  (0.051 * 4.43 / 0.132239)
-        max_acceleration: 10.0 # 17.1 rad/s^2  (~100ms ramp to full speed)
+        max_acceleration: 17.1  # rad/s^2  (~100ms ramp to full speed)
