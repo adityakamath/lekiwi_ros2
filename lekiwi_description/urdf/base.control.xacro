@@ -15,7 +15,7 @@
   <!-- ACC given to the wheel with the largest |target - current| velocity delta. -->
   <!-- All others scaled proportionally so every wheel finishes ramping in equal time. -->
   <!-- Set proportional_acc_max to 0 to disable (ACC=0 for all wheels). -->
-  <xacro:property name="proportional_acc_max" value="100"/>        <!-- [0-254] -->
+  <xacro:property name="proportional_acc_max" value="150"/>        <!-- [0-254] -->
   <xacro:property name="proportional_acc_deadband" value="0.05"/>  <!-- rad/s, below this max-delta ACC=0 (steady-state cruise) -->
 
   <!-- Motor IDs and mode -->
