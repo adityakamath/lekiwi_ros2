@@ -230,7 +230,7 @@
       <param name="enable_mock_mode">$(arg use_mock)</param>
       <!-- Motor-specific parameter (adjust for different STS motor models) -->
       <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
-      <!-- Proportional per-wheel ACC: back wheel gets acc_max, others scale proportionally -->
+      <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
       <param name="proportional_acc_max">${proportional_acc_max}</param>
       <param name="proportional_acc_deadband">${proportional_acc_deadband}</param>
     </hardware>
