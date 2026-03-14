@@ -68,8 +68,8 @@ base_controller:
     # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
     #   The sts_hardware_interface uses proportional per-wheel ACC so all wheels finish ramping in equal time.
     #   This requires the per-cycle velocity step to be large enough that the hardware ramp spans at least one
-    #   control cycle (20ms at 50Hz). Values below ~2 m/s² make per-cycle steps so small (~0.39 rad/s back wheel)
-    #   that hardware finishes in <5ms regardless of ACC, negating the proportional ACC effect. 
+    #   control cycle (20ms at 50Hz). Values below ~2 m/s² make per-cycle steps so small (~0.78 rad/s back wheel,
+    #   ~0.39 rad/s front wheels) that hardware finishes in <5ms regardless of ACC, negating the proportional ACC effect. 
     #   Use physics-derived values (~100ms to full speed).
     linear:
       x:
