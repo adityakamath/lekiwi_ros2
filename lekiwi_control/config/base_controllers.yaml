@@ -78,12 +78,6 @@ base_controller:
     #     → 0.866 * 0.17 + 0.132239 * 0.575 = 0.223 m/s → 4.37 rad/s  ✓
     #
     # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
-    #   sts_hardware_interface uses proportional per-wheel ACC (see base.control.xacro: proportional_acc_max /
-    #   proportional_acc_deadband) so all wheels finish ramping in equal wall-clock time regardless of
-    #   their individual velocity deltas. Slower ramps (200ms) reduce per-cycle velocity deltas and
-    #   improve motor tracking synchronisation, minimising rotation artefacts during strafing.
-    #   NOTE: per-cycle step must exceed proportional_acc_deadband (0.05 rad/s) to activate ACC.
-    #   At 50 Hz with max_acc=0.75 m/s²: step = 0.015 m/s → 0.294 rad/s at back wheel >> 0.05 ✓
     linear:
       x:
         max_velocity: 0.17   # m/s  (reduced from 0.261 to keep vx+ωz within joint limit)
