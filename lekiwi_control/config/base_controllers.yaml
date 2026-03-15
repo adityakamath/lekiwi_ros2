@@ -67,25 +67,31 @@ base_controller:
     # COMBINED-MOTION SAFETY CONSTRAINT:
     #   The joint limit is 4.433 rad/s = 0.226 m/s / wheel_radius.
     #   OmniWheel IK superposes all DoFs on each wheel, so limits must be set such that
-    #   the worst-case 2-DoF combination stays within the joint limit.
+    #   the worst-case 3-DoF combination stays within the joint limit.
     #
-    #   Back wheel (vy+ωz worst case):
+    #   Left/right wheel (vx+vy+ωz worst case — all three DoFs stack on these wheels):
+    #     (sin(60°) * vx_max + 0.5 * vy_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
+    #     → 0.866 * 0.13 + 0.5 * 0.11 + 0.132239 * 0.44 = 0.226 m/s → 4.43 rad/s  ✓
+    #
+    #   Back wheel (vy+ωz only — vx does not contribute at 180°):
     #     (vy_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
-    #     → 0.15 + 0.132239 * 0.575 = 0.226 m/s → 4.43 rad/s  ✓
-    #
-    #   Left/right wheel (vx+ωz worst case):
-    #     (sin(60°) * vx_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
-    #     → 0.866 * 0.17 + 0.132239 * 0.575 = 0.223 m/s → 4.37 rad/s  ✓
+    #     → 0.11 + 0.132239 * 0.44 = 0.168 m/s → 3.30 rad/s  ✓
     #
     # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
+    #   sts_hardware_interface uses proportional per-wheel ACC (see base.control.xacro: proportional_acc_max /
+    #   proportional_acc_deadband) so all wheels finish ramping in equal wall-clock time regardless of
+    #   their individual velocity deltas. Slower ramps (200ms) reduce per-cycle velocity deltas and
+    #   improve motor tracking synchronisation, minimising rotation artefacts during strafing.
+    #   NOTE: per-cycle step must exceed proportional_acc_deadband (0.05 rad/s) to activate ACC.
+    #   At 50 Hz with max_acc=0.55 m/s²: step = 0.011 m/s → 0.216 rad/s at back wheel >> 0.05 ✓
     linear:
       x:
-        max_velocity: 0.17   # m/s  (reduced from 0.261 to keep vx+ωz within joint limit)
-        max_acceleration: 0.85  # m/s^2  (~200ms ramp to full speed, reduced for smoother tracking)
+        max_velocity: 0.13   # m/s  (3-DoF safe: 0.866*0.13 + 0.5*0.11 + R*0.44 = 0.226 m/s)
+        max_acceleration: 0.65  # m/s^2  (~200ms ramp to full speed)
       y:
-        max_velocity: 0.15   # m/s  (reduced from 0.226 to leave budget for ωz: 0.15 + R*0.575 = 0.226)
-        max_acceleration: 0.75  # m/s^2  (~200ms ramp to full speed, reduced for smoother tracking)
+        max_velocity: 0.11   # m/s  (3-DoF safe: leaves budget for vx and ωz contributions)
+        max_acceleration: 0.55  # m/s^2  (~200ms ramp to full speed)
     angular:
       z:
-        max_velocity: 0.575  # rad/s  (0.076 m/s wheel contribution: 0.226 - 0.15 = 0.076; 0.076/0.132239)
-        max_acceleration: 2.88  # rad/s^2  (~200ms ramp to full speed, reduced for smoother tracking)
+        max_velocity: 0.44   # rad/s  (3-DoF safe: R*0.44 = 0.058 m/s wheel contribution)
+        max_acceleration: 2.2   # rad/s^2  (~200ms ramp to full speed)
