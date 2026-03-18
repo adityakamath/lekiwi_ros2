@@ -232,14 +232,12 @@
       <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
       <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
       <param name="proportional_acc_max">${proportional_acc_max}</param>
-      <param name="proportional_acc_deadband">${proportional_acc_deadband}</param>
     </hardware>
     <!-- Left wheel joint (Motor ID 7) -->
     <joint name="left_wheel_joint">
       <param name="motor_id">${left_motor_id}</param>
       <param name="operating_mode">${operating_mode}</param>
       <command_interface name="velocity"/>
-      <command_interface name="acceleration"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
@@ -253,7 +251,6 @@
       <param name="motor_id">${back_motor_id}</param>
       <param name="operating_mode">${operating_mode}</param>
       <command_interface name="velocity"/>
-      <command_interface name="acceleration"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
@@ -267,7 +264,6 @@
       <param name="motor_id">${right_motor_id}</param>
       <param name="operating_mode">${operating_mode}</param>
       <command_interface name="velocity"/>
-      <command_interface name="acceleration"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
