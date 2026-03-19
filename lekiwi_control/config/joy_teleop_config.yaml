@@ -1,27 +1,37 @@
 joy_teleop:
   ros__parameters:
-    topic_name: "/base_controller/cmd_vel"
-    topic_type: "geometry_msgs/msg/TwistStamped"
-    deadzone: 0.1
-    autorepeat_rate: 20.0
-    enable_button: 9  # L1
-    # No turbo button for now
-    outputs:
-      - type: message
-        interface: geometry_msgs/msg/TwistStamped
-        topic: /base_controller/cmd_vel
-        msg:
-          header:
-            stamp: now()
-            frame_id: "base_link"
-          twist:
-            linear:
-              x: "axis(1) * 0.13"
-              y: "axis(0) * 0.11"
-              z: 0.0
-            angular:
-              x: 0.0
-              y: 0.0
-              z: "axis(2) * 0.44"
-# This config matches the teleop_twist_joy mapping for holonomic base control.
-# Adjust axis indices and scaling if your joystick or robot differs.
+    teleop:
+      type: topic
+      interface_type: geometry_msgs/msg/TwistStamped
+      topic_name: /base_controller/cmd_vel
+      axis_mappings:
+        twist-linear-x:
+          axis: 1
+          scale: 0.13
+          offset: 0.0
+        twist-linear-y:
+          axis: 0
+          scale: 0.11
+          offset: 0.0
+        twist-angular-z:
+          axis: 2
+          scale: 0.44
+          offset: 0.0
+        header-frame_id:
+          value: 'base_link'
+
+    estop_enable:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /emergency_stop
+      service_request:
+        data: true
+      buttons: [0]  # X = enable
+
+    estop_disable:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /emergency_stop
+      service_request:
+        data: false
+      buttons: [1]  # B = disable
