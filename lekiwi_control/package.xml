@@ -20,7 +20,8 @@
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>omni_wheel_drive_controller</exec_depend>
   <exec_depend>sts_hardware_interface</exec_depend>
-  <exec_depend>teleop_twist_joy</exec_depend>
+  <!-- <exec_depend>teleop_twist_joy</exec_depend> -->
+  <exec_depend>joy</exec_depend>
   <exec_depend>joy_teleop</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

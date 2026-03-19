@@ -16,12 +16,12 @@ joy_teleop:
             frame_id: "base_link"
           twist:
             linear:
-              x: "axis(1) * 0.13"   # Left stick vertical (forward/backward)
-              y: "axis(0) * 0.11"   # Left stick horizontal (strafe left/right)
+              x: "axis(1) * 0.13"
+              y: "axis(0) * 0.11"
               z: 0.0
             angular:
               x: 0.0
               y: 0.0
-              z: "axis(2) * 0.44"   # Right stick horizontal (rotation)
+              z: "axis(2) * 0.44"
 # This config matches the teleop_twist_joy mapping for holonomic base control.
 # Adjust axis indices and scaling if your joystick or robot differs.
