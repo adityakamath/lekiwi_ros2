@@ -98,19 +98,16 @@ def generate_launch_description():
         output="both",
     )
 
-    # Motor diagnostics node - starts after controller_manager is ready
-    motor_diagnostics_node = Node(
-        package="lekiwi_control",
-        executable="motor_diagnostics",
-        output="log",
-        parameters=[
-            PathJoinSubstitution(
-                [FindPackageShare("lekiwi_control"), "config", "motor_diagnostics_config.yaml"]
-            ),
-        ],
-        remappings=[
-            ("/diagnostics", "/dynamic_joint_states/diagnostics"),
-        ],
+
+    # Motor diagnostics node from sts_hardware_interface - starts after controller_manager is ready
+    diagnostics_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('sts_hardware_interface'),
+                'launch',
+                'motor_diagnostics.launch.py'
+            ])
+        ])
     )
 
     # Delay spawners to ensure controller_manager and hardware are fully initialized
@@ -124,10 +121,10 @@ def generate_launch_description():
         actions=[base_controller_spawner],
     )
 
-    # Delay motor diagnostics node to ensure joint states are being published
-    delayed_motor_diagnostics_node = TimerAction(
+    # Delay diagnostics launch to ensure joint states are being published
+    delayed_diagnostics_launch = TimerAction(
         period=3.0,
-        actions=[motor_diagnostics_node],
+        actions=[diagnostics_launch],
     )
 
     # Include teleop launch file
@@ -141,12 +138,13 @@ def generate_launch_description():
         ])
     )
 
+
     nodes = [
         robot_state_publisher_node,
         controller_manager,
         delayed_joint_state_broadcaster_spawner,
         delayed_base_controller_spawner,
-        delayed_motor_diagnostics_node,
+        delayed_diagnostics_launch,
         teleop_launch,
     ]
 

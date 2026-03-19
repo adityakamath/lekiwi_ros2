@@ -60,30 +60,8 @@ base_controller:
     # Command timeout
     cmd_vel_timeout: 0.5  # seconds
 
-    # Velocity and Acceleration limits (based on omnidirectional kinematics)
-    # NOTE: These values must match (or be less than) the URDF calculations in base.urdf.xacro
-    # NOTE: These values can be overridden in the launch file
-    #
-    # COMBINED-MOTION SAFETY CONSTRAINT:
-    #   The joint limit is 4.433 rad/s = 0.226 m/s / wheel_radius.
-    #   OmniWheel IK superposes all DoFs on each wheel, so limits must be set such that
-    #   the worst-case 3-DoF combination stays within the joint limit.
-    #
-    #   Left/right wheel (vx+vy+ωz worst case — all three DoFs stack on these wheels):
-    #     (sin(60°) * vx_max + 0.5 * vy_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
-    #     → 0.866 * 0.13 + 0.5 * 0.11 + 0.132239 * 0.44 = 0.226 m/s → 4.43 rad/s  ✓
-    #
-    #   Back wheel (vy+ωz only — vx does not contribute at 180°):
-    #     (vy_max + robot_radius * ωz_max) / wheel_radius ≤ 4.433
-    #     → 0.11 + 0.132239 * 0.44 = 0.168 m/s → 3.30 rad/s  ✓
-    #
-    # max_acceleration: SOFTWARE ramp limit applied by OmniWheelDriveController to incoming cmd_vel.
-    #   sts_hardware_interface uses proportional per-wheel ACC (see base.control.xacro: proportional_acc_max /
-    #   proportional_acc_deadband) so all wheels finish ramping in equal wall-clock time regardless of
-    #   their individual velocity deltas. Slower ramps (200ms) reduce per-cycle velocity deltas and
-    #   improve motor tracking synchronisation, minimising rotation artefacts during strafing.
-    #   NOTE: per-cycle step must exceed proportional_acc_deadband (0.05 rad/s) to activate ACC.
-    #   At 50 Hz with max_acc=0.55 m/s²: step = 0.011 m/s → 0.216 rad/s at back wheel >> 0.05 ✓
+    # Velocity/acceleration limits ensure safe omnidirectional motion and match URDF joint limits.
+    # Values are set for 3-DoF safety and can be overridden in launch if needed.
     linear:
       x:
         max_velocity: 0.13   # m/s  (3-DoF safe: 0.866*0.13 + 0.5*0.11 + R*0.44 = 0.226 m/s)

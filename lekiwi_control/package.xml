@@ -11,8 +11,6 @@
 
   <!-- Build and runtime dependencies for C++ nodes -->
   <depend>rclcpp</depend>
-  <depend>diagnostic_msgs</depend>
-  <depend>control_msgs</depend>
 
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_description</exec_depend>
@@ -23,6 +21,7 @@
   <exec_depend>omni_wheel_drive_controller</exec_depend>
   <exec_depend>sts_hardware_interface</exec_depend>
   <exec_depend>teleop_twist_joy</exec_depend>
+  <exec_depend>joy_teleop</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

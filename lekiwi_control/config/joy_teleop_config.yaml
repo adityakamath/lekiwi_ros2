@@ -1,0 +1,27 @@
+joy_teleop:
+  ros__parameters:
+    topic_name: "/base_controller/cmd_vel"
+    topic_type: "geometry_msgs/msg/TwistStamped"
+    deadzone: 0.1
+    autorepeat_rate: 20.0
+    enable_button: 9  # L1
+    # No turbo button for now
+    outputs:
+      - type: message
+        interface: geometry_msgs/msg/TwistStamped
+        topic: /base_controller/cmd_vel
+        msg:
+          header:
+            stamp: now()
+            frame_id: "base_link"
+          twist:
+            linear:
+              x: "axis(1) * 0.13"   # Left stick vertical (forward/backward)
+              y: "axis(0) * 0.11"   # Left stick horizontal (strafe left/right)
+              z: 0.0
+            angular:
+              x: 0.0
+              y: 0.0
+              z: "axis(2) * 0.44"   # Right stick horizontal (rotation)
+# This config matches the teleop_twist_joy mapping for holonomic base control.
+# Adjust axis indices and scaling if your joystick or robot differs.
