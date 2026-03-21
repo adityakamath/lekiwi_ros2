@@ -1,10 +1,5 @@
 teleop_node:
   ros__parameters:
-    # Joy node parameters
-    device_id: 0
-    deadzone: 0.1
-    autorepeat_rate: 20.0
-
     # Teleop twist joy parameters
     # For holonomic (omni-wheel) robot control
     axis_linear:

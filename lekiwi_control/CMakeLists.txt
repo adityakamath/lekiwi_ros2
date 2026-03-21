@@ -7,9 +7,6 @@ endif()
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(diagnostic_msgs REQUIRED)
-find_package(control_msgs REQUIRED)
 
 
 # Install launch files, config, URDF, and documentation
