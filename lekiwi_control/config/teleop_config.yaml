@@ -1,29 +1,38 @@
-teleop_node:
+joy_teleop:
   ros__parameters:
-    # Teleop twist joy parameters
-    # For holonomic (omni-wheel) robot control
-    axis_linear:
-      x: 1  # Left stick vertical (forward/backward)
-      y: 0  # Left stick horizontal (strafe left/right)
-    scale_linear:
-      x: 0.13  # m/s - matches base_controller max_velocity for X
-      y: 0.11  # m/s - matches base_controller max_velocity for Y
-    scale_linear_turbo:
-      x: 0.13  # m/s - full speed (matches base_controller limit)
-      y: 0.11  # m/s - full speed (matches base_controller limit)
+    teleop:
+      type: topic
+      interface_type: geometry_msgs/msg/TwistStamped
+      topic_name: /base_controller/cmd_vel
+      deadman_buttons: [9] # L1; set to an invalid number like 99 to disable
+      axis_mappings:
+        twist-linear-x:
+          axis: 1 # Left stick vertical
+          scale: 0.13
+          offset: 0.0
+        twist-linear-y:
+          axis: 0 # Left stick horizontal
+          scale: 0.11
+          offset: 0.0
+        twist-angular-z:
+          axis: 2 # Right stick horizontal
+          scale: 0.44
+          offset: 0.0
+        header-frame_id:
+          value: 'base_link'
 
-    axis_angular:
-      yaw: 2  # Right stick horizontal (rotation)
-    scale_angular:
-      yaw: 0.44  # rad/s - matches base_controller max_velocity for Z
-    scale_angular_turbo:
-      yaw: 0.44  # rad/s - matches base_controller max_velocity for Z
+    estop_enable:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /emergency_stop
+      service_request:
+        data: true
+      buttons: [0]  # A = enable
 
-    enable_button: 9  # L1
-    enable_turbo_button: -1  # -1 = Disabled
-
-    # Inverted axes (set to true if needed)
-    inverted_reverse: false
-
-    # Publish TwistStamped instead of Twist
-    publish_stamped_twist: true
+    estop_disable:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /emergency_stop
+      service_request:
+        data: false
+      buttons: [1]  # B = disable
