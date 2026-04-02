@@ -8,10 +8,11 @@ base_controller), motor diagnostics, and teleop with timed sequencing for initia
 
 from launch import LaunchDescription
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration
-from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import GroupAction, TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
+from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.parameter_descriptions import ParameterValue
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetRemap
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -98,16 +99,45 @@ def generate_launch_description():
         output="both",
     )
 
+    # IMU sensor broadcaster spawner - starts 2.5s after launch alongside base_controller
+    imu_broadcaster_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["imu_sensor_broadcaster", "-c", "/controller_manager"],
+        output="both",
+    )
+
 
     # Motor diagnostics node from sts_hardware_interface - starts after controller_manager is ready
-    diagnostics_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('sts_hardware_interface'),
-                'launch',
-                'motor_diagnostics.launch.py'
+    # Remaps /diagnostics -> /base/diagnostics to separate from IMU diagnostics
+    motor_diagnostics_launch = GroupAction([
+        SetRemap('/diagnostics', '/base/diagnostics'),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('sts_hardware_interface'),
+                    'launch',
+                    'motor_diagnostics.launch.py'
+                ])
             ])
-        ])
+        ),
+    ])
+
+    # IMU diagnostics node from bno055_hardware_interface - starts after IMU is initialized
+    # Remaps /diagnostics -> /imu/diagnostics to separate from motor diagnostics
+    # Not started in mock mode (requires real I2C hardware)
+    imu_diagnostics_launch = Node(
+        package='bno055_hardware_interface',
+        executable='bno055_diagnostics',
+        name='bno055_diagnostics',
+        output='log',
+        parameters=[{
+            'i2c_bus':     1,
+            'i2c_addr':    '28',
+            'sensor_mode': 'NDOF',
+        }],
+        remappings=[('/diagnostics', '/imu/diagnostics')],
+        condition=UnlessCondition(use_mock),
     )
 
     # Delay spawners to ensure controller_manager and hardware are fully initialized
@@ -118,13 +148,18 @@ def generate_launch_description():
 
     delayed_base_controller_spawner = TimerAction(
         period=2.5,
-        actions=[base_controller_spawner],
+        actions=[base_controller_spawner, imu_broadcaster_spawner],
     )
 
-    # Delay diagnostics launch to ensure joint states are being published
-    delayed_diagnostics_launch = TimerAction(
+    # Delay diagnostics launches to ensure joint states are being published
+    delayed_motor_diagnostics_launch = TimerAction(
         period=3.0,
-        actions=[diagnostics_launch],
+        actions=[motor_diagnostics_launch],
+    )
+
+    delayed_imu_diagnostics_launch = TimerAction(
+        period=3.0,
+        actions=[imu_diagnostics_launch],
     )
 
     # Include teleop launch file
@@ -144,7 +179,8 @@ def generate_launch_description():
         controller_manager,
         delayed_joint_state_broadcaster_spawner,
         delayed_base_controller_spawner,
-        delayed_diagnostics_launch,
+        delayed_motor_diagnostics_launch,
+        delayed_imu_diagnostics_launch,
         teleop_launch,
     ]
 

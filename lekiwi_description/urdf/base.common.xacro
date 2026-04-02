@@ -25,4 +25,8 @@
   <!-- LDLidar frame offsets from laser_link -->
   <xacro:property name="laser_frame_offset_z" value="0.027"/>
 
+  <!-- BNO055 IMU offsets from base_link -->
+  <xacro:property name="imu_base_offset_x" value="-0.044"/>
+  <xacro:property name="imu_base_offset_z" value="0.08"/>
+
 </robot>

@@ -17,6 +17,12 @@
   <!-- Set proportional_acc_max to 0 to disable (ACC=0 for all wheels). -->
   <xacro:property name="proportional_acc_max" value="25"/>        <!-- [0-254] -->
 
+  <!-- BNO055 IMU parameters -->
+  <xacro:property name="imu_i2c_bus"    value="1"/>       <!-- I2C bus number (/dev/i2c-1) -->
+  <xacro:property name="imu_i2c_addr"   value="28"/>      <!-- I2C address: 28 = 0x28 (ADR pin low) -->
+  <xacro:property name="imu_axis_remap" value="P1"/>      <!-- Mounting orientation P0-P7, see BNO055 datasheet Table 3-4 -->
+  <xacro:property name="imu_sensor_mode" value="NDOF"/>   <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
+
   <!-- Motor IDs and mode -->
   <xacro:property name="left_motor_id" value="7"/>
   <xacro:property name="back_motor_id" value="8"/>

@@ -6,8 +6,12 @@
   <xacro:include filename="$(find lekiwi_description)/urdf/base.control.xacro"/>
 
   <!-- Arguments -->
-  <xacro:arg name="serial_port" default="${serial_port}"/>
-  <xacro:arg name="use_mock" default="${use_mock}"/>
+  <xacro:arg name="serial_port"  default="${serial_port}"/>
+  <xacro:arg name="use_mock"     default="${use_mock}"/>
+  <xacro:arg name="i2c_bus"     default="${imu_i2c_bus}"/>
+  <xacro:arg name="i2c_addr"    default="${imu_i2c_addr}"/>
+  <xacro:arg name="axis_remap"  default="${imu_axis_remap}"/>
+  <xacro:arg name="sensor_mode" default="${imu_sensor_mode}"/>
 
   <!-- Define custom materials for base and wheels using color properties -->
   <material name="light_grey">
@@ -66,6 +70,30 @@
 
   <!-- Laser frame -->
   <link name="laser_frame"/>
+
+  <!-- BNO055 IMU link -->
+  <link name="imu_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
+      </geometry>
+      <material name="charcoal"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <!-- IMU frame -->
+  <link name="imu_frame"/>
 
   <!-- Camera link -->
   <link name="camera_link">
@@ -177,6 +205,20 @@
     <origin xyz="0 0 ${laser_frame_offset_z}" rpy="0 0 0"/>
   </joint>
 
+  <!-- IMU fixed joint -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="${imu_base_offset_x} 0 ${imu_base_offset_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- imu_frame fixed joint -->
+  <joint name="imu_frame_joint" type="fixed">
+    <parent link="imu_link"/>
+    <child link="imu_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
   <!-- camera fixed joint -->
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
@@ -272,6 +314,34 @@
       <state_interface name="current"/>
       <state_interface name="is_moving"/>
     </joint>
+  </ros2_control>
+
+  <!-- ROS 2 CONTROL -->
+  <!-- Sensor interface (BNO055 IMU) -->
+  <ros2_control name="lekiwi_imu" type="sensor">
+    <hardware>
+      <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
+      <param name="i2c_bus">$(arg i2c_bus)</param>       <!-- I2C bus number (default: 1 → /dev/i2c-1) -->
+      <param name="i2c_addr">$(arg i2c_addr)</param>     <!-- I2C address in hex, no 0x prefix (default: 28 = 0x28) -->
+      <param name="axis_remap">$(arg axis_remap)</param> <!-- Axis placement config: P0-P7 (default: P1) -->
+      <param name="sensor_mode">$(arg sensor_mode)</param> <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS (default: NDOF) -->
+      <param name="enable_mock">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
+    </hardware>
+    <sensor name="bno055">
+      <!-- Orientation (quaternion, unit norm) -->
+      <state_interface name="orientation.x"/>
+      <state_interface name="orientation.y"/>
+      <state_interface name="orientation.z"/>
+      <state_interface name="orientation.w"/>
+      <!-- Angular velocity (rad/s) -->
+      <state_interface name="angular_velocity.x"/>
+      <state_interface name="angular_velocity.y"/>
+      <state_interface name="angular_velocity.z"/>
+      <!-- Linear acceleration (m/s²), gravity-compensated -->
+      <state_interface name="linear_acceleration.x"/>
+      <state_interface name="linear_acceleration.y"/>
+      <state_interface name="linear_acceleration.z"/>
+    </sensor>
   </ros2_control>
 
 </robot>

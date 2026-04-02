@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 50  # Hz
+    update_rate: 50  # Hz — limited by STS serial I/O latency (~14 ms/cycle)
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
     
     # Command and error handling
@@ -17,6 +17,9 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
+    imu_sensor_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
     base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
 
@@ -26,14 +29,8 @@ joint_state_broadcaster:
       - left_wheel_joint
       - back_wheel_joint
       - right_wheel_joint
-    interfaces:
-      - position
-      - velocity
-      - effort
-      - voltage
-      - temperature
-      - current
-      - is_moving
+    # No `interfaces` needed: JSB publishes position/velocity/effort to /joint_states
+    # and extra state interfaces (voltage, temperature, etc.) to /dynamic_joint_states.
 
 base_controller:
   ros__parameters:
@@ -73,3 +70,33 @@ base_controller:
       z:
         max_velocity: 0.44   # rad/s  (3-DoF safe: R*0.44 = 0.058 m/s wheel contribution)
         max_acceleration: 2.2   # rad/s^2  (~200ms ramp to full speed)
+
+imu_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: bno055     # Must match the <sensor name="..."> in the URDF ros2_control block
+    frame_id: imu_frame     # TF frame for published Imu messages
+
+    # Static covariance matrices (row-major 3x3, diagonal — cross-correlations are zero).
+    # Values derived from BNO055 datasheet and typical noise density at 100 Hz.
+    #
+    # Orientation: ±2° absolute accuracy (datasheet) → (0.035 rad)² ≈ 0.001 rad²
+    static_covariance_orientation: [0.001, 0.0,   0.0,
+                                     0.0,  0.001,  0.0,
+                                     0.0,  0.0,   0.001]
+
+    # Angular velocity: ~0.014 °/s/√Hz gyro noise @ 100 Hz → (~2.4e-4 rad/s)² ≈ 1e-5 rad²/s²
+    static_covariance_angular_velocity: [1.0e-5, 0.0,    0.0,
+                                          0.0,   1.0e-5,  0.0,
+                                          0.0,   0.0,    1.0e-5]
+
+    # Linear acceleration: ~150 µg/√Hz accel noise @ 100 Hz → (~0.015 m/s²)² ≈ 2e-4 m²/s⁴
+    static_covariance_linear_acceleration: [2.0e-4, 0.0,    0.0,
+                                             0.0,   2.0e-4,  0.0,
+                                             0.0,   0.0,    2.0e-4]
+
+    # Software rotation on top of hardware axis_remap (Z-Y'-X'' / extrinsic RPY).
+    # Uncomment and set values if the sensor has a residual angular offset.
+    # rotation_offset:
+    #   roll:  0.0  # radians
+    #   pitch: 0.0  # radians
+    #   yaw:   0.0  # radians
