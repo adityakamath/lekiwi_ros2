@@ -3,7 +3,7 @@ ekf_node:
     # --- Filter settings ---
     frequency: 50.0          # Hz — matches controller_manager update_rate
     sensor_timeout: 0.1      # seconds — max gap before sensor is considered stale
-    two_d_mode: true         # Planar ground robot; ignores z, roll, pitch states
+    two_d_mode: false        # 3D mode: tracks roll/pitch for ramps and uneven terrain
 
     # --- Frame IDs ---
     map_frame: map
@@ -35,7 +35,10 @@ ekf_node:
 
     # --- Sensor 1: BNO055 IMU via imu_sensor_broadcaster ---
     # Topic: /imu_sensor_broadcaster/imu  (sensor_msgs/Imu)
-    # Fuses: absolute yaw orientation (NDOF fusion) + yaw rate from gyro.
+    # Fuses: absolute roll, pitch, yaw (NDOF, gravity-referenced, drift-free) + full angular
+    # velocity (vroll, vpitch, vyaw from gyro). Absolute orientation anchors the drift-free
+    # reference while angular rates provide fast dynamic updates between orientation samples —
+    # these constrain separate state indices and are complementary, not redundant.
     # Linear acceleration (ax/ay) is excluded: odom vx/vy already provides direct velocity
     # measurements, making acceleration redundant; motor vibration injects noise into ax/ay
     # that can destabilize velocity estimates.
@@ -45,9 +48,9 @@ ekf_node:
     # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
     imu0: /imu_sensor_broadcaster/imu
     imu0_config: [false, false, false,
-                  false, false, true,
+                  true,  true,  true,
                   false, false, false,
-                  false, false, true,
+                  true,  true,  true,
                   false, false, false]
     imu0_differential: false   # BNO055 NDOF provides global orientation (magnetometer fused)
     imu0_relative: false
