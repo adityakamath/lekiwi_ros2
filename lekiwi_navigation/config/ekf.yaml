@@ -1,0 +1,74 @@
+ekf_node:
+  ros__parameters:
+    # --- Filter settings ---
+    frequency: 50.0          # Hz — matches controller_manager update_rate
+    sensor_timeout: 0.1      # seconds — max gap before sensor is considered stale
+    two_d_mode: true         # Planar ground robot; ignores z, roll, pitch states
+
+    # --- Frame IDs ---
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_footprint
+    world_frame: odom        # EKF runs relative to odom (no GPS / map frame)
+
+    # --- Output ---
+    publish_tf: true         # EKF owns and publishes odom → base_footprint TF
+    publish_acceleration: true
+
+    # --- Sensor 0: Wheel odometry from omni_wheel_drive_controller ---
+    # Topic: /base_controller/odom  (nav_msgs/Odometry)
+    # Fuses: vx, vy linear velocities only (NOT x, y position).
+    # Position is excluded because the controller computes it using its own heading estimate,
+    # which diverges from the IMU when the robot is rotated by hand. The EKF integrates
+    # body-frame velocities using the correct IMU heading to produce world-frame position.
+    #
+    # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    odom0: /base_controller/odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  false,
+                   false, false, false,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 5
+
+    # --- Sensor 1: BNO055 IMU via imu_sensor_broadcaster ---
+    # Topic: /imu_sensor_broadcaster/imu  (sensor_msgs/Imu)
+    # Fuses: absolute yaw orientation (NDOF fusion) + yaw rate from gyro + linear acceleration ax, ay.
+    # imu0_remove_gravitational_acceleration is false because the BNO055 NDOF fusion already
+    # strips gravity from the linear_acceleration registers on-chip; setting it true would
+    # subtract gravity a second time and corrupt the ax/ay measurements.
+    # Note: ax/ay ≈ 0 is consistent with both stationary-with-spinning-wheels and constant-speed
+    # motion, so linear acceleration cannot anchor position the way absolute yaw anchors heading.
+    #
+    # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    imu0: /imu_sensor_broadcaster/imu
+    imu0_config: [false, false, false,
+                  false, false, true,
+                  false, false, false,
+                  false, false, true,
+                  true,  true,  false]
+    imu0_differential: false   # BNO055 NDOF provides global orientation (magnetometer fused)
+    imu0_relative: false
+    imu0_remove_gravitational_acceleration: false  # BNO055 NDOF already removes gravity on-chip
+    imu0_queue_size: 5
+
+    # --- Process noise covariance (Q matrix) ---
+    # Diagonal: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    # Tuned for a slow indoor ground robot. Larger values → faster tracking but noisier output.
+    process_noise_covariance: [0.05,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.05,   0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.06,   0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.03,   0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.03,   0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.06,   0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.04,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.02,   0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.015]

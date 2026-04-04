@@ -4,13 +4,14 @@
   <name>lekiwi_bringup</name>
   <version>0.0.1</version>
   <description>Launch and system startup for LeKiwi robot</description>
-  <maintainer email="adityakamath@live.com">adityakamath</maintainer>
+  <maintainer email="adityakamath@live.com">Aditya Kamath (Kamath Robotics)</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_control</exec_depend>
+  <exec_depend>lekiwi_navigation</exec_depend>
   <exec_depend>camera_ros</exec_depend>
   <exec_depend>ldlidar_ros2</exec_depend>
 

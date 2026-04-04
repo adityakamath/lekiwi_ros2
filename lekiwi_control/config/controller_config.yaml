@@ -50,7 +50,7 @@ base_controller:
     base_frame_id: base_footprint
 
     # Odometry settings
-    enable_odom_tf: true
+    enable_odom_tf: false # TF is published by EKF, fusing the /base_controller/odom and the IMU topic
     open_loop: false  # Use wheel feedback for odometry
     position_feedback: false  # Use velocity-based odometry when false
 

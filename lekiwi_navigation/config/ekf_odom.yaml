@@ -1,0 +1,57 @@
+ekf_node:
+  ros__parameters:
+    # --- Filter settings ---
+    frequency: 50.0          # Hz — matches controller_manager update_rate
+    sensor_timeout: 0.1      # seconds — max gap before sensor is considered stale
+    two_d_mode: true         # Planar ground robot; ignores z, roll, pitch states
+
+    # --- Frame IDs ---
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_footprint
+    world_frame: odom        # EKF runs relative to odom (no GPS / map frame)
+
+    # --- Output ---
+    publish_tf: true         # EKF owns and publishes odom → base_footprint TF
+    publish_acceleration: false
+
+    # --- Odometry-only debug mode ---
+    # IMU is intentionally excluded. Useful for debugging wheel odometry in isolation:
+    # the EKF integrates vx/vy from the wheel controller using its own internal heading
+    # (which starts at 0 and drifts). Without the IMU yaw anchor, heading will diverge
+    # if the robot is physically rotated. Use this mode on a flat surface only.
+
+    # --- Sensor 0: Wheel odometry from omni_wheel_drive_controller ---
+    # Topic: /base_controller/odom  (nav_msgs/Odometry)
+    # Fuses: vx, vy linear velocities only (NOT x, y position).
+    # Position is excluded because the controller computes it using its own heading estimate,
+    # which diverges without an IMU heading correction in this mode.
+    #
+    # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    odom0: /base_controller/odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 5
+
+    # --- Process noise covariance (Q matrix) ---
+    # Diagonal: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    process_noise_covariance: [0.05,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.05,   0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.06,   0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.03,   0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.03,   0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.06,   0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.04,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.01,   0.0,    0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.02,   0.0,    0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,    0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01,   0.0,
+                               0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.015]
