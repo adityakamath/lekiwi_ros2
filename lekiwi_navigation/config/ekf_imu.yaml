@@ -3,7 +3,7 @@ ekf_node:
     # --- Filter settings ---
     frequency: 50.0          # Hz — matches controller_manager update_rate
     sensor_timeout: 0.1      # seconds — max gap before sensor is considered stale
-    two_d_mode: true         # Planar ground robot; ignores z, roll, pitch states
+    two_d_mode: false        # Full 3D orientation — allows roll and pitch from IMU to be fused
 
     # --- Frame IDs ---
     map_frame: map
@@ -13,29 +13,28 @@ ekf_node:
 
     # --- Output ---
     publish_tf: true         # EKF owns and publishes odom → base_footprint TF
-    publish_acceleration: true
+    publish_acceleration: false
 
     # --- Platform testing mode ---
     # Wheel odometry is intentionally excluded. When the robot is on a test platform the
     # wheels spin freely without moving the robot, so vx/vy from wheel odometry would
-    # incorrectly drive the EKF position estimate. With no velocity source, the EKF sees
-    # ax/ay ≈ 0 (robot is stationary) and keeps position near zero, giving a stationary
-    # visualization that matches reality. Yaw and yaw rate from the IMU are still fused,
-    # so orientation remains accurate if the robot is physically rotated on the platform.
+    # incorrectly drive the EKF position estimate. With no velocity source and no acceleration
+    # fused, position stays near zero. Full 3D orientation (roll, pitch, yaw) and all angular
+    # rates are fused, so the visualization accurately reflects any physical rotation or tilt
+    # applied to the robot on the platform.
 
     # --- Sensor 0: BNO055 IMU via imu_sensor_broadcaster ---
     # Topic: /imu_sensor_broadcaster/imu  (sensor_msgs/Imu)
-    # Fuses: absolute yaw orientation (NDOF fusion) + yaw rate from gyro only.
-    # Linear acceleration (ax/ay) is excluded: with no velocity source in the filter,
-    # accelerometer bias and noise would be double-integrated into drifting position.
-    # Yaw + vyaw are sufficient to show correct orientation while keeping position stationary.
+    # Fuses: full 3D absolute orientation (roll, pitch, yaw from NDOF fusion) + all angular
+    # rates (vroll, vpitch, vyaw from gyro). Linear acceleration excluded — no velocity source
+    # means ax/ay bias would integrate into position drift.
     #
     # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
     imu0: /imu_sensor_broadcaster/imu
     imu0_config: [false, false, false,
-                  false, false, true,
+                  true,  true,  true,
                   false, false, false,
-                  false, false, true,
+                  true,  true,  true,
                   false, false, false]
     imu0_differential: false   # BNO055 NDOF provides global orientation (magnetometer fused)
     imu0_relative: false

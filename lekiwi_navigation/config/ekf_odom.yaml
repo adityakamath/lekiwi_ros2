@@ -16,21 +16,22 @@ ekf_node:
     publish_acceleration: false
 
     # --- Odometry-only debug mode ---
-    # IMU is intentionally excluded. Useful for debugging wheel odometry in isolation:
-    # the EKF integrates vx/vy from the wheel controller using its own internal heading
-    # (which starts at 0 and drifts). Without the IMU yaw anchor, heading will diverge
-    # if the robot is physically rotated. Use this mode on a flat surface only.
+    # IMU is intentionally excluded. All available odometry values (position, heading,
+    # velocity) are fused directly from the wheel controller. The controller computes
+    # pose and heading using its own internal dead-reckoning, so heading will drift if
+    # the robot is physically rotated without the wheels moving. This mode is purely for
+    # simulating and debugging wheel odometry in isolation — not for normal operation.
 
     # --- Sensor 0: Wheel odometry from omni_wheel_drive_controller ---
     # Topic: /base_controller/odom  (nav_msgs/Odometry)
-    # Fuses: vx, vy linear velocities only (NOT x, y position).
-    # Position is excluded because the controller computes it using its own heading estimate,
-    # which diverges without an IMU heading correction in this mode.
+    # Fuses: x, y, z position + yaw heading + vx, vy linear velocities + vyaw angular rate.
+    # All values come from the controller's internal dead-reckoning — heading is the
+    # controller's own estimate and will diverge without IMU correction.
     #
     # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
     odom0: /base_controller/odom
-    odom0_config: [false, false, false,
-                   false, false, false,
+    odom0_config: [true,  true,  true,
+                   false, false, true,
                    true,  true,  false,
                    false, false, true,
                    false, false, false]
