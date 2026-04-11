@@ -325,7 +325,7 @@
       <param name="i2c_addr">$(arg i2c_addr)</param>     <!-- I2C address in hex, no 0x prefix (default: 28 = 0x28) -->
       <param name="axis_remap">$(arg axis_remap)</param> <!-- Axis placement config: P0-P7 (default: P1) -->
       <param name="sensor_mode">$(arg sensor_mode)</param> <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS (default: NDOF) -->
-      <param name="enable_mock">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
+      <param name="enable_mock_mode">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
     </hardware>
     <sensor name="bno055">
       <!-- Orientation (quaternion, unit norm) -->

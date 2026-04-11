@@ -38,3 +38,6 @@ Makefile
 # Other
 *.bag
 *.rviz
+
+# graphify
+graphify-out/

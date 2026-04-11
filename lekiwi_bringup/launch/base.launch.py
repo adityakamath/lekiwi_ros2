@@ -60,7 +60,7 @@ def generate_launch_description():
             lekiwi_control_share, '/launch/base.launch.py'
         ]),
         launch_arguments={
-            'log_level': 'warn',
+            'log_level': LaunchConfiguration('log_level'),
             'use_mock': LaunchConfiguration('use_mock'),
         }.items()
     )
@@ -71,7 +71,7 @@ def generate_launch_description():
             lekiwi_navigation_share, '/launch/nav.launch.py'
         ]),
         launch_arguments={
-            'log_level': 'warn',
+            'log_level': LaunchConfiguration('log_level'),
             'use_mock': LaunchConfiguration('use_mock'),
             'imu_only': LaunchConfiguration('imu_only'),
             'odom_only': LaunchConfiguration('odom_only'),
@@ -83,7 +83,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             lekiwi_bringup_share, '/launch/laser.launch.py'
         ]),
-        launch_arguments={'log_level': 'warn'}.items()
+        launch_arguments={'log_level': LaunchConfiguration('log_level')}.items()
     )
 
     # Include webcam launch file
@@ -91,7 +91,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             lekiwi_bringup_share, '/launch/webcam.launch.py'
         ]),
-        launch_arguments={'log_level': 'warn'}.items()
+        launch_arguments={'log_level': LaunchConfiguration('log_level')}.items()
     )
 
     return LaunchDescription(declared_arguments + [
