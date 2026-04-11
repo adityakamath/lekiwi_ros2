@@ -8,7 +8,6 @@ base_controller), motor diagnostics, and teleop with timed sequencing for initia
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, TimerAction
-from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node, SetRemap
@@ -105,19 +104,19 @@ def generate_launch_description():
         ),
     ])
 
-    # IMU diagnostics — remapped to /imu/diagnostics, skipped in mock mode
+    # IMU diagnostics — remapped to /imu/diagnostics, runs in mock mode too
     imu_diagnostics_launch = Node(
         package='bno055_hardware_interface',
         executable='bno055_diagnostics',
         name='bno055_diagnostics',
         output='log',
         parameters=[{
-            'i2c_bus':     1,
-            'i2c_addr':    '28',
-            'sensor_mode': 'NDOF',
+            'i2c_bus':          1,
+            'i2c_addr':         '28',
+            'sensor_mode':      'NDOF',
+            'enable_mock_mode': use_mock,
         }],
         remappings=[('/diagnostics', '/imu/diagnostics')],
-        condition=UnlessCondition(use_mock),
     )
 
     delayed_joint_state_broadcaster_spawner = TimerAction(
