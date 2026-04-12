@@ -1,11 +1,17 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- Hardware interface parameters -->
+  <!-- Shared hardware interface parameters (single STS servo bus) -->
   <xacro:property name="serial_port" default="/dev/ttySERVO"/>
   <xacro:property name="baud_rate" default="1000000"/>
   <xacro:property name="use_mock" default="false"/>
   <xacro:property name="use_sync_write" default="true"/>
+
+  <!-- Base motor IDs and mode -->
+  <xacro:property name="left_motor_id" value="7"/>
+  <xacro:property name="back_motor_id" value="8"/>
+  <xacro:property name="right_motor_id" value="9"/>
+  <xacro:property name="base_operating_mode" value="1"/>  <!-- Velocity mode -->
 
   <!-- Motor-specific parameter (STS3215 default) -->
   <!-- Adjust for other motor models: STS3032 max=2900, STS3235 max=3400 -->
@@ -23,12 +29,6 @@
   <xacro:property name="imu_axis_remap" value="P1"/>      <!-- Mounting orientation P0-P7, see BNO055 datasheet Table 3-4 -->
   <xacro:property name="imu_sensor_mode" value="NDOF"/>   <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
 
-  <!-- Motor IDs and mode -->
-  <xacro:property name="left_motor_id" value="7"/>
-  <xacro:property name="back_motor_id" value="8"/>
-  <xacro:property name="right_motor_id" value="9"/>
-  <xacro:property name="operating_mode" value="1"/>  <!-- Velocity mode -->
-
   <!-- Wheel geometry for omnidirectional control -->
   <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
   <xacro:property name="offset" value="${pi/3}"/>  <!-- 60° -->
@@ -45,6 +45,7 @@
   <!-- Maximum allowable linear velocity per axis -->
   <xacro:property name="max_linear_velocity_x" value="${wheel_radius * max_velocity_rads / (sqrt(3)/2)}"/>
   <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
-  <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_offset}"/>
+  <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_radius}"/>
+
 
 </robot>
