@@ -67,7 +67,7 @@ def generate_launch_description():
             robot_description,
             PathJoinSubstitution([FindPackageShare('lekiwi_control'), 'config', 'controller_config.yaml']),
         ],
-        arguments=['--ros-args', '--remap', '/diagnostics:=/controller_manager/diagnostics'],
+        remappings=[('/diagnostics', '/controller_manager/diagnostics')],
         output='log',
         emulate_tty=True,
     )
