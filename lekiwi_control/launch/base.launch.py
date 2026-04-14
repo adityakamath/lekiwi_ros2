@@ -38,7 +38,7 @@ def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port')
     use_mock = LaunchConfiguration('use_mock')
 
-    # Get URDF via xacro
+    # Robot description (also used by controller_manager below)
     robot_description_content = Command([
         PathJoinSubstitution([FindExecutable(name='xacro')]),
         ' ',
@@ -48,15 +48,17 @@ def generate_launch_description():
     ])
     robot_description = {'robot_description': ParameterValue(robot_description_content, value_type=str)}
 
-    # Robot state publisher
-    robot_state_publisher_node = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        output='log',
-        parameters=[robot_description],
-        name='robot_state_publisher',
-        emulate_tty=True,
-        arguments=['--ros-args', '--log-level', 'WARN'],
+    # Description launch — starts robot_state_publisher
+    description_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('lekiwi_description'), 'launch', 'lekiwi.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'serial_port': serial_port,
+            'use_mock': use_mock,
+        }.items(),
     )
 
     # Controller manager — enable_odom_tf is controlled by controller_config.yaml
@@ -147,7 +149,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription(declared_arguments + [
-        robot_state_publisher_node,
+        description_launch,
         controller_manager,
         delayed_joint_state_broadcaster_spawner,
         delayed_base_controller_spawner,
