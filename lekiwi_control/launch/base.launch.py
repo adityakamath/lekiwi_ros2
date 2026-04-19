@@ -28,11 +28,6 @@ def generate_launch_description():
             default_value='false',
             description='Use mock/simulation mode (no hardware required)',
         ),
-        DeclareLaunchArgument(
-            'log_level',
-            default_value='warn',
-            description='Logging level',
-        ),
     ]
 
     serial_port = LaunchConfiguration('serial_port')

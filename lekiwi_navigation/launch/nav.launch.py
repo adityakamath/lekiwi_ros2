@@ -30,7 +30,6 @@ def launch_setup(context, *args, **kwargs):
     use_mock = LaunchConfiguration('use_mock').perform(context)
     imu_only = LaunchConfiguration('imu_only').perform(context)
     odom_only = LaunchConfiguration('odom_only').perform(context)
-    log_level = LaunchConfiguration('log_level').perform(context)
 
     # Mock mode has no IMU hardware — force odom-only regardless of other args.
     if use_mock == 'true':
@@ -67,7 +66,7 @@ def launch_setup(context, *args, **kwargs):
                 config_file,
             ])
         ],
-        arguments=['--ros-args', '--log-level', log_level],
+        arguments=['--ros-args', '--log-level', 'WARN'],
     )
 
     return [ekf_node]
@@ -76,11 +75,6 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     """Generate launch description for LeKiwi navigation stack."""
     declared_arguments = [
-        DeclareLaunchArgument(
-            'log_level',
-            default_value='warn',
-            description='Logging level for navigation nodes',
-        ),
         DeclareLaunchArgument(
             'use_mock',
             default_value='false',

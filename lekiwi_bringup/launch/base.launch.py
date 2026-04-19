@@ -18,11 +18,6 @@ def generate_launch_description():
     """Generate launch description for complete robot bringup with navigation."""
     declared_arguments = [
         DeclareLaunchArgument(
-            'log_level',
-            default_value='warn',
-            description='Logging level for all nodes',
-        ),
-        DeclareLaunchArgument(
             'use_mock',
             default_value='false',
             description=(
@@ -59,10 +54,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             lekiwi_control_share, '/launch/base.launch.py'
         ]),
-        launch_arguments={
-            'log_level': LaunchConfiguration('log_level'),
-            'use_mock': LaunchConfiguration('use_mock'),
-        }.items()
+        launch_arguments={'use_mock': LaunchConfiguration('use_mock')}.items()
     )
 
     # Include navigation launch file 
@@ -71,7 +63,6 @@ def generate_launch_description():
             lekiwi_navigation_share, '/launch/nav.launch.py'
         ]),
         launch_arguments={
-            'log_level': LaunchConfiguration('log_level'),
             'use_mock': LaunchConfiguration('use_mock'),
             'imu_only': LaunchConfiguration('imu_only'),
             'odom_only': LaunchConfiguration('odom_only'),
@@ -82,16 +73,14 @@ def generate_launch_description():
     laser_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             lekiwi_bringup_share, '/launch/laser.launch.py'
-        ]),
-        launch_arguments={'log_level': LaunchConfiguration('log_level')}.items()
+        ])
     )
 
     # Include webcam launch file
     webcam_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             lekiwi_bringup_share, '/launch/webcam.launch.py'
-        ]),
-        launch_arguments={'log_level': LaunchConfiguration('log_level')}.items()
+        ])
     )
 
     return LaunchDescription(declared_arguments + [
