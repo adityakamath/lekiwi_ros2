@@ -5,13 +5,9 @@
   <xacro:include filename="$(find lekiwi_description)/urdf/base.common.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/base.control.xacro"/>
 
-  <!-- Arguments -->
-  <xacro:arg name="serial_port"  default="${serial_port}"/>
-  <xacro:arg name="use_mock"     default="${use_mock}"/>
-  <xacro:arg name="i2c_bus"     default="${imu_i2c_bus}"/>
-  <xacro:arg name="i2c_addr"    default="${imu_i2c_addr}"/>
-  <xacro:arg name="axis_remap"  default="${imu_axis_remap}"/>
-  <xacro:arg name="sensor_mode" default="${imu_sensor_mode}"/>
+  <!-- Optional pan-tilt module -->
+  <xacro:arg name="use_pantilt" default="false"/>
+  <xacro:include filename="$(find lepantilt_description)/urdf/pantilt.module.xacro"/>
 
   <!-- Define custom materials for lekiwi color properties -->
   <material name="light_grey">
@@ -260,88 +256,12 @@
     <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
   </joint>
 
-  <!-- ROS 2 CONTROL -->
-  <!-- System interface -->
-  <ros2_control name="lekiwi_base" type="system">
-    <hardware>
-      <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
-      <!-- Serial communication parameters -->
-      <param name="serial_port">$(arg serial_port)</param>
-      <param name="baud_rate">${baud_rate}</param>
-      <param name="use_sync_write">${use_sync_write}</param>
-      <param name="enable_mock_mode">$(arg use_mock)</param>
-      <!-- Motor-specific parameter (adjust for different STS motor models) -->
-      <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
-      <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
-      <param name="proportional_acc_max">${proportional_acc_max}</param>
-    </hardware>
-    <!-- Left wheel joint (Motor ID 7) -->
-    <joint name="left_wheel_joint">
-      <param name="motor_id">${left_motor_id}</param>
-      <param name="operating_mode">${base_operating_mode}</param>
-      <command_interface name="velocity"/>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
-    </joint>
-    <!-- Back wheel joint (Motor ID 8) -->
-    <joint name="back_wheel_joint">
-      <param name="motor_id">${back_motor_id}</param>
-      <param name="operating_mode">${base_operating_mode}</param>
-      <command_interface name="velocity"/>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
-    </joint>
-    <!-- Right wheel joint (Motor ID 9) -->
-    <joint name="right_wheel_joint">
-      <param name="motor_id">${right_motor_id}</param>
-      <param name="operating_mode">${base_operating_mode}</param>
-      <command_interface name="velocity"/>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
-    </joint>
-  </ros2_control>
-
-  <!-- ROS 2 CONTROL -->
-  <!-- Sensor interface (BNO055 IMU) -->
-  <ros2_control name="lekiwi_imu" type="sensor">
-    <hardware>
-      <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
-      <param name="i2c_bus">$(arg i2c_bus)</param>       <!-- I2C bus number (default: 1 → /dev/i2c-1) -->
-      <param name="i2c_addr">$(arg i2c_addr)</param>     <!-- I2C address in hex, no 0x prefix (default: 28 = 0x28) -->
-      <param name="axis_remap">$(arg axis_remap)</param> <!-- Axis placement config: P0-P7 (default: P1) -->
-      <param name="sensor_mode">$(arg sensor_mode)</param> <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS (default: NDOF) -->
-      <param name="enable_mock_mode">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
-    </hardware>
-    <sensor name="bno055">
-      <!-- Orientation (quaternion, unit norm) -->
-      <state_interface name="orientation.x"/>
-      <state_interface name="orientation.y"/>
-      <state_interface name="orientation.z"/>
-      <state_interface name="orientation.w"/>
-      <!-- Angular velocity (rad/s) -->
-      <state_interface name="angular_velocity.x"/>
-      <state_interface name="angular_velocity.y"/>
-      <state_interface name="angular_velocity.z"/>
-      <!-- Linear acceleration (m/s²), gravity-compensated -->
-      <state_interface name="linear_acceleration.x"/>
-      <state_interface name="linear_acceleration.y"/>
-      <state_interface name="linear_acceleration.z"/>
-    </sensor>
-  </ros2_control>
+  <!-- Optional pan-tilt module (mounted on front-center of base) -->
+  <xacro:if value="$(arg use_pantilt)">
+    <xacro:lepantilt_module parent="base_link">
+      <origin xyz="${pantilt_base_offset_x} 0 ${pantilt_base_offset_z}" rpy="0 0 0"/>
+      <!-- OAK-D mesh color enforced as charcoal (0.15 0.15 0.15 1.0) in pantilt.module.xacro and base_pantilt.urdf -->
+    </xacro:lepantilt_module>
+  </xacro:if>
 
 </robot>

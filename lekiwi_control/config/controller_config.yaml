@@ -23,12 +23,17 @@ controller_manager:
     base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
 
+    lepantilt_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
 joint_state_broadcaster:
   ros__parameters:
     joints:
       - left_wheel_joint
       - back_wheel_joint
       - right_wheel_joint
+      - pan_joint      # Added when use_pantilt:=true
+      - tilt_joint     # Added when use_pantilt:=true
     # No `interfaces` needed: JSB publishes position/velocity/effort to /joint_states
     # and extra state interfaces (voltage, temperature, etc.) to /dynamic_joint_states.
 
@@ -100,3 +105,31 @@ imu_sensor_broadcaster:
     #   roll:  0.0  # radians
     #   pitch: 0.0  # radians
     #   yaw:   0.0  # radians
+
+lepantilt_controller:
+  ros__parameters:
+    joints:
+      - pan_joint
+      - tilt_joint
+
+    command_interfaces:
+      - position
+
+    state_interfaces:
+      - position
+      - velocity
+
+    # Trajectory execution parameters
+    allow_partial_joints_goal: false  # Require all joints in trajectory
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 2.0  # seconds
+      pan_joint:
+        trajectory: 0.05
+        goal: 0.01
+      tilt_joint:
+        trajectory: 0.05
+        goal: 0.01
+
+    # Default trajectory interpolation method
+    interpolation_method: spline  # or "linear"
