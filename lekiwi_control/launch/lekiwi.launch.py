@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-Launch the complete LeKiwi robot control stack.
-
-Starts robot_state_publisher, controller_manager, controllers (joint_state_broadcaster,
-base_controller), motor diagnostics, and teleop with timed sequencing for initialization.
+Launch the LeKiwi robot with pantilt enabled (use_pantilt:=true).
+Loads lekiwi_control_config.yaml and the base URDF with pantilt.
 """
 
 from launch import LaunchDescription
@@ -14,9 +12,7 @@ from launch_ros.actions import Node, SetRemap
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
-
 def generate_launch_description():
-    """Generate launch description with sequenced node startup."""
     declared_arguments = [
         DeclareLaunchArgument(
             'serial_port',
@@ -33,17 +29,17 @@ def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port')
     use_mock = LaunchConfiguration('use_mock')
 
-    # Get URDF via xacro
+    # Get URDF via xacro with use_pantilt:=true
     robot_description_content = Command([
         PathJoinSubstitution([FindExecutable(name='xacro')]),
         ' ',
         PathJoinSubstitution([FindPackageShare('lekiwi_description'), 'urdf', 'base.urdf.xacro']),
         ' serial_port:=', serial_port,
         ' use_mock:=', use_mock,
+        ' use_pantilt:=true',
     ])
     robot_description = {'robot_description': ParameterValue(robot_description_content, value_type=str)}
 
-    # Robot state publisher
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -54,20 +50,18 @@ def generate_launch_description():
         arguments=['--ros-args', '--log-level', 'WARN'],
     )
 
-    # Controller manager — enable_odom_tf is controlled by base_control_config.yaml
     controller_manager = Node(
         package='controller_manager',
         executable='ros2_control_node',
         parameters=[
             robot_description,
-            PathJoinSubstitution([FindPackageShare('lekiwi_control'), 'config', 'base_control_config.yaml']),
+            PathJoinSubstitution([FindPackageShare('lekiwi_control'), 'config', 'lekiwi_control_config.yaml']),
         ],
         remappings=[('/diagnostics', '/controller_manager/diagnostics')],
         output='log',
         emulate_tty=True,
     )
 
-    # Spawners with delays to ensure controller_manager and hardware are fully initialized
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
@@ -82,6 +76,13 @@ def generate_launch_description():
         output='both',
     )
 
+    pantilt_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['pantilt_controller', '-c', '/controller_manager'],
+        output='both',
+    )
+
     imu_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
@@ -89,7 +90,6 @@ def generate_launch_description():
         output='both',
     )
 
-    # Motor diagnostics — remapped to /base/diagnostics
     motor_diagnostics_launch = GroupAction([
         SetRemap('/diagnostics', '/base/diagnostics'),
         IncludeLaunchDescription(
@@ -99,7 +99,6 @@ def generate_launch_description():
         ),
     ])
 
-    # IMU diagnostics — remapped to /imu/diagnostics, runs in mock mode too
     imu_diagnostics_launch = Node(
         package='bno055_hardware_interface',
         executable='bno055_diagnostics',
@@ -121,7 +120,7 @@ def generate_launch_description():
 
     delayed_base_controller_spawner = TimerAction(
         period=2.5,
-        actions=[base_controller_spawner, imu_broadcaster_spawner],
+        actions=[base_controller_spawner, pantilt_controller_spawner, imu_broadcaster_spawner],
     )
 
     delayed_motor_diagnostics_launch = TimerAction(
@@ -134,7 +133,6 @@ def generate_launch_description():
         actions=[imu_diagnostics_launch],
     )
 
-    # Teleop
 
 
     return LaunchDescription(declared_arguments + [

@@ -2,29 +2,21 @@ controller_manager:
   ros__parameters:
     update_rate: 50  # Hz — limited by STS serial I/O latency (~14 ms/cycle)
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
-    
     # Command and error handling
     enforce_command_limits: true  # Enforce URDF joint limits via JointSaturationLimiter
     handle_exceptions: true       # Graceful error handling
-    
     # Hardware component initialization
     defaults:
       switch_controller:
         strictness: strict
       allow_controller_activation_with_inactive_hardware: false
       deactivate_controllers_on_hardware_self_deactivate: true
-
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
-
     imu_sensor_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
-
     base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
-
-    lepantilt_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
 
 joint_state_broadcaster:
   ros__parameters:
@@ -32,8 +24,6 @@ joint_state_broadcaster:
       - left_wheel_joint
       - back_wheel_joint
       - right_wheel_joint
-      - pan_joint      # Added when use_pantilt:=true
-      - tilt_joint     # Added when use_pantilt:=true
     # No `interfaces` needed: JSB publishes position/velocity/effort to /joint_states
     # and extra state interfaces (voltage, temperature, etc.) to /dynamic_joint_states.
 
@@ -45,23 +35,18 @@ base_controller:
       - left_wheel_joint   # 60° from +X
       - back_wheel_joint   # 180° from +X (60° + 120°)
       - right_wheel_joint  # 300° from +X (60° + 240°)
-
     # Robot dimensions
     robot_radius: 0.132239  # meters (distance from center to wheel contact point)
     wheel_radius: 0.051  # meters
-
     # Frame IDs
     odom_frame_id: odom
     base_frame_id: base_footprint
-
     # Odometry settings
     enable_odom_tf: false # TF is published by EKF, fusing the /base_controller/odom and the IMU topic
     open_loop: false  # Use wheel feedback for odometry
     position_feedback: false  # Use velocity-based odometry when false
-
     # Command timeout
     cmd_vel_timeout: 0.5  # seconds
-
     # Velocity/acceleration limits ensure safe omnidirectional motion and match URDF joint limits.
     # Values are set for 3-DoF safety and can be overridden in launch if needed.
     linear:
@@ -80,7 +65,6 @@ imu_sensor_broadcaster:
   ros__parameters:
     sensor_name: bno055     # Must match the <sensor name="..."> in the URDF ros2_control block
     frame_id: imu_frame     # TF frame for published Imu messages
-
     # Static covariance matrices (row-major 3x3, diagonal — cross-correlations are zero).
     # Values derived from BNO055 datasheet and typical noise density at 100 Hz.
     #
@@ -88,48 +72,11 @@ imu_sensor_broadcaster:
     static_covariance_orientation: [0.001, 0.0,   0.0,
                                      0.0,  0.001,  0.0,
                                      0.0,  0.0,   0.001]
-
     # Angular velocity: ~0.014 °/s/√Hz gyro noise @ 100 Hz → (~2.4e-4 rad/s)² ≈ 1e-5 rad²/s²
     static_covariance_angular_velocity: [1.0e-5, 0.0,    0.0,
                                           0.0,   1.0e-5,  0.0,
                                           0.0,   0.0,    1.0e-5]
-
     # Linear acceleration: ~150 µg/√Hz accel noise @ 100 Hz → (~0.015 m/s²)² ≈ 2e-4 m²/s⁴
     static_covariance_linear_acceleration: [2.0e-4, 0.0,    0.0,
                                              0.0,   2.0e-4,  0.0,
                                              0.0,   0.0,    2.0e-4]
-
-    # Software rotation on top of hardware axis_remap (Z-Y'-X'' / extrinsic RPY).
-    # Uncomment and set values if the sensor has a residual angular offset.
-    # rotation_offset:
-    #   roll:  0.0  # radians
-    #   pitch: 0.0  # radians
-    #   yaw:   0.0  # radians
-
-lepantilt_controller:
-  ros__parameters:
-    joints:
-      - pan_joint
-      - tilt_joint
-
-    command_interfaces:
-      - position
-
-    state_interfaces:
-      - position
-      - velocity
-
-    # Trajectory execution parameters
-    allow_partial_joints_goal: false  # Require all joints in trajectory
-    constraints:
-      stopped_velocity_tolerance: 0.05
-      goal_time: 2.0  # seconds
-      pan_joint:
-        trajectory: 0.05
-        goal: 0.01
-      tilt_joint:
-        trajectory: 0.05
-        goal: 0.01
-
-    # Default trajectory interpolation method
-    interpolation_method: spline  # or "linear"

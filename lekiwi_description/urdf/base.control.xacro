@@ -10,6 +10,7 @@
   <xacro:arg name="i2c_addr"     default="28"/>
   <xacro:arg name="axis_remap"   default="P1"/>
   <xacro:arg name="sensor_mode"  default="NDOF"/>
+  <xacro:arg name="use_pantilt" default="false"/>
 
   <!-- Base motor IDs and mode -->
   <xacro:property name="left_motor_id" value="7"/>
