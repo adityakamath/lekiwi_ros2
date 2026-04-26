@@ -16,6 +16,8 @@
   <exec_depend>controller_manager</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>omni_wheel_drive_controller</exec_depend>
+  <exec_depend>forward_command_controller</exec_depend>
+  <exec_depend>imu_sensor_broadcaster</exec_depend>
   <exec_depend>sts_hardware_interface</exec_depend>
   <exec_depend>bno055_hardware_interface</exec_depend>
   <!-- <exec_depend>teleop_twist_joy</exec_depend> -->

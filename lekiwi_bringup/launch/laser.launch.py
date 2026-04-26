@@ -2,7 +2,7 @@
 """
 Launch LD06 laser scanner for LeKiwi robot.
 
-Starts ldlidar_ros2_node with configuration from laser_config.yaml.
+Starts ldlidar_ros2_node with configuration from laser.yaml.
 """
 
 from launch import LaunchDescription
@@ -16,7 +16,7 @@ def generate_launch_description():
     config_file = PathJoinSubstitution([
         FindPackageShare('lekiwi_bringup'),
         'config',
-        'laser_config.yaml'
+        'laser.yaml'
     ])
 
     laser_node = Node(

@@ -16,7 +16,7 @@ def generate_launch_description():
     config_file = PathJoinSubstitution([
         FindPackageShare('lekiwi_bringup'),
         'config',
-        'webcam_config.yaml'
+        'webcam.yaml'
     ])
     
     camera_info_file = PathJoinSubstitution([

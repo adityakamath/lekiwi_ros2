@@ -1,0 +1,36 @@
+# joy_teleop mapping for PT100 joystick control.
+# Left stick axes drive pan/tilt (deadman: L1/button 9); buttons A/B (0/1) toggle emergency stop.
+joy_teleop:
+  ros__parameters:
+    pantilt_control:
+      type: topic
+      interface_type: std_msgs/msg/Float64MultiArray
+      topic_name: /pantilt_controller/commands
+      deadman_buttons: [9]  # L1
+      axis_mappings:
+        data:
+          index: 0
+          axis: 0  # Left stick horizontal -> pan
+          scale: 1.57079
+          offset: 0.0
+        data-:
+          index: 1
+          axis: 1  # Left stick vertical -> tilt
+          scale: 1.57079
+          offset: 0.0
+
+    estop_enable:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /emergency_stop
+      service_request:
+        data: true
+      buttons: [0]  # A = enable
+
+    estop_disable:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /emergency_stop
+      service_request:
+        data: false
+      buttons: [1]  # B = disable

@@ -1,0 +1,252 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find lekiwi_description)/urdf/base/base.common.xacro"/>
+
+  <xacro:macro name="lekiwi_base_module" params="parent *origin">
+
+    <!-- Material definitions (referenced by links below) -->
+    <material name="base_light_grey">
+      <color rgba="${light_grey_rgba}"/>
+    </material>
+    <material name="base_charcoal">
+      <color rgba="${charcoal_rgba}"/>
+    </material>
+
+    <!-- Mount base_link to parent platform at specified origin -->
+    <joint name="lekiwi_mount_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="base_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <!-- Base link -->
+    <link name="base_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/lekiwi_base.stl"/>
+        </geometry>
+        <material name="base_light_grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/lekiwi_base.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="2.0"/>
+        <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.02"/>
+      </inertial>
+    </link>
+
+    <!-- LD06 laser link -->
+    <link name="laser_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${laser_offset_rx} 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/ld06_lidar.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${laser_offset_rx} 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/ld06_lidar.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.2"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <!-- Laser frame -->
+    <link name="laser_frame"/>
+
+    <!-- BNO055 IMU link -->
+    <link name="imu_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/bno055_imu.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/bno055_imu.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <!-- IMU frame -->
+    <link name="imu_frame"/>
+
+    <!-- Camera link -->
+    <link name="camera_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/hd_webcam.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/hd_webcam.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <!-- Camera frame -->
+    <link name="camera"/>
+
+    <!-- Left wheel link -->
+    <link name="left_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/omni_wheel.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/omni_wheel.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+      </inertial>
+    </link>
+
+    <!-- Back wheel link -->
+    <link name="back_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/omni_wheel.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/omni_wheel.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+      </inertial>
+    </link>
+
+    <!-- Right wheel link -->
+    <link name="right_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/omni_wheel.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/omni_wheel.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+      </inertial>
+    </link>
+
+    <!-- JOINTS -->
+
+    <!-- laser fixed joint -->
+    <joint name="laser_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="laser_link"/>
+      <origin xyz="${laser_base_offset_x} 0 ${laser_base_offset_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- laser_frame fixed joint -->
+    <joint name="laser_frame_joint" type="fixed">
+      <parent link="laser_link"/>
+      <child link="laser_frame"/>
+      <origin xyz="0 0 ${laser_frame_offset_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- IMU fixed joint -->
+    <joint name="imu_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="imu_link"/>
+      <origin xyz="${imu_base_offset_x} 0 ${imu_base_offset_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- imu_frame fixed joint -->
+    <joint name="imu_frame_joint" type="fixed">
+      <parent link="imu_link"/>
+      <child link="imu_frame"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- camera fixed joint -->
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="${camera_base_offset_x} 0 ${camera_base_offset_z}" rpy="0 ${camera_offset_ry} 0"/>
+    </joint>
+
+    <!-- camera_frame fixed joint -->
+    <joint name="camera_frame_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera"/>
+      <origin xyz="0 0 0" rpy="0 0 ${camera_frame_offset_rz}"/>
+    </joint>
+
+    <!-- left wheel joint: 60 degrees anti-clockwise from +X at radius wheel_base_radius -->
+    <joint name="left_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="left_wheel_link"/>
+      <origin xyz="${wheel_base_radius * cos(offset)} ${wheel_base_radius * sin(offset)} ${wheel_base_offset_z}" rpy="0 ${pi/2} ${offset}"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
+    </joint>
+
+    <!-- back wheel joint: 180 degrees anti-clockwise from +X at radius base_radius -->
+    <joint name="back_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="back_wheel_link"/>
+      <origin xyz="${wheel_base_radius * cos(offset + theta)} ${wheel_base_radius * sin(offset + theta)} ${wheel_base_offset_z}" rpy="0 ${pi/2} ${offset + theta}"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
+    </joint>
+
+    <!-- right wheel joint: 300 degrees (or -60 degrees) anti-clockwise from +X at radius base_radius -->
+    <joint name="right_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="right_wheel_link"/>
+      <origin xyz="${wheel_base_radius * cos(offset - theta)} ${wheel_base_radius * sin(offset - theta)} ${wheel_base_offset_z}" rpy="0 ${pi/2} ${offset - theta}"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="${max_torque_nm}" velocity="${max_velocity_rads}"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

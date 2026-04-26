@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="lekiwi">
+
+  <xacro:include filename="$(find lekiwi_description)/urdf/lekiwi.common.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/lekiwi.control.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/base/base.module.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/pantilt/pantilt.module.xacro"/>
+
+  <link name="base_footprint"/>
+
+  <xacro:lekiwi_base_module parent="base_footprint">
+    <origin xyz="0 0 ${wheel_radius - wheel_base_offset_z}" rpy="0 0 0"/>
+  </xacro:lekiwi_base_module>
+
+  <xacro:pantilt_module parent="base_link">
+    <origin xyz="${pantilt_base_offset_x} 0 ${pantilt_base_offset_z}" rpy="0 0 0"/>
+  </xacro:pantilt_module>
+
+</robot>

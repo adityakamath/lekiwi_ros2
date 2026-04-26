@@ -1,0 +1,50 @@
+# OAK-D S2 pipeline: RGBD + VIO, no point cloud.
+# RGB at 30 Hz (quarter ISP resolution, low-bandwidth JPEG), depth at 15 Hz (2x decimation), VIO at 60 Hz.
+/oak:
+  ros__parameters:
+    driver:
+      i_usb_speed: SUPER
+    pipeline_gen:
+      i_nn_type: none
+      i_pipeline_type: RGBD
+      i_enable_imu: true
+      i_enable_vio: true
+    vio:
+      i_fps: 60.0
+      i_publish_tf: false
+    rgb:
+      i_fps: 30.0
+      i_isp_num: 1
+      i_isp_den: 4
+      i_low_bandwidth: true
+      i_low_bandwidth_quality: 50
+      i_publish_topic: true
+    imu:
+      i_acc_freq: 400
+      i_gyro_freq: 400
+      i_max_batch_reports: 10
+      i_batch_report_threshold: 1
+      i_enable_rotation: false
+      i_sync_method: LINEAR_INTERPOLATE_ACCEL
+    left:
+      i_publish_topic: false
+    right:
+      i_publish_topic: false
+    stereo:
+      i_depth_preset: FAST_ACCURACY
+      i_fps: 15.0
+      i_enable_decimation_filter: true
+      i_decimation_filter_decimation_factor: 2
+      i_decimation_filter_decimation_mode: NON_ZERO_MEDIAN
+      i_publish_topic: true
+      i_publish_left_rect: false
+      i_publish_right_rect: false
+      i_publish_synced_rect_pair: false
+      i_aligned: true
+    oak.rgb.image_raw.enable_pub_plugins:
+      - image_transport/raw
+      - image_transport/compressed
+      - image_transport/theora
+    oak.stereo.image_raw.enable_pub_plugins:
+      - image_transport/raw
+      - image_transport/compressedDepth

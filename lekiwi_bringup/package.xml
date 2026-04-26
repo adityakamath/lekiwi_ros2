@@ -14,6 +14,7 @@
   <exec_depend>lekiwi_navigation</exec_depend>
   <exec_depend>camera_ros</exec_depend>
   <exec_depend>ldlidar_ros2</exec_depend>
+  <exec_depend>depthai_ros_driver</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -1,0 +1,178 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Arguments (externally settable via command line or parent xacro) -->
+  <xacro:arg name="serial_port" default="/dev/ttySERVO"/>
+  <xacro:arg name="baud_rate" default="1000000"/>
+  <xacro:arg name="use_mock" default="false"/>
+  <xacro:arg name="use_sync_write" default="true"/>
+  <xacro:arg name="left_motor_id" default="7"/>
+  <xacro:arg name="back_motor_id" default="8"/>
+  <xacro:arg name="right_motor_id" default="9"/>
+  <xacro:arg name="pan_motor_id"      default="1"/>
+  <xacro:arg name="tilt_motor_id"     default="2"/>
+  <xacro:arg name="pan_center_steps"  default="2048"/>
+  <xacro:arg name="tilt_center_steps" default="2048"/>
+
+  <!-- BNO055 IMU parameters (externally settable) -->
+  <xacro:arg name="imu_i2c_bus"     default="1"/>       <!-- I2C bus number (/dev/i2c-1) -->
+  <xacro:arg name="imu_i2c_addr"    default="28"/>      <!-- I2C address: 28 = 0x28 (ADR pin low) -->
+  <xacro:arg name="imu_axis_remap"  default="P1"/>      <!-- Mounting orientation P0-P7, see BNO055 datasheet Table 3-4 -->
+  <xacro:arg name="imu_sensor_mode" default="NDOF"/>    <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
+
+  <!-- Base operating mode -->
+  <xacro:property name="base_operating_mode" value="1"/>  <!-- Velocity mode -->
+
+  <!-- Motor-specific parameter (STS3215 default) -->
+  <!-- Adjust for other motor models: STS3032 max=2900, STS3235 max=3400 -->
+  <xacro:property name="sts_max_velocity_steps" value="3400"/>  <!-- Max hardware velocity in steps/s (absolute motor limit, do not exceed) -->
+
+  <!-- Proportional ACC parameters (SyncWriteSpe velocity path only) -->
+  <!-- ACC given to the wheel with the largest |target - current| velocity delta. -->
+  <!-- All others scaled proportionally so every wheel finishes ramping in equal time. -->
+  <!-- Set proportional_acc_max to 0 to disable (ACC=0 for all wheels). -->
+  <xacro:property name="proportional_acc_max" value="25"/>        <!-- [0-254] -->
+
+  <!-- Wheel geometry for omnidirectional control -->
+  <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
+  <xacro:property name="offset" value="${pi/3}"/>  <!-- 60° -->
+  <xacro:property name="theta" value="${2*pi/3}"/>  <!-- 120° between wheels -->
+
+  <!-- Maximum allowable speed/acceleration/torque for each motor -->
+  <xacro:property name="max_velocity_steps" value="${int(sts_max_velocity_steps * 0.85)}"/> <!-- steps/second (85% of hardware max, 15% safety margin) -->
+  <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/> <!-- rad/s -->
+  <xacro:property name="max_torque_nm" value="2.942"/> <!-- N⋅m (30 kgf⋅cm for STS3215) -->
+
+  <!-- Omnidirectional Kinematics Calculations -->
+  <!-- For 3-wheel omni drive: ω_i = (-sin(θ_i)·v_x + cos(θ_i)·v_y + R·ω_z) / r -->
+
+  <!-- Maximum allowable linear velocity per axis -->
+  <xacro:property name="max_linear_velocity_x" value="${wheel_radius * max_velocity_rads / (sqrt(3)/2)}"/>
+  <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
+  <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_radius}"/>
+
+  <!-- Pan and tilt joint limits -->
+  <xacro:property name="pan_joint_lower"  value="${-pi/2}"/>
+  <xacro:property name="pan_joint_upper"  value="${pi/2}"/>
+  <xacro:property name="tilt_joint_lower" value="${-pi/2}"/>
+  <xacro:property name="tilt_joint_upper" value="${pi/2}"/>
+
+  <!-- ROS 2 CONTROL -->
+  <!-- System interface — all STS3215 joints on a single serial bus -->
+  <ros2_control name="lekiwi_base" type="system">
+    <hardware>
+      <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
+      <!-- Serial communication parameters -->
+      <param name="serial_port">$(arg serial_port)</param>
+      <param name="baud_rate">$(arg baud_rate)</param>
+      <param name="use_sync_write">$(arg use_sync_write)</param>
+      <param name="enable_mock_mode">$(arg use_mock)</param>
+      <!-- Motor-specific parameter (adjust for different STS motor models) -->
+      <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
+      <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
+      <param name="proportional_acc_max">${proportional_acc_max}</param>
+    </hardware>
+    <!-- Left wheel joint (Motor ID 7) -->
+    <joint name="left_wheel_joint">
+      <param name="motor_id">$(arg left_motor_id)</param>
+      <param name="operating_mode">${base_operating_mode}</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      <state_interface name="voltage"/>
+      <state_interface name="temperature"/>
+      <state_interface name="current"/>
+      <state_interface name="is_moving"/>
+    </joint>
+    <!-- Back wheel joint (Motor ID 8) -->
+    <joint name="back_wheel_joint">
+      <param name="motor_id">$(arg back_motor_id)</param>
+      <param name="operating_mode">${base_operating_mode}</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      <state_interface name="voltage"/>
+      <state_interface name="temperature"/>
+      <state_interface name="current"/>
+      <state_interface name="is_moving"/>
+    </joint>
+    <!-- Right wheel joint (Motor ID 9) -->
+    <joint name="right_wheel_joint">
+      <param name="motor_id">$(arg right_motor_id)</param>
+      <param name="operating_mode">${base_operating_mode}</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      <state_interface name="voltage"/>
+      <state_interface name="temperature"/>
+      <state_interface name="current"/>
+      <state_interface name="is_moving"/>
+    </joint>
+    <!-- Pan joint (Motor ID 1, position mode) -->
+    <joint name="pan_joint">
+      <param name="motor_id">$(arg pan_motor_id)</param>
+      <param name="operating_mode">0</param>
+      <param name="min_position">${pan_joint_lower}</param>
+      <param name="max_position">${pan_joint_upper}</param>
+      <param name="max_velocity">${max_velocity_rads}</param>
+      <param name="position_center_steps">$(arg pan_center_steps)</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      <state_interface name="voltage"/>
+      <state_interface name="temperature"/>
+      <state_interface name="current"/>
+      <state_interface name="is_moving"/>
+    </joint>
+    <!-- Tilt joint (Motor ID 2, position mode) -->
+    <joint name="tilt_joint">
+      <param name="motor_id">$(arg tilt_motor_id)</param>
+      <param name="operating_mode">0</param>
+      <param name="min_position">${tilt_joint_lower}</param>
+      <param name="max_position">${tilt_joint_upper}</param>
+      <param name="max_velocity">${max_velocity_rads}</param>
+      <param name="position_center_steps">$(arg tilt_center_steps)</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      <state_interface name="voltage"/>
+      <state_interface name="temperature"/>
+      <state_interface name="current"/>
+      <state_interface name="is_moving"/>
+    </joint>
+  </ros2_control>
+
+  <!-- ROS 2 CONTROL -->
+  <!-- Sensor interface (BNO055 IMU) -->
+  <ros2_control name="lekiwi_imu" type="sensor">
+    <hardware>
+      <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
+      <param name="i2c_bus">$(arg imu_i2c_bus)</param>       <!-- I2C bus number (default: 1 → /dev/i2c-1) -->
+      <param name="i2c_addr">$(arg imu_i2c_addr)</param>     <!-- I2C address in hex, no 0x prefix (default: 28 = 0x28) -->
+      <param name="axis_remap">$(arg imu_axis_remap)</param> <!-- Axis placement config: P0-P7 (default: P1) -->
+      <param name="sensor_mode">$(arg imu_sensor_mode)</param> <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS (default: NDOF) -->
+      <param name="enable_mock_mode">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
+    </hardware>
+    <sensor name="bno055">
+      <!-- Orientation (quaternion, unit norm) -->
+      <state_interface name="orientation.x"/>
+      <state_interface name="orientation.y"/>
+      <state_interface name="orientation.z"/>
+      <state_interface name="orientation.w"/>
+      <!-- Angular velocity (rad/s) -->
+      <state_interface name="angular_velocity.x"/>
+      <state_interface name="angular_velocity.y"/>
+      <state_interface name="angular_velocity.z"/>
+      <!-- Linear acceleration (m/s²), gravity-compensated -->
+      <state_interface name="linear_acceleration.x"/>
+      <state_interface name="linear_acceleration.y"/>
+      <state_interface name="linear_acceleration.z"/>
+    </sensor>
+  </ros2_control>
+
+</robot>

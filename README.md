@@ -20,7 +20,7 @@ git clone https://github.com/adityakamath/lekiwi_ros2.git
 cd ~/ros2_ws
 colcon build --packages-select lekiwi_control lekiwi_description lekiwi_bringup
 source install/setup.bash
-ros2 launch lekiwi_bringup base.launch.py
+ros2 launch lekiwi_bringup lekiwi.launch.py
 ```
 
 ## Dependencies

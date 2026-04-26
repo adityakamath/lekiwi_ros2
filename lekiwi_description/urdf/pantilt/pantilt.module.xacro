@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find lekiwi_description)/urdf/pantilt/oakd_s2.module.xacro"/>
+
+  <xacro:macro name="pantilt_module" params="parent *origin">
+
+    <!-- Material definitions — unique names to avoid conflict with base.module.xacro -->
+    <material name="pantilt_light_grey">
+      <color rgba="${light_grey_rgba}"/>
+    </material>
+    <material name="pantilt_charcoal">
+      <color rgba="${charcoal_rgba}"/>
+    </material>
+
+    <!-- Mount pantilt_base_link to parent platform at specified origin -->
+    <joint name="pantilt_mount_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="pantilt_base_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <!-- Pan-tilt base link -->
+    <link name="pantilt_base_link">
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 ${pantilt_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/pantilt_base.stl"/>
+        </geometry>
+        <material name="pantilt_light_grey"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 ${pantilt_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/pan_motor.stl"/>
+        </geometry>
+        <material name="pantilt_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 ${pantilt_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/pantilt_base.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Pan link -->
+    <link name="pan_link">
+      <inertial>
+        <mass value="0.119226"/>
+        <origin xyz="-9.07886e-05 0.0590972 0.031089" rpy="0 0 0"/>
+        <inertia ixx="5.94278e-05" ixy="0" ixz="0" iyy="5.89975e-05" iyz="0" izz="3.13712e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pan_offset_rx} 0 ${pan_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/pan_joint.stl"/>
+        </geometry>
+        <material name="pantilt_light_grey"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 0" rpy="${pan_offset_rx} 0 ${pan_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/tilt_motor.stl"/>
+        </geometry>
+        <material name="pantilt_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pan_offset_rx} 0 ${pan_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/pan_joint.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Tilt link -->
+    <link name="tilt_link">
+      <inertial>
+        <mass value="0.1"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual>
+        <origin xyz="${tilt_visual_x} ${tilt_visual_y} ${tilt_visual_z}" rpy="${tilt_offset_rx} ${tilt_offset_ry} 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/tilt_joint.stl"/>
+        </geometry>
+        <material name="pantilt_light_grey"/>
+      </visual>
+      <collision>
+        <origin xyz="${tilt_visual_x} ${tilt_visual_y} ${tilt_visual_z}" rpy="${tilt_offset_rx} ${tilt_offset_ry} 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/pantilt/tilt_joint.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- For the Pan and Tilt joints below, velocity="1e6":
+    URDF requires a velocity attribute on revolute joints, but hardware-enforced
+    velocity profiling makes software rate-limiting redundant and causes spurious
+    "command out of limits" errors from ros2_control when joy_teleop sends large absolute
+    position steps. 1e6 rad/s is physically unreachable and effectively disables the
+    JointSaturationLimiter's per-cycle velocity clipping for these joints. -->
+
+    <!-- Pan joint (revolute) -->
+    <joint name="pan_joint" type="revolute">
+      <parent link="pantilt_base_link"/>
+      <child link="pan_link"/>
+      <origin xyz="${pan_joint_x} 0 ${pan_joint_z}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${pan_joint_lower}" upper="${pan_joint_upper}" effort="${max_torque_nm}" velocity="1e6"/>
+    </joint>
+
+    <!-- Tilt joint (revolute) -->
+    <joint name="tilt_joint" type="revolute">
+      <parent link="pan_link"/>
+      <child link="tilt_link"/>
+      <origin xyz="${tilt_joint_x} 0 ${tilt_joint_z}" rpy="${tilt_joint_rx} ${tilt_joint_ry} 0"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="${tilt_joint_lower}" upper="${tilt_joint_upper}" effort="${max_torque_nm}" velocity="1e6"/>
+    </joint>
+
+    <!-- OAK-D-S2 Camera + IMU -->
+    <xacro:oakd_s2_camera
+      camera_name="oak_link"
+      base_frame="oak_link"
+      parent="tilt_link"
+      cam_pos_x="${oak_pos_x}" cam_pos_y="${oak_pos_y}" cam_pos_z="0"
+      cam_roll="${oak_roll}" cam_pitch="0" cam_yaw="${oak_yaw}"
+      r="${charcoal_rgb}" g="${charcoal_rgb}" b="${charcoal_rgb}" a="1.0"
+      imu_frame="oak_imu_frame"/>
+
+  </xacro:macro>
+
+</robot>
