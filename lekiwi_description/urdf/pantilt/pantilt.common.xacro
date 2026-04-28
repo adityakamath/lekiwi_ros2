@@ -33,8 +33,8 @@
   <xacro:property name="tilt_visual_z" value="-0.0002"/>
 
   <!-- OAK-D-S2 camera mount offset (in tilt_link frame) -->
-  <xacro:property name="oak_pos_x" value="-0.03435"/>
-  <xacro:property name="oak_pos_y" value="-0.01"/>
+  <xacro:property name="oak_pos_x" value="-0.0306"/>
+  <xacro:property name="oak_pos_y" value="-0.012165"/>
 
   <!-- OAK-D-S2 camera mount orientation (in tilt_link frame) -->
   <xacro:property name="oak_roll" value="${-pi/2}"/>

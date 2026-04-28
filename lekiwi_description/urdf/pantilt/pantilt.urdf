@@ -174,7 +174,7 @@
   <joint name="oak_link_center_joint" type="fixed">
     <parent link="tilt_link"/>
     <child link="oak_link"/>
-    <origin rpy="-1.5707963267948966 0 -1.5707963267948966" xyz="-0.03435 -0.01 0"/>
+    <origin rpy="-1.5707963267948966 0 -1.5707963267948966" xyz="-0.0306 -0.012165 0"/>
   </joint>
   <!-- IMU frame -->
   <link name="oak_imu_frame"/>
