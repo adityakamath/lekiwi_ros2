@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="lekiwi">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="k2">
 
-  <xacro:include filename="$(find lekiwi_description)/urdf/lekiwi.common.xacro"/>
-  <xacro:include filename="$(find lekiwi_description)/urdf/lekiwi.control.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/k2.common.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/k2.control.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.module.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/pantilt/pantilt.module.xacro"/>
 

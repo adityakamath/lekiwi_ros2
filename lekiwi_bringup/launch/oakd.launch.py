@@ -11,7 +11,6 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode, ParameterFile
 
-
 def generate_launch_description():
     """Declare arguments and defer camera node setup to launch_setup via OpaqueFunction."""
     declared_arguments = [

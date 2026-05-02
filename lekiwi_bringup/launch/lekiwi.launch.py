@@ -5,7 +5,7 @@ Launch the LeKiwi robot system.
 The 'config' argument selects which subsystems to bring up:
   base     — base drive + IMU, laser, webcam, navigation  [no pantilt]
   pantilt  — pan-tilt servos + OAK-D camera               [no base, no navigation]
-  lekiwi   — full system: base + pantilt + all sensors + navigation  [default]
+  k2       — full K2 (LeKiwi2) system: base + pantilt + all sensors + navigation  [default]
 """
 
 from launch import LaunchDescription
@@ -13,7 +13,6 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Opaq
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
-
 
 def launch_setup(context, *args, **kwargs):
     """
@@ -24,7 +23,7 @@ def launch_setup(context, *args, **kwargs):
     """
     config          = LaunchConfiguration('config').perform(context)
     diagnostics     = LaunchConfiguration('diagnostics').perform(context)
-    ekf_mode        = LaunchConfiguration('ekf_mode').perform(context)
+    fusion_mode     = LaunchConfiguration('fusion_mode').perform(context)
     pointcloud      = LaunchConfiguration('pointcloud').perform(context)
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
@@ -43,8 +42,8 @@ def launch_setup(context, *args, **kwargs):
         'diagnostics': diagnostics,
     })
 
-    nav    = include(pkg_nav,     'launch/nav.launch.py', {'ekf_mode': ekf_mode})
-    laser  = include(pkg_bringup, 'launch/laser.launch.py')
+    nav    = include(pkg_nav,     'launch/nav.launch.py', {'fusion_mode': fusion_mode})
+    laser  = include(pkg_bringup, 'launch/laser.launch.py', {'config': config})
     webcam = include(pkg_bringup, 'launch/webcam.launch.py')
     oakd   = include(pkg_bringup, 'launch/oakd.launch.py', {'pointcloud': pointcloud})
 
@@ -58,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
         # Pan-tilt + OAK-D only; no base drive, no navigation, no 2D sensors
         return [control, oakd]
 
-    else:  # lekiwi — full system
+    else:  # k2 — full system
         return [control, nav, laser, webcam, oakd]
 
 
@@ -73,7 +72,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'config',
             default_value='base',
-            description='Bringup configuration: base, pantilt, or lekiwi',
+            description='Bringup configuration: base, pantilt, or k2',
         ),
         DeclareLaunchArgument(
             'diagnostics',
@@ -81,7 +80,7 @@ def generate_launch_description():
             description='Launch motor and IMU diagnostics nodes',
         ),
         DeclareLaunchArgument(
-            'ekf_mode',
+            'fusion_mode',
             default_value='base',
             description=(
                 'EKF sensor fusion mode (passed to nav.launch.py): '

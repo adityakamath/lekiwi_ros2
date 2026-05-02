@@ -29,13 +29,13 @@ controller_manager:
     joint_limits:
       pan_joint:
         has_position_limits: true
-        min_position: -1.5708    # rad (-π/2) — matches lekiwi.control.xacro pan_joint_lower
-        max_position: 1.5708     # rad (+π/2) — matches lekiwi.control.xacro pan_joint_upper
+        min_position: -1.5708    # rad (-π/2)
+        max_position: 1.5708     # rad (+π/2)
         has_velocity_limits: false  # Hardware velocity profiling via max_velocity param in URDF
       tilt_joint:
         has_position_limits: true
-        min_position: -1.5708    # rad (-π/2) — matches lekiwi.control.xacro tilt_joint_lower
-        max_position: 1.5708     # rad (+π/2) — matches lekiwi.control.xacro tilt_joint_upper
+        min_position: -1.5708    # rad (-π/2)
+        max_position: 1.5708     # rad (+π/2)
         has_velocity_limits: false  # Hardware velocity profiling via max_velocity param in URDF
 
 joint_state_broadcaster:

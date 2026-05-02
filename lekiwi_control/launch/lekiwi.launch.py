@@ -2,11 +2,11 @@
 """
 Launch the LeKiwi robot control stack.
 
-The 'config' argument selects 'base', 'pantilt', or 'lekiwi' to load
+The 'config' argument selects 'base', 'pantilt', or 'k2' to load
 the matching URDF, controller config, teleop config, and spawners:
   base     — wheel drive + IMU (no pantilt)
   pantilt  — pan/tilt servos only (no base drive, no IMU)
-  lekiwi   — full robot: base + pantilt + IMU  [default]
+  k2       — full K2 (LeKiwi2) robot: base + pantilt + IMU [default]
 """
 
 from launch import LaunchDescription
@@ -16,7 +16,6 @@ from launch.substitutions import Command, FindExecutable, LaunchConfiguration, P
 from launch_ros.actions import Node, SetRemap
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
-
 
 def launch_setup(context, *args, **kwargs):
     """
@@ -39,19 +38,16 @@ def launch_setup(context, *args, **kwargs):
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
     xacro    = FindExecutable(name='xacro').perform(context)
 
-    # Each config has its own URDF: base and pantilt live in subdirectories,
-    # lekiwi.urdf.xacro is at the root of the urdf/ folder.
-    if config == 'base':
-        urdf = f'{pkg_desc}/urdf/base/base.urdf.xacro'
-    elif config == 'pantilt':
-        urdf = f'{pkg_desc}/urdf/pantilt/pantilt.urdf.xacro'
+    # Each config has its own URDF: for 'base' or 'pantilt', use subdirectory; otherwise use k2.urdf.xacro at root.
+    if config in ('base', 'pantilt'):
+        urdf = f'{pkg_desc}/urdf/{config}/{config}.urdf.xacro'
     else:
-        urdf = f'{pkg_desc}/urdf/lekiwi.urdf.xacro'
+        urdf = f'{pkg_desc}/urdf/k2.urdf.xacro'
 
-    # pan/tilt center steps are only declared in pantilt and lekiwi URDFs —
+    # pan/tilt center steps are only declared in pantilt and k2 URDFs —
     # passing them to base.urdf.xacro would cause an "unused argument" xacro error.
     xacro_cmd = f'{xacro} {urdf} serial_port:={serial_port} use_mock:={use_mock}'
-    if config in ('pantilt', 'lekiwi'):
+    if config in ('pantilt', 'k2'):
         xacro_cmd += f' pan_center_steps:={pan_center} tilt_center_steps:={tilt_center}'
 
     robot_description = {
@@ -79,6 +75,7 @@ def launch_setup(context, *args, **kwargs):
         remappings=[('/diagnostics', '/controller_manager/diagnostics')],
         output='log',
         emulate_tty=True,
+        arguments=['--ros-args', '--log-level', 'rclcpp:=ERROR'],
     )
 
     teleop_node = Node(
@@ -132,7 +129,7 @@ def launch_setup(context, *args, **kwargs):
                      arguments=['pantilt_controller', '-c', '/controller_manager'], output='both'),
             ],
         )
-    else:  # lekiwi — all controllers
+    else:  # k2 — all controllers
         extra_spawners = TimerAction(
             period=2.5,
             actions=[
@@ -159,8 +156,8 @@ def launch_setup(context, *args, **kwargs):
         # Motor diagnostics applies to all configs — all use STS servos.
         actions.append(TimerAction(period=3.0, actions=[motor_diagnostics]))
 
-        # IMU diagnostics only for configs that include the BNO055 (base and lekiwi).
-        if config in ('base', 'lekiwi'):
+        # IMU diagnostics only for configs that include the BNO055 (base and k2).
+        if config in ('base', 'k2'):
             actions.append(TimerAction(
                 period=3.0,
                 actions=[Node(
@@ -193,7 +190,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'config',
             default_value='base',
-            description='Robot configuration to launch: base, pantilt, or lekiwi',
+            description='Robot configuration to launch: base, pantilt, or k2',
         ),
         DeclareLaunchArgument(
             'serial_port',
