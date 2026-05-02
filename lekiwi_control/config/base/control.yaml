@@ -79,10 +79,10 @@ imu_sensor_broadcaster:
     # Static covariance matrices (row-major 3x3, diagonal — cross-correlations are zero).
     # Values derived from BNO055 datasheet and typical noise density at 100 Hz.
     #
-    # Orientation: ±2° absolute accuracy (datasheet) → (0.035 rad)² ≈ 0.001 rad²
-    static_covariance_orientation: [0.001, 0.0,   0.0,
-                                     0.0,  0.001,  0.0,
-                                     0.0,  0.0,   0.001]
+    # Orientation: ±2.5° magnetometer heading accuracy(datasheet) → 0.002 rad²
+    static_covariance_orientation: [0.002, 0.0,   0.0,
+                                     0.0,  0.002,  0.0,
+                                     0.0,  0.0,   0.002]
 
     # Angular velocity: ~0.014 °/s/√Hz gyro noise @ 100 Hz → (~2.4e-4 rad/s)² ≈ 1e-5 rad²/s²
     static_covariance_angular_velocity: [1.0e-5, 0.0,    0.0,
