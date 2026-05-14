@@ -1,0 +1,66 @@
+slam_toolbox:
+  ros__parameters:
+    # Plugin / solver
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_loss_function: None
+    ceres_num_threads: 2  # default: 1; 2 threads is faster on LeKiwi's CPU, but more may cause instability
+
+    # Frames / topics
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    use_map_saver: true
+    mode: mapping  # 'mapping' (build) or 'localization' (re-use)
+
+    # Update cadence
+    debug_logging: false
+    throttle_scans: 2               # process every 2nd scan — halves CPU; LD06 @10 Hz → 5 Hz effective
+    transform_publish_period: 0.05  # s (20 Hz)
+    map_update_interval: 2.0        # s — grid rasterisation is expensive; 2 s is invisible at walking speed
+    resolution: 0.05                # m/cell
+    max_laser_range: 8.0            # m — indoor rooms rarely exceed 8 m; smaller cloud → faster matching
+    minimum_time_interval: 0.2      # s
+    transform_timeout: 0.2          # s
+    tf_buffer_duration: 20.0        # s
+    stack_size_to_use: 40000000     # bytes — needed for serialization
+    enable_interactive_mode: false
+
+    # Scan matching
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.10            # m — LeKiwi is small/slow
+    minimum_travel_heading: 0.10             # rad
+    scan_buffer_size: 20                     # more scan history → better local matching
+    scan_buffer_maximum_scan_distance: 8.0   # m — match max_laser_range
+    link_match_minimum_response_fine: 0.1    # score [0–1]
+    link_scan_maximum_distance: 2.0          # m — connect poses slightly further apart; better for slow robot
+    loop_search_maximum_distance: 3.0        # m
+    do_loop_closing: true
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0  # m²
+    loop_match_minimum_response_coarse: 0.4  # score [0–1] — stricter: reject weaker loop closures
+    loop_match_minimum_response_fine: 0.5    # score [0–1] — stricter: fewer false positives in the map
+
+    # Correlation parameters
+    correlation_search_space_dimension: 0.5        # m
+    correlation_search_space_resolution: 0.01      # m
+    correlation_search_space_smear_deviation: 0.1  # m
+
+    # Loop closure search
+    loop_search_space_dimension: 8.0         # m
+    loop_search_space_resolution: 0.05       # m
+    loop_search_space_smear_deviation: 0.03  # m
+
+    # Scan matcher penalties
+    distance_variance_penalty: 0.5
+    angle_variance_penalty: 1.0
+    fine_search_angle_offset: 0.00349  # rad
+    coarse_search_angle_offset: 0.349  # rad
+    coarse_angle_resolution: 0.0349    # rad
+    minimum_angle_penalty: 0.9         # score [0–1]
+    minimum_distance_penalty: 0.5      # score [0–1]
+    use_response_expansion: true

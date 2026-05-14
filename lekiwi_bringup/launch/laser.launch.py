@@ -86,7 +86,7 @@ def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument(
             'config',
-            default_value='base',
+            default_value='k2',
             description='Robot configuration: base, pantilt, or k2',
         ),
         DeclareLaunchArgument(

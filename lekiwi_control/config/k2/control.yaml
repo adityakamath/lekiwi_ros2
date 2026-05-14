@@ -78,15 +78,15 @@ base_controller:
     # Values are set for 3-DoF safety and can be overridden in launch if needed.
     linear:
       x:
-        max_velocity: 0.13   # m/s  (3-DoF safe: 0.866*0.13 + 0.5*0.11 + R*0.44 = 0.226 m/s)
-        max_acceleration: 0.65  # m/s^2  (~200ms ramp to full speed)
+        max_velocity: 0.2    # m/s  (3-DoF safe: 0.866*0.2 + 0.5*0.17 + R*0.68 ≈ 0.348 m/s)
+        max_acceleration: 1.0   # m/s^2  (~200ms ramp to full speed)
       y:
-        max_velocity: 0.11   # m/s  (3-DoF safe: leaves budget for vx and ωz contributions)
-        max_acceleration: 0.55  # m/s^2  (~200ms ramp to full speed)
+        max_velocity: 0.17   # m/s  (3-DoF safe: leaves budget for vx and ωz contributions)
+        max_acceleration: 0.85  # m/s^2  (~200ms ramp to full speed)
     angular:
       z:
-        max_velocity: 0.44   # rad/s  (3-DoF safe: R*0.44 = 0.058 m/s wheel contribution)
-        max_acceleration: 2.2   # rad/s^2  (~200ms ramp to full speed)
+        max_velocity: 0.68   # rad/s  (3-DoF safe: R*0.68 = 0.090 m/s wheel contribution)
+        max_acceleration: 3.4   # rad/s^2  (~200ms ramp to full speed)
 
 imu_sensor_broadcaster:
   ros__parameters:

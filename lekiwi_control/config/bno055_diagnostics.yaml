@@ -1,0 +1,5 @@
+bno055_diagnostics:
+  ros__parameters:
+    i2c_bus: 1
+    i2c_addr: '28'
+    sensor_mode: NDOF

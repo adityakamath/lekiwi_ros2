@@ -1,21 +1,21 @@
 ekf_node:
   ros__parameters:
-    # --- Filter settings ---
-    frequency: 50.0          # Hz — matches controller_manager update_rate
-    sensor_timeout: 0.1      # seconds — max gap before sensor is considered stale
-    two_d_mode: false        # 3D mode: tracks roll/pitch for ramps and uneven terrain
+    # Filter settings
+    frequency: 50.0      # Hz — matches controller_manager update_rate
+    sensor_timeout: 0.1  # s — max gap before sensor is considered stale
+    two_d_mode: true     # 2D mode: clamps z, roll, pitch to zero — indoor flat floor only
 
-    # --- Frame IDs ---
+    # Frame IDs
     map_frame: map
     odom_frame: odom
     base_link_frame: base_footprint
-    world_frame: odom        # EKF runs relative to odom (no GPS / map frame)
+    world_frame: odom  # EKF runs relative to odom (no GPS / map frame)
 
-    # --- Output ---
-    publish_tf: true         # EKF owns and publishes odom → base_footprint TF
+    # Output
+    publish_tf: true  # EKF owns and publishes odom → base_footprint TF
     publish_acceleration: false
 
-    # --- Sensor 0: Wheel odometry from omni_wheel_drive_controller ---
+    # Sensor 0: Wheel odometry from omni_wheel_drive_controller
     # Topic: /base_controller/odom  (nav_msgs/Odometry)
     # Fuses: vx, vy linear velocities only (NOT x, y position).
     # Position is excluded because the controller computes it using its own heading estimate,
@@ -33,7 +33,7 @@ ekf_node:
     odom0_relative: false
     odom0_queue_size: 5
 
-    # --- Sensor 1: BNO055 IMU via imu_sensor_broadcaster ---
+    # Sensor 1: BNO055 IMU via imu_sensor_broadcaster
     # Topic: /imu_sensor_broadcaster/imu  (sensor_msgs/Imu)
     # Fuses: absolute roll, pitch, yaw (NDOF, gravity-referenced, drift-free) + full angular
     # velocity (vroll, vpitch, vyaw from gyro). Absolute orientation anchors the drift-free
@@ -52,12 +52,12 @@ ekf_node:
                   false, false, false,
                   true,  true,  true,
                   false, false, false]
-    imu0_differential: false   # BNO055 NDOF provides global orientation (magnetometer fused)
+    imu0_differential: false                       # BNO055 NDOF provides global orientation (magnetometer fused)
     imu0_relative: false
     imu0_remove_gravitational_acceleration: false  # BNO055 NDOF already removes gravity on-chip
     imu0_queue_size: 5
 
-    # --- Process noise covariance (Q matrix) ---
+    # Process noise covariance (Q matrix)
     # Diagonal: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
     # Tuned for a slow indoor ground robot. Larger values → faster tracking but noisier output.
     process_noise_covariance: [0.05,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,

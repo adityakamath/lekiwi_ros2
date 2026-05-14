@@ -1,0 +1,48 @@
+amcl:
+  ros__parameters:
+    # Frames / topics
+    base_frame_id: base_footprint
+    odom_frame_id: odom
+    global_frame_id: map
+    scan_topic: scan
+
+    # Motion model 
+    robot_model_type: nav2_amcl::OmniMotionModel
+    alpha1: 0.1  # noise in rotation from rotation    (low: EKF already handles odom noise)
+    alpha2: 0.1  # noise in rotation from translation
+    alpha3: 0.1  # noise in translation from translation
+    alpha4: 0.1  # noise in translation from rotation
+    alpha5: 0.1  # strafe noise (omni only)
+
+    # Particle filter
+    max_particles: 2000                    # more particles → better convergence, tighter cloud
+    particle_filter_publish_period_s: 0.1  # s (10 Hz); 0 = disabled
+    pf_err: 0.05                           # error bound [0–1]
+    pf_z: 0.99                             # confidence bound [0–1]
+    update_min_d: 0.10                     # m — update every ~10 cm of travel
+    update_min_a: 0.2                      # rad
+    resample_interval: 1                   # updates
+
+    # Laser model
+    # likelihood_field model only uses: z_hit, z_rand, sigma_hit, likelihood_field_dsmax
+    laser_model_type: likelihood_field
+    laser_max_range: 8.0         # m
+    laser_min_range: 0.02        # m
+    max_beams: 60                # beams/scan
+    z_hit: 0.9                   # weight [0–1] — 90% of beam weight on obstacle hits
+    z_rand: 0.1                  # weight [0–1] — 10% uniform noise (high values cause jitter)
+    z_max: 0.05                  # weight [0–1] — unused for likelihood_field
+    z_short: 0.0                 # weight [0–1] — unused for likelihood_field
+    sigma_hit: 0.1               # m — Gaussian std of obstacle hit model (10 cm)
+    lambda_short: 0.1            # 1/m — unused for likelihood_field
+    likelihood_field_dsmax: 2.0  # m — max obstacle lookup distance
+
+    # Global localization
+    do_beamskip: false
+    beam_skip_distance: 0.5   # m
+    beam_skip_threshold: 0.3  # fraction [0–1]
+
+    # TF / pose output
+    transform_tolerance: 1.0  # s — wider window smooths the published map→odom TF
+    tf_broadcast: true
+    save_pose_rate: 0.5       # Hz — how often the last pose is saved for warm-starting

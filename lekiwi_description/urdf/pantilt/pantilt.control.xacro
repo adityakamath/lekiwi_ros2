@@ -25,7 +25,7 @@
   <xacro:property name="tilt_joint_upper" value="${pi/2}"/>
 
   <!-- ROS 2 CONTROL -->
-  <ros2_control name="pt100_control" type="system">
+  <ros2_control name="pantilt_control" type="system">
     <hardware>
       <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
       <param name="serial_port">$(arg serial_port)</param>

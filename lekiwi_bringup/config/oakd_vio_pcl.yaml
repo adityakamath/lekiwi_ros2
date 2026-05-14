@@ -43,7 +43,6 @@
     oak.rgb.image_raw.enable_pub_plugins:
       - image_transport/raw
       - image_transport/compressed
-      - image_transport/theora
     oak.stereo.image_raw.enable_pub_plugins:
       - image_transport/raw
       - image_transport/compressedDepth

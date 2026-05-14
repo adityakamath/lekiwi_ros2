@@ -1,0 +1,3 @@
+map_saver_node:
+  ros__parameters:
+    button: 5  # R1

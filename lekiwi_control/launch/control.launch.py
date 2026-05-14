@@ -9,6 +9,8 @@ the matching URDF, controller config, teleop config, and spawners:
   k2       — full K2 (LeKiwi2) robot: base + pantilt + IMU [default]
 """
 
+import yaml
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -27,12 +29,11 @@ def launch_setup(context, *args, **kwargs):
     xacro arguments.
     """
     config        = LaunchConfiguration('config').perform(context)
-    serial_port   = LaunchConfiguration('serial_port').perform(context)
+    serial_port   = LaunchConfiguration('sts_serial_port').perform(context)
     use_mock      = LaunchConfiguration('use_mock').perform(context)
     diagnostics   = LaunchConfiguration('diagnostics').perform(context)
-    pan_center    = LaunchConfiguration('pan_center_steps').perform(context)
-    tilt_center   = LaunchConfiguration('tilt_center_steps').perform(context)
-    teleop_config = LaunchConfiguration('teleop_config').perform(context)
+    launch_joy    = LaunchConfiguration('joy').perform(context).lower() in ('true', '1')
+    use_sim_time  = LaunchConfiguration('use_sim_time').perform(context).lower() in ('true', '1')
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
@@ -48,7 +49,13 @@ def launch_setup(context, *args, **kwargs):
     # passing them to base.urdf.xacro would cause an "unused argument" xacro error.
     xacro_cmd = f'{xacro} {urdf} serial_port:={serial_port} use_mock:={use_mock}'
     if config in ('pantilt', 'k2'):
-        xacro_cmd += f' pan_center_steps:={pan_center} tilt_center_steps:={tilt_center}'
+        # Read calibration values from the per-config pantilt_limits.yaml rather
+        # than from launch arguments — callers don't need to know these values.
+        _limits = yaml.safe_load(open(f'{pkg_ctrl}/config/{config}/urdf_config.yaml'))
+        xacro_cmd += (
+            f' pan_center_steps:={_limits["pan_center_steps"]}'
+            f' tilt_center_steps:={_limits["tilt_center_steps"]}'
+        )
 
     robot_description = {
         'robot_description': ParameterValue(Command([xacro_cmd]), value_type=str)
@@ -60,7 +67,7 @@ def launch_setup(context, *args, **kwargs):
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='log',
-        parameters=[robot_description],
+        parameters=[robot_description, {'use_sim_time': use_sim_time}],
         name='robot_state_publisher',
         emulate_tty=True,
         arguments=['--ros-args', '--log-level', 'WARN'],
@@ -71,7 +78,11 @@ def launch_setup(context, *args, **kwargs):
     controller_manager = Node(
         package='controller_manager',
         executable='ros2_control_node',
-        parameters=[robot_description, f'{pkg_ctrl}/config/{config}/control.yaml'],
+        parameters=[
+            robot_description,
+            f'{pkg_ctrl}/config/{config}/control.yaml',
+            {'use_sim_time': use_sim_time},
+        ],
         remappings=[('/diagnostics', '/controller_manager/diagnostics')],
         output='log',
         emulate_tty=True,
@@ -82,8 +93,33 @@ def launch_setup(context, *args, **kwargs):
         package='joy_teleop',
         executable='joy_teleop',
         name='joy_teleop',
-        parameters=[teleop_config],
+        parameters=[f'{pkg_ctrl}/config/{config}/teleop.yaml', {'use_sim_time': use_sim_time}],
         output='screen',
+    )
+
+    # joy_node reads the gamepad and publishes /joy. Disabled by default because
+    # the joystick is normally connected to and published from a remote device.
+    # Set launch_joy:=true to run joy_node on the robot itself.
+    joy_node = Node(
+        package='joy',
+        executable='joy_node',
+        name='joy_node',
+        output='log',
+        parameters=[{'use_sim_time': use_sim_time}],
+    )
+
+    # twist_switch_node bridges /cmd_vel_teleop (joy_teleop) and /cmd_vel_nav (nav stack)
+    # onto /base_controller/cmd_vel. Only launched for configs that include the
+    # base_controller (base and k2) — pantilt has no drive controller.
+    twist_switch_node = Node(
+        package='lekiwi_control',
+        executable='twist_switch_node',
+        name='twist_switch',
+        output='log',
+        parameters=[
+            f'{pkg_ctrl}/config/twist_switch.yaml',
+            {'use_sim_time': use_sim_time},
+        ],
     )
 
     # joint_state_broadcaster must be active before the other controllers so
@@ -152,6 +188,13 @@ def launch_setup(context, *args, **kwargs):
         teleop_node,
     ]
 
+    if launch_joy:
+        actions.append(joy_node)
+
+    # Add twist_switch_node for configs with a base_controller
+    if config in ('base', 'k2'):
+        actions.append(twist_switch_node)
+
     if diagnostics.lower() == 'true':
         # Motor diagnostics applies to all configs — all use STS servos.
         actions.append(TimerAction(period=3.0, actions=[motor_diagnostics]))
@@ -165,12 +208,10 @@ def launch_setup(context, *args, **kwargs):
                     executable='bno055_diagnostics',
                     name='bno055_diagnostics',
                     output='log',
-                    parameters=[{
-                        'i2c_bus':          1,
-                        'i2c_addr':         '28',
-                        'sensor_mode':      'NDOF',
-                        'enable_mock_mode': use_mock,
-                    }],
+                    parameters=[
+                        f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
+                        {'enable_mock_mode': use_mock},
+                    ],
                     remappings=[('/diagnostics', '/imu/diagnostics')],
                 )],
             ))
@@ -189,11 +230,11 @@ def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument(
             'config',
-            default_value='base',
+            default_value='k2',
             description='Robot configuration to launch: base, pantilt, or k2',
         ),
         DeclareLaunchArgument(
-            'serial_port',
+            'sts_serial_port',
             default_value='/dev/ttySERVO',
             description='Serial port for STS motor communication',
         ),
@@ -208,23 +249,15 @@ def generate_launch_description():
             description='Launch motor and IMU diagnostics nodes',
         ),
         DeclareLaunchArgument(
-            'pan_center_steps',
-            default_value='2048',
-            description='Encoder step that maps to 0 rad for the pan joint',
+            'use_sim_time',
+            default_value='false',
+            description='Use /clock from a simulator instead of system time.',
         ),
         DeclareLaunchArgument(
-            'tilt_center_steps',
-            default_value='2646',
-            description='Encoder step that maps to 0 rad for the tilt joint',
-        ),
-        # teleop_config defaults to config/{config}/teleop.yaml, but can be
-        # overridden at launch time to point at a custom joystick mapping.
-        DeclareLaunchArgument(
-            'teleop_config',
-            default_value=PathJoinSubstitution(
-                [FindPackageShare('lekiwi_control'), 'config', LaunchConfiguration('config'), 'teleop.yaml']
-            ),
-            description='Path to the joy_teleop configuration file',
+            'joy',
+            default_value='false',
+            description='Launch joy_node on this device. Set true when the joystick is connected locally; '
+                        'leave false when /joy is published from a remote device.',
         ),
     ]
 
