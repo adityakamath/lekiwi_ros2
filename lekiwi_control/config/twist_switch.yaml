@@ -4,15 +4,13 @@ twist_switch:
     input_topic_default: /cmd_vel_teleop
     input_topic_default.stamped: true
 
-    # Switched input: nav2/nav stack publishes Twist on /cmd_vel_nav
+    # Switched input: Nav2 Kilted collision_monitor publishes TwistStamped on /cmd_vel_nav
+    # (enable_stamped_cmd_vel defaults to true in Kilted's nav2_util TwistPublisher)
     input_topic_switched: /cmd_vel_nav
-    input_topic_switched.stamped: false
+    input_topic_switched.stamped: true
 
     # Output: base_controller expects TwistStamped
     output_topic: /base_controller/cmd_vel
     output_topic.stamped: true
 
     frame_id: base_link
-
-    # Publish zero velocity if switched input is silent for this many seconds
-    switched_timeout_s: 0.5

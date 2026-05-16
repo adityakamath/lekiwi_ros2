@@ -1,96 +1,187 @@
 #!/usr/bin/env python3
 """
-Launch slam_toolbox for LeKiwi.
+Launch the Nav2 navigation nodes for LeKiwi.
+
+Mirrors nav2_bringup/launch/navigation_launch.py but limited to the six
+nodes LeKiwi actually uses.  Unused nav2_bringup nodes are omitted:
+    - smoother_server   (SmacPlanner2D has a built-in path smoother)
+    - route_server      (graph-based routing — not needed for free-space nav)
+    - waypoint_follower (single-goal navigation only)
+    - docking_server    (no docking hardware)
+    - following_server  (no following use-case)
+
+Nodes launched (in lifecycle order):
+    controller_server   MPPI Omni @ 10 Hz
+    planner_server      SmacPlanner2D (A* + built-in smoother)
+    behavior_server     Spin / BackUp / Wait recoveries
+    velocity_smoother   rate-limits MPPI output
+    collision_monitor   last-resort safety stop
+    bt_navigator        Behavior Tree orchestrator (started last)
+
+Topic wiring (no namespace):
+    controller_server  cmd_vel   → cmd_vel_raw      (MPPI output)
+    behavior_server    cmd_vel   → cmd_vel_raw      (BackUp / Spin output)
+    velocity_smoother  cmd_vel   → cmd_vel_raw      (input remap; output is cmd_vel_smoothed)
+    collision_monitor  reads cmd_vel_smoothed, writes cmd_vel_nav (set in nav2.yaml params)
+    twist_switch_node  subscribes /cmd_vel_nav → base_controller
 
 Launch arguments:
-    slam_mode    map | localize   (default: map)
-    map_name     subdirectory name under maps/ (required for localize)
-    use_sim_time true | false     (default: false)
+    params_file   full path to nav2.yaml
+                  (default: lekiwi_navigation/config/nav2/nav2.yaml)
+    use_sim_time  true | false  (default: false)
+    autostart     true | false  (default: true)
+    log_level     info | debug | warn | error  (default: info)
 
-Invoked from navigation.launch.py for slam_mode:=map and slam_mode:=localize.
+Invoked from navigation.launch.py.
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetParameter
+from launch_ros.descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
-import os
-import yaml
-
-
-def launch_setup(context, *args, **kwargs):
-    use_sim_time = LaunchConfiguration('use_sim_time')
-    slam_mode    = LaunchConfiguration('slam_mode').perform(context)
-    map_name     = LaunchConfiguration('map_name').perform(context)
-
-    slam_params = PathJoinSubstitution([
-        FindPackageShare('lekiwi_navigation'), 'config', 'nav2', 'slam_toolbox.yaml',
-    ])
-
-    # slam_toolbox internal mode names
-    _st_mode = {'map': 'mapping', 'localize': 'localization'}
-    extra_params = {'use_sim_time': use_sim_time, 'mode': _st_mode[slam_mode]}
-
-    if slam_mode == 'localize':
-        if not map_name:
-            raise RuntimeError(
-                "[nav2.launch.py] slam_mode:=localize requires map_name to be set. "
-                "e.g. map_name:=livingroom1"
-            )
-        # os.path.realpath resolves the symlink created by --symlink-install so
-        # that _pkg_src always points to the source tree where maps/ lives.
-        # Maps are not installed — they remain in the source tree only.
-        _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        map_file_path = os.path.join(_pkg_src, 'maps', map_name, 'map')
-        extra_params['map_file_name'] = map_file_path
-
-        # Load saved starting pose so slam_toolbox starts from the right position.
-        pose_file = os.path.join(_pkg_src, 'maps', map_name, 'starting_pose.yaml')
-        if os.path.exists(pose_file):
-            with open(pose_file) as f:
-                pose = yaml.safe_load(f)
-            extra_params['map_start_pose'] = [pose['x'], pose['y'], pose['theta']]
-        # If no starting_pose.yaml, slam_toolbox starts at map origin (0, 0, 0).
-
-    return [
-        Node(
-            package='slam_toolbox',
-            executable='async_slam_toolbox_node',
-            name='slam_toolbox',
-            output='screen',
-            parameters=[slam_params, extra_params],
-        ),
-        Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_slam',
-            output='screen',
-            parameters=[{
-                'use_sim_time': use_sim_time,
-                'autostart': True,
-                'node_names': ['slam_toolbox'],
-            }],
-        ),
-    ]
 
 
 def generate_launch_description():
+    pkg_nav = FindPackageShare('lekiwi_navigation')
+
+    params_file = LaunchConfiguration('params_file')
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    autostart    = LaunchConfiguration('autostart')
+    log_level    = LaunchConfiguration('log_level')
+
+    # Lifecycle manager brings up nodes in this order; bt_navigator must be last
+    # because it depends on the other servers being active.
+    lifecycle_nodes = [
+        'controller_server',
+        'planner_server',
+        'behavior_server',
+        'velocity_smoother',
+        'collision_monitor',
+        'bt_navigator',
+    ]
+
+    # Standard Nav2 TF remappings — required when running without a namespace.
+    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+
+    # ParameterFile makes the yaml available to every node without duplicating
+    # it.  allow_substs=True enables $(find ...) style substitutions inside the
+    # yaml if ever needed.
+    configured_params = ParameterFile(params_file, allow_substs=True)
+
+    load_nodes = GroupAction(
+        actions=[
+            SetParameter('use_sim_time', use_sim_time),
+            # ── Controller Server ────────────────────────────────────────────
+            # Remaps output cmd_vel → cmd_vel_raw so velocity_smoother can pick
+            # it up without a circular dependency on cmd_vel_nav.
+            Node(
+                package='nav2_controller',
+                executable='controller_server',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
+            ),
+            # ── Planner Server ───────────────────────────────────────────────
+            Node(
+                package='nav2_planner',
+                executable='planner_server',
+                name='planner_server',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings,
+            ),
+            # ── Behavior Server ──────────────────────────────────────────────
+            # BackUp and Spin also publish cmd_vel; remap to cmd_vel_raw so
+            # recovery velocities go through the same smoother/safety path.
+            Node(
+                package='nav2_behaviors',
+                executable='behavior_server',
+                name='behavior_server',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
+            ),
+            # ── BT Navigator ─────────────────────────────────────────────────
+            Node(
+                package='nav2_bt_navigator',
+                executable='bt_navigator',
+                name='bt_navigator',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings,
+            ),
+            # ── Velocity Smoother ────────────────────────────────────────────
+            # Input remap: cmd_vel → cmd_vel_raw  (reads raw controller output)
+            # Output: publishes to cmd_vel_smoothed  (collision_monitor reads it)
+            Node(
+                package='nav2_velocity_smoother',
+                executable='velocity_smoother',
+                name='velocity_smoother',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
+            ),
+            # ── Collision Monitor ────────────────────────────────────────────
+            # Reads cmd_vel_smoothed, applies safety polygon, writes cmd_vel_nav.
+            # The output topic name is set via cmd_vel_out_topic in nav2.yaml.
+            Node(
+                package='nav2_collision_monitor',
+                executable='collision_monitor',
+                name='collision_monitor',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings,
+            ),
+            # ── Lifecycle Manager ────────────────────────────────────────────
+            Node(
+                package='nav2_lifecycle_manager',
+                executable='lifecycle_manager',
+                name='lifecycle_manager_navigation',
+                output='screen',
+                arguments=['--ros-args', '--log-level', log_level],
+                parameters=[
+                    configured_params,
+                    {'autostart': autostart},
+                    {'node_names': lifecycle_nodes},
+                ],
+            ),
+        ],
+    )
+
     return LaunchDescription([
+        SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1'),
         DeclareLaunchArgument(
-            'slam_mode', default_value='map',
-            description="slam_toolbox mode: 'map' (build new map) or 'localize' (re-use serialized map).",
-        ),
-        DeclareLaunchArgument(
-            'map_name', default_value='',
+            'params_file',
+            default_value=PathJoinSubstitution([
+                pkg_nav, 'config', 'nav2', 'nav2.yaml',
+            ]),
             description=(
-                'Subdirectory name of the map to load for localize mode '
-                '(e.g. livingroom1). The full path is constructed automatically.'
+                'Full path to the Nav2 parameters YAML file. '
+                'Defaults to lekiwi_navigation/config/nav2/nav2.yaml.'
             ),
         ),
         DeclareLaunchArgument(
-            'use_sim_time', default_value='false',
-            description='Use /clock from a sim instead of system time.',
+            'use_sim_time',
+            default_value='false',
+            description='Use /clock from a simulator instead of system time.',
         ),
-        OpaqueFunction(function=launch_setup),
+        DeclareLaunchArgument(
+            'autostart',
+            default_value='true',
+            description='Automatically activate the Nav2 lifecycle nodes on startup.',
+        ),
+        DeclareLaunchArgument(
+            'log_level',
+            default_value='info',
+            description='Log level for all Nav2 nodes (info | debug | warn | error).',
+        ),
+        load_nodes,
     ])
