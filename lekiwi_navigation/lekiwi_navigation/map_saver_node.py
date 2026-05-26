@@ -2,7 +2,7 @@
 """
 map_saver_node — save the slam_toolbox map on joystick button press.
 
-Subscribes to /joy and on R1 button (button 5) press:
+Subscribes to /joy and on R1 button (button 10) press:
   1. Creates maps/<YYYY_MM_DD_HH_MM_SS>/ in the source tree
   2. Calls /slam_toolbox/save_map      → writes map.pgm + map.yaml
   3. Calls /slam_toolbox/serialize_map → writes map.posegraph + map.data
@@ -11,7 +11,7 @@ Subscribes to /joy and on R1 button (button 5) press:
                                          (used by nav2.launch.py for map_start_pose)
 
 Parameters:
-    button  int  Button index for save trigger (default: 5 = R1)
+    button  int  Button index for save trigger (default: 10 = R1)
 """
 
 import math
@@ -40,7 +40,7 @@ class MapSaverNode(Node):
         self._maps_dir = os.path.join(_src_pkg, 'maps')
         os.makedirs(self._maps_dir, exist_ok=True)
 
-        self.declare_parameter('button', 5)
+        self.declare_parameter('button', 10)
         self._button = self.get_parameter('button').value
 
         self._save_client      = self.create_client(SaveMap, '/slam_toolbox/save_map')

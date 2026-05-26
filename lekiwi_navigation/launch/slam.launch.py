@@ -96,7 +96,7 @@ def launch_setup(context, *args, **kwargs):
             ),
         ]
 
-        if slam_mode == 'map':
+        if slam_mode in ('map', 'localize'):
             # map_saver_node listens on /joy and saves the map when R1 (button 5) is pressed.
             actions.append(Node(
                 package='lekiwi_navigation',
