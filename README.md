@@ -10,7 +10,7 @@
 
 ## Overview
 
-Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Features holonomic drive, odometry, teleoperation, and real-time motor diagnostics for controls and safety. Includes LiDAR and camera drivers for perception.
+Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Features holonomic drive, odometry, teleoperation, and real-time motor diagnostics for controls and safety. Includes LiDAR and an OAK-D depth camera for perception.
 
 ## Installation and Usage
 
@@ -29,7 +29,6 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 - **[ros2_control](https://control.ros.org/)** framework with standard controllers
 - **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)**: Hardware interface for Feetech STS servos
 - **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)**: LD06 LiDAR driver with bug fixes
-- **[camera_ros](https://github.com/ros-drivers/camera_ros)**: USB camera driver
 
 ## Structure
 

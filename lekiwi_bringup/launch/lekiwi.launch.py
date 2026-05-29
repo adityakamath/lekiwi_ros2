@@ -3,9 +3,9 @@
 Launch the LeKiwi robot system.
 
 The 'config' argument selects which subsystems to bring up:
-  base     — base drive + IMU, laser, webcam, navigation  [no pantilt]
-  pantilt  — pan-tilt servos + OAK-D camera               [no base, no navigation]
-  k2       — full K2 (LeKiwi2) system: base + pantilt + all sensors + navigation  [default]
+  base     — base drive + IMU, laser, navigation [no pantilt]
+  pantilt  — pan-tilt servos + OAK-D camera [no base, no navigation]
+  k2       — full K2 (LeKiwi2) system: base + pantilt + all sensors + navigation [default]
 """
 
 from launch import LaunchDescription
@@ -59,21 +59,20 @@ def launch_setup(context, *args, **kwargs):
         'use_sim_time': use_sim_time,
     })
     laser  = include(pkg_bringup, 'launch/laser.launch.py', {'config': config})
-    webcam = include(pkg_bringup, 'launch/webcam.launch.py')
     oakd   = include(pkg_bringup, 'launch/oakd.launch.py', {'pointcloud': pointcloud})
 
     # ── Config-specific subsystem selection ──────────────────────────────────
 
     if config == 'base':
         # Base drive + navigation; no pantilt hardware, no OAK-D
-        return [control, nav, laser, webcam]
+        return [control, nav, laser]
 
     elif config == 'pantilt':
         # Pan-tilt + OAK-D only; no base drive, no navigation, no 2D sensors
         return [control, oakd]
 
     else:  # k2 — full system
-        return [control, nav, laser, webcam, oakd]
+        return [control, nav, laser, oakd]
 
 
 def generate_launch_description():

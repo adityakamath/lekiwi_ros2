@@ -12,7 +12,6 @@
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_control</exec_depend>
   <exec_depend>lekiwi_navigation</exec_depend>
-  <exec_depend>camera_ros</exec_depend>
   <exec_depend>ldlidar_ros2</exec_depend>
   <exec_depend>depthai_ros_driver</exec_depend>
   <exec_depend>laser_filters</exec_depend>

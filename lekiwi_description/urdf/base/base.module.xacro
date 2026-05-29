@@ -89,30 +89,6 @@
     <!-- IMU frame -->
     <link name="imu_frame"/>
 
-    <!-- Camera link -->
-    <link name="camera_link">
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://lekiwi_description/meshes/base/hd_webcam.stl"/>
-        </geometry>
-        <material name="base_charcoal"/>
-      </visual>
-      <collision>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://lekiwi_description/meshes/base/hd_webcam.stl"/>
-        </geometry>
-      </collision>
-      <inertial>
-        <mass value="0.05"/>
-        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
-      </inertial>
-    </link>
-
-    <!-- Camera frame -->
-    <link name="camera"/>
-
     <!-- Left wheel link -->
     <link name="left_wheel_link">
       <visual>
@@ -204,20 +180,6 @@
       <parent link="imu_link"/>
       <child link="imu_frame"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-    </joint>
-
-    <!-- camera fixed joint -->
-    <joint name="camera_joint" type="fixed">
-      <parent link="base_link"/>
-      <child link="camera_link"/>
-      <origin xyz="${camera_base_offset_x} 0 ${camera_base_offset_z}" rpy="0 ${camera_offset_ry} 0"/>
-    </joint>
-
-    <!-- camera_frame fixed joint -->
-    <joint name="camera_frame_joint" type="fixed">
-      <parent link="camera_link"/>
-      <child link="camera"/>
-      <origin xyz="0 0 0" rpy="0 0 ${camera_frame_offset_rz}"/>
     </joint>
 
     <!-- left wheel joint: 60 degrees anti-clockwise from +X at radius wheel_base_radius -->

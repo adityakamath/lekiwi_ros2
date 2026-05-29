@@ -17,12 +17,6 @@
   <xacro:property name="laser_base_offset_z" value="0.0915"/>
   <xacro:property name="laser_offset_rx" value="${pi/2}"/>
 
-  <!-- HD camera offsets from base_link -->
-  <xacro:property name="camera_base_offset_x" value="0.114"/>
-  <xacro:property name="camera_base_offset_z" value="0.026"/>
-  <xacro:property name="camera_offset_ry" value="${pi/2}"/>
-  <xacro:property name="camera_frame_offset_rz" value="${3*pi/2}"/>
-
   <!-- LDLidar frame offsets from laser_link -->
   <xacro:property name="laser_frame_offset_z" value="0.027"/>
 
