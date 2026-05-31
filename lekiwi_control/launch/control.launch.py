@@ -45,16 +45,56 @@ def launch_setup(context, *args, **kwargs):
     else:
         urdf = f'{pkg_desc}/urdf/k2.urdf.xacro'
 
-    # pan/tilt center steps are only declared in pantilt and k2 URDFs —
-    # passing them to base.urdf.xacro would cause an "unused argument" xacro error.
-    xacro_cmd = f'{xacro} {urdf} serial_port:={serial_port} use_mock:={use_mock}'
-    if config in ('pantilt', 'k2'):
-        # Read calibration values from the per-config pantilt_limits.yaml rather
-        # than from launch arguments — callers don't need to know these values.
-        _limits = yaml.safe_load(open(f'{pkg_ctrl}/config/{config}/urdf_config.yaml'))
+    # Load per-robot URDF config (motor IDs, comms defaults, calibration).
+    # serial_port and use_mock: launch args override YAML when explicitly set (non-empty).
+    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/{config}/urdf_config.yaml'))
+    final_serial_port = serial_port if serial_port else _cfg['serial_port']
+    final_use_mock    = use_mock if use_mock else str(_cfg['use_mock']).lower()
+
+    xacro_cmd = (
+        f'{xacro} {urdf}'
+        f' serial_port:={final_serial_port}'
+        f' use_mock:={final_use_mock}'
+        f' baud_rate:={_cfg["baud_rate"]}'
+        f' use_sync_write:={str(_cfg["use_sync_write"]).lower()}'
+    )
+    if config == 'base':
         xacro_cmd += (
-            f' pan_center_steps:={_limits["pan_center_steps"]}'
-            f' tilt_center_steps:={_limits["tilt_center_steps"]}'
+            f' left_motor_id:={_cfg["left_motor_id"]}'
+            f' back_motor_id:={_cfg["back_motor_id"]}'
+            f' right_motor_id:={_cfg["right_motor_id"]}'
+            f' sts_max_velocity_steps:={_cfg["sts_max_velocity_steps"]}'
+            f' proportional_acc_max:={_cfg["proportional_acc_max"]}'
+        )
+    elif config == 'pantilt':
+        xacro_cmd += (
+            f' pan_motor_id:={_cfg["pan_motor_id"]}'
+            f' tilt_motor_id:={_cfg["tilt_motor_id"]}'
+            f' pan_center_steps:={_cfg["pan_center_steps"]}'
+            f' tilt_center_steps:={_cfg["tilt_center_steps"]}'
+            f' sts_max_velocity_steps:={_cfg["sts_max_velocity_steps"]}'
+            f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
+            f' pan_joint_lower:={_cfg["pan_joint_lower"]}'
+            f' pan_joint_upper:={_cfg["pan_joint_upper"]}'
+            f' tilt_joint_lower:={_cfg["tilt_joint_lower"]}'
+            f' tilt_joint_upper:={_cfg["tilt_joint_upper"]}'
+        )
+    else:  # k2
+        xacro_cmd += (
+            f' left_motor_id:={_cfg["left_motor_id"]}'
+            f' back_motor_id:={_cfg["back_motor_id"]}'
+            f' right_motor_id:={_cfg["right_motor_id"]}'
+            f' pan_motor_id:={_cfg["pan_motor_id"]}'
+            f' tilt_motor_id:={_cfg["tilt_motor_id"]}'
+            f' pan_center_steps:={_cfg["pan_center_steps"]}'
+            f' tilt_center_steps:={_cfg["tilt_center_steps"]}'
+            f' sts_max_velocity_steps:={_cfg["sts_max_velocity_steps"]}'
+            f' proportional_acc_max:={_cfg["proportional_acc_max"]}'
+            f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
+            f' pan_joint_lower:={_cfg["pan_joint_lower"]}'
+            f' pan_joint_upper:={_cfg["pan_joint_upper"]}'
+            f' tilt_joint_lower:={_cfg["tilt_joint_lower"]}'
+            f' tilt_joint_upper:={_cfg["tilt_joint_upper"]}'
         )
 
     robot_description = {
@@ -210,7 +250,7 @@ def launch_setup(context, *args, **kwargs):
                     output='log',
                     parameters=[
                         f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
-                        {'enable_mock_mode': use_mock},
+                        {'enable_mock_mode': final_use_mock},
                     ],
                     remappings=[('/diagnostics', '/imu/diagnostics')],
                 )],
@@ -235,13 +275,13 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'sts_serial_port',
-            default_value='/dev/ttySERVO',
-            description='Serial port for STS motor communication',
+            default_value='',
+            description='Serial port override; empty string means use urdf_config.yaml value',
         ),
         DeclareLaunchArgument(
             'use_mock',
-            default_value='false',
-            description='Use mock/simulation mode (no hardware required)',
+            default_value='',
+            description='Mock mode override (true/false); empty string means use urdf_config.yaml value',
         ),
         DeclareLaunchArgument(
             'diagnostics',

@@ -29,7 +29,6 @@ def launch_setup(context, *args, **kwargs):
     map_name            = LaunchConfiguration('map_name').perform(context)
     pointcloud          = LaunchConfiguration('pointcloud').perform(context)
     slam_mode           = LaunchConfiguration('slam_mode').perform(context)
-    sts_serial_port     = LaunchConfiguration('sts_serial_port').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
@@ -47,7 +46,6 @@ def launch_setup(context, *args, **kwargs):
         'config':           config,
         'diagnostics':      control_diagnostics,
         'use_mock':         control_mock,
-        'sts_serial_port':  sts_serial_port,
         'joy':              joy,
         'use_sim_time':     use_sim_time,
     })
@@ -95,13 +93,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'control_mock',
-            default_value='false',
-            description='Enable mock/simulation mode in lekiwi_control (no hardware required)',
-        ),
-        DeclareLaunchArgument(
-            'sts_serial_port',
-            default_value='/dev/ttySERVO',
-            description='Serial port for STS motor communication (forwarded to lekiwi_control)',
+            default_value='',
+            description='Mock mode override (true/false) forwarded to lekiwi_control; empty means use urdf_config.yaml value',
         ),
         DeclareLaunchArgument(
             'fusion_mode',

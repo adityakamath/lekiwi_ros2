@@ -1,0 +1,12 @@
+serial_port: /dev/ttySERVO
+baud_rate: 1000000
+
+use_mock: false
+use_sync_write: true
+
+left_motor_id: 7
+back_motor_id: 8
+right_motor_id: 9
+
+sts_max_velocity_steps: 3400
+proportional_acc_max: 25

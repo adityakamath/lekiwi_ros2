@@ -16,19 +16,22 @@
   <xacro:arg name="imu_axis_remap" default="P1"/>      <!-- Mounting orientation P0-P7, see BNO055 datasheet Table 3-4 -->
   <xacro:arg name="imu_sensor_mode" default="NDOF"/>   <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
 
+  <!-- Configurable hardware parameters (STS3215 defaults) -->
+  <xacro:arg name="sts_max_velocity_steps" default="3400"/>  <!-- STS3215=3400, STS3032=2900, STS3235=3400 -->
+  <xacro:arg name="proportional_acc_max"   default="25"/>    <!-- [0-254]; 0 = disable proportional ACC -->
+
   <!-- Base operating mode -->
 
   <xacro:property name="base_operating_mode" value="1"/>  <!-- Velocity mode -->
 
-  <!-- Motor-specific parameter (STS3215 default) -->
-  <!-- Adjust for other motor models: STS3032 max=2900, STS3235 max=3400 -->
-  <xacro:property name="sts_max_velocity_steps" value="3400"/>  <!-- Max hardware velocity in steps/s (absolute motor limit, do not exceed) -->
+  <!-- Motor-specific parameter — sourced from arg, STS3215 default -->
+  <xacro:property name="sts_max_velocity_steps" value="$(arg sts_max_velocity_steps)"/>  <!-- Max hardware velocity in steps/s -->
 
   <!-- Proportional ACC parameters (SyncWriteSpe velocity path only) -->
   <!-- ACC given to the wheel with the largest |target - current| velocity delta. -->
   <!-- All others scaled proportionally so every wheel finishes ramping in equal time. -->
   <!-- Set proportional_acc_max to 0 to disable (ACC=0 for all wheels). -->
-  <xacro:property name="proportional_acc_max" value="25"/>        <!-- [0-254] -->
+  <xacro:property name="proportional_acc_max" value="$(arg proportional_acc_max)"/>        <!-- [0-254] -->
 
   <!-- Wheel geometry for omnidirectional control -->
   <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
