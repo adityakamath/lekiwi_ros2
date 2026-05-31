@@ -21,7 +21,7 @@ setup(
     maintainer_email='adityakamath@live.com',
     description='Navigation stack for LeKiwi robot: sensor fusion and SLAM',
     license='Apache-2.0',
-    tests_require=['pytest'],
+    extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
             'map_saver_node = lekiwi_navigation.map_saver_node:main',

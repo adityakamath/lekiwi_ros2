@@ -80,21 +80,21 @@
     <visual>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/pantilt_base.stl"/>
+        <mesh filename="../../meshes/pantilt/pantilt_base.stl"/>
       </geometry>
       <material name="pantilt_light_grey"/>
     </visual>
     <visual>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/pan_motor.stl"/>
+        <mesh filename="../../meshes/pantilt/pan_motor.stl"/>
       </geometry>
       <material name="pantilt_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/pantilt_base.stl"/>
+        <mesh filename="../../meshes/pantilt/pantilt_base.stl"/>
       </geometry>
     </collision>
   </link>
@@ -108,21 +108,21 @@
     <visual>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/pan_joint.stl"/>
+        <mesh filename="../../meshes/pantilt/pan_joint.stl"/>
       </geometry>
       <material name="pantilt_light_grey"/>
     </visual>
     <visual>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/tilt_motor.stl"/>
+        <mesh filename="../../meshes/pantilt/tilt_motor.stl"/>
       </geometry>
       <material name="pantilt_charcoal"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/pan_joint.stl"/>
+        <mesh filename="../../meshes/pantilt/pan_joint.stl"/>
       </geometry>
     </collision>
   </link>
@@ -136,14 +136,14 @@
     <visual>
       <origin rpy="1.5707963267948966 -1.5707963267948966 0" xyz="0.119 0.07579999999999999 -0.0002"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/tilt_joint.stl"/>
+        <mesh filename="../../meshes/pantilt/tilt_joint.stl"/>
       </geometry>
       <material name="pantilt_light_grey"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 -1.5707963267948966 0" xyz="0.119 0.07579999999999999 -0.0002"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/tilt_joint.stl"/>
+        <mesh filename="../../meshes/pantilt/tilt_joint.stl"/>
       </geometry>
     </collision>
   </link>
@@ -188,7 +188,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/pantilt/oakd_s2.stl"/>
+        <mesh filename="../../meshes/pantilt/oakd_s2.stl"/>
       </geometry>
       <material name="mat">
         <color rgba="0.15 0.15 0.15 1.0"/>
