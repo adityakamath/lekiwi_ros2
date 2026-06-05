@@ -89,6 +89,27 @@
     <!-- IMU frame -->
     <link name="imu_frame"/>
 
+    <!-- Respeaker flex mic link -->
+    <link name="mic_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/respeaker_flex_mic.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/base/respeaker_flex_mic.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      </inertial>
+    </link>
+
     <!-- Left wheel link -->
     <link name="left_wheel_link">
       <visual>
@@ -180,6 +201,13 @@
       <parent link="imu_link"/>
       <child link="imu_frame"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Respeaker flex mic fixed joint -->
+    <joint name="mic_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="mic_link"/>
+      <origin xyz="${mic_base_offset_x} 0 ${mic_base_offset_z}" rpy="0 0 0"/>
     </joint>
 
     <!-- left wheel joint: 60 degrees anti-clockwise from +X at radius wheel_base_radius -->

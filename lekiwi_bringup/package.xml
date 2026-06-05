@@ -9,6 +9,14 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- Build dependencies for custom compressor node -->
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>point_cloud_interfaces</depend>
+  <depend>cloudini_lib</depend>
+  <depend>cloudini_ros</depend>
+
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_control</exec_depend>
   <exec_depend>lekiwi_navigation</exec_depend>

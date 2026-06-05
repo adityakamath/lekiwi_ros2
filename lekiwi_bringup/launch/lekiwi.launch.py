@@ -88,7 +88,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'control_diagnostics',
-            default_value='true',
+            default_value='false',
             description='Launch motor and IMU diagnostics nodes in lekiwi_control',
         ),
         DeclareLaunchArgument(

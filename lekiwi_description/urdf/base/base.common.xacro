@@ -24,4 +24,8 @@
   <xacro:property name="imu_base_offset_x" value="-0.044"/>
   <xacro:property name="imu_base_offset_z" value="0.08"/>
 
+  <!-- Respeaker flex mic offsets from base_link -->
+  <xacro:property name="mic_base_offset_x" value="-0.045042"/>
+  <xacro:property name="mic_base_offset_z" value="0.10901"/>
+
 </robot>
