@@ -60,11 +60,13 @@
   <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
   <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_radius}"/>
 
-  <!-- Pan and tilt joint limits — properties sourced from args for use in pantilt.module.xacro -->
+  <!-- Pan and tilt joint limits — properties sourced from args for use in pt100.module.xacro -->
   <xacro:property name="pan_joint_lower"  value="$(arg pan_joint_lower)"/>
   <xacro:property name="pan_joint_upper"  value="$(arg pan_joint_upper)"/>
   <xacro:property name="tilt_joint_lower" value="$(arg tilt_joint_lower)"/>
   <xacro:property name="tilt_joint_upper" value="$(arg tilt_joint_upper)"/>
+
+  <xacro:include filename="$(find pt100_description)/urdf/pantilt.joints.xacro"/>
 
   <!-- ROS 2 CONTROL -->
   <!-- System interface — all STS3215 joints on a single serial bus -->
@@ -122,40 +124,16 @@
       <state_interface name="current"/>
       <state_interface name="is_moving"/>
     </joint>
-    <!-- Pan joint (Motor ID 1, position mode) -->
-    <joint name="pan_joint">
-      <param name="motor_id">$(arg pan_motor_id)</param>
-      <param name="operating_mode">0</param>
-      <param name="min_position">${pan_joint_lower}</param>
-      <param name="max_position">${pan_joint_upper}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">$(arg pan_center_steps)</param>
-      <command_interface name="position"/>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
-    </joint>
-    <!-- Tilt joint (Motor ID 2, position mode) -->
-    <joint name="tilt_joint">
-      <param name="motor_id">$(arg tilt_motor_id)</param>
-      <param name="operating_mode">0</param>
-      <param name="min_position">${tilt_joint_lower}</param>
-      <param name="max_position">${tilt_joint_upper}</param>
-      <param name="max_velocity">${max_velocity_rads}</param>
-      <param name="position_center_steps">$(arg tilt_center_steps)</param>
-      <command_interface name="position"/>
-      <state_interface name="position"/>
-      <state_interface name="velocity"/>
-      <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
-    </joint>
+    <xacro:pt100_joints
+        pan_motor_id="$(arg pan_motor_id)"
+        tilt_motor_id="$(arg tilt_motor_id)"
+        pan_center_steps="$(arg pan_center_steps)"
+        tilt_center_steps="$(arg tilt_center_steps)"
+        sts_max_velocity_steps="${sts_max_velocity_steps}"
+        pan_joint_lower="${pan_joint_lower}"
+        pan_joint_upper="${pan_joint_upper}"
+        tilt_joint_lower="${tilt_joint_lower}"
+        tilt_joint_upper="${tilt_joint_upper}"/>
   </ros2_control>
 
   <!-- ROS 2 CONTROL -->

@@ -9,20 +9,12 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Build dependencies for custom compressor node -->
-  <depend>rclcpp</depend>
-  <depend>rclcpp_components</depend>
-  <depend>sensor_msgs</depend>
-  <depend>point_cloud_interfaces</depend>
-  <depend>cloudini_lib</depend>
-  <depend>cloudini_ros</depend>
-
   <!-- Runtime dependencies for launch files -->
   <exec_depend>lekiwi_control</exec_depend>
   <exec_depend>lekiwi_navigation</exec_depend>
   <exec_depend>ldlidar_ros2</exec_depend>
-  <exec_depend>depthai_ros_driver</exec_depend>
   <exec_depend>laser_filters</exec_depend>
+  <exec_depend>pt100_bringup</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

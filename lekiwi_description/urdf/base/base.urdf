@@ -121,14 +121,14 @@
     <visual>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/lekiwi_base.stl"/>
+        <mesh filename="../../meshes/lekiwi_base.stl"/>
       </geometry>
       <material name="base_light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/lekiwi_base.stl"/>
+        <mesh filename="../../meshes/lekiwi_base.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -141,14 +141,14 @@
     <visual>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/ld06_lidar.stl"/>
+        <mesh filename="../../meshes/ld06_lidar.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/ld06_lidar.stl"/>
+        <mesh filename="../../meshes/ld06_lidar.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -163,14 +163,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/bno055_imu.stl"/>
+        <mesh filename="../../meshes/bno055_imu.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/bno055_imu.stl"/>
+        <mesh filename="../../meshes/bno055_imu.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -185,14 +185,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/respeaker_flex_mic.stl"/>
+        <mesh filename="../../meshes/respeaker_flex_mic.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/respeaker_flex_mic.stl"/>
+        <mesh filename="../../meshes/respeaker_flex_mic.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -205,14 +205,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/omni_wheel.stl"/>
+        <mesh filename="../../meshes/omni_wheel.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/omni_wheel.stl"/>
+        <mesh filename="../../meshes/omni_wheel.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -225,14 +225,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/omni_wheel.stl"/>
+        <mesh filename="../../meshes/omni_wheel.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/omni_wheel.stl"/>
+        <mesh filename="../../meshes/omni_wheel.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -245,14 +245,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/omni_wheel.stl"/>
+        <mesh filename="../../meshes/omni_wheel.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/base/omni_wheel.stl"/>
+        <mesh filename="../../meshes/omni_wheel.stl"/>
       </geometry>
     </collision>
     <inertial>

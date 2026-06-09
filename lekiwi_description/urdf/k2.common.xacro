@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.common.xacro"/>
-  <xacro:include filename="$(find lekiwi_description)/urdf/pantilt/pantilt.common.xacro"/>
+  <xacro:include filename="$(find pt100_description)/urdf/pantilt.common.xacro"/>
 
   <!-- Pantilt mount point on base_link (integration-specific offsets) -->
   <xacro:property name="pantilt_base_offset_x" value="0.032725"/>

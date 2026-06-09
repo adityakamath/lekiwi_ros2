@@ -14,8 +14,8 @@ from launch_ros.substitutions import FindPackageShare
 
 
 
-def launch_setup(context, *args, **kwargs):
-    config_value = LaunchConfiguration('config').perform(context).lower()
+def launch_setup(context):
+    payload_value = LaunchConfiguration('payload').perform(context).lower()
     custom_filter_name = LaunchConfiguration('custom_filter').perform(context)
     config_file = PathJoinSubstitution([
         FindPackageShare('lekiwi_bringup'),
@@ -23,11 +23,11 @@ def launch_setup(context, *args, **kwargs):
         'laser.yaml'
     ])
 
-    if config_value == 'k2':
+    if payload_value == 'pantilt':
         filter_config_file = PathJoinSubstitution([
             FindPackageShare('lekiwi_bringup'),
             'config',
-            'laser_filter_k2.yaml'
+            'laser_filter.yaml'
         ])
         laser_node = Node(
             package='ldlidar_ros2',
@@ -85,9 +85,9 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument(
-            'config',
-            default_value='k2',
-            description='Robot configuration: base, pantilt, or k2',
+            'payload',
+            default_value='',
+            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
         ),
         DeclareLaunchArgument(
             'custom_filter',
