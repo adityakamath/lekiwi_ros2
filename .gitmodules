@@ -1,0 +1,3 @@
+[submodule "payloads/pantilt100"]
+	path = payloads/pantilt100
+	url = https://github.com/adityakamath/pantilt100
