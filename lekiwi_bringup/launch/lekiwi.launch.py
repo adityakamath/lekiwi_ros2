@@ -64,7 +64,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'payload',
             default_value='pantilt',
-            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt (k2)',
+            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
         ),
         DeclareLaunchArgument(
             'control_diagnostics',

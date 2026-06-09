@@ -1,0 +1,20 @@
+# Pantilt payload additions — merged on top of base/teleop.yaml.
+# Adds D-pad pan/tilt control (shared L1 deadman with base drive).
+joy_teleop:
+  ros__parameters:
+    pantilt_control:
+      type: topic
+      interface_type: std_msgs/msg/Float64MultiArray
+      topic_name: /pantilt_controller/commands
+      deadman_buttons: [9]  # L1
+      axis_mappings:
+        data:
+          index: 0
+          axis: 6  # D-pad horizontal -> pan
+          scale: 1.57079
+          offset: 0.0
+        data-:
+          index: 1
+          axis: 7  # D-pad vertical -> tilt
+          scale: 1.57079
+          offset: 0.0

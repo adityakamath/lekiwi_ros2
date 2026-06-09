@@ -1,0 +1,26 @@
+# Pantilt payload additions — merged on top of base/control.yaml.
+# Registers the pantilt_controller type and its joint limits with the controller manager,
+# and configures the ForwardCommandController for pan/tilt position commands.
+controller_manager:
+  ros__parameters:
+    pantilt_controller:
+      type: forward_command_controller/ForwardCommandController
+
+    joint_limits:
+      pan_joint:
+        has_position_limits: true
+        min_position: -1.5708    # rad (-π/2)
+        max_position: 1.5708     # rad (+π/2)
+        has_velocity_limits: false
+      tilt_joint:
+        has_position_limits: true
+        min_position: -1.5708    # rad (-π/2)
+        max_position: 1.5708     # rad (+π/2)
+        has_velocity_limits: false
+
+pantilt_controller:
+  ros__parameters:
+    joints:
+      - pan_joint
+      - tilt_joint
+    interface_name: position

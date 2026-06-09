@@ -1,21 +1,10 @@
-serial_port: /dev/ttySERVO
-baud_rate: 1000000
-
-use_mock: false
-use_sync_write: true
-
-left_motor_id: 7
-back_motor_id: 8
-right_motor_id: 9
-
+# Pantilt payload additions — merged on top of base/urdf_config.yaml.
 pan_motor_id: 1
 tilt_motor_id: 2
 
 pan_center_steps: 2048
 tilt_center_steps: 2646
 
-sts_max_velocity_steps: 3400
-proportional_acc_max: 25
 proportional_vel_max: 0
 
 pan_joint_lower: -1.5708

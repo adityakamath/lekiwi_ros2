@@ -23,15 +23,6 @@ controller_manager:
     base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
 
-joint_state_broadcaster:
-  ros__parameters:
-    joints:
-      - left_wheel_joint
-      - back_wheel_joint
-      - right_wheel_joint
-    # No `interfaces` needed: JSB publishes position/velocity/effort to /joint_states
-    # and extra state interfaces (voltage, temperature, etc.) to /dynamic_joint_states.
-
 base_controller:
   ros__parameters:
     # Wheel geometry - 3 wheels at 60°, 180°, 300° from +X axis
@@ -80,9 +71,9 @@ imu_sensor_broadcaster:
     # Values derived from BNO055 datasheet and typical noise density at 100 Hz.
     #
     # Orientation: ±2.5° magnetometer heading accuracy(datasheet) → 0.002 rad²
-    static_covariance_orientation: [0.002, 0.0,   0.0,
-                                     0.0,  0.002,  0.0,
-                                     0.0,  0.0,   0.002]
+    static_covariance_orientation: [0.001, 0.0,   0.0,
+                                     0.0,  0.001,  0.0,
+                                     0.0,  0.0,   0.001]
 
     # Angular velocity: ~0.014 °/s/√Hz gyro noise @ 100 Hz → (~2.4e-4 rad/s)² ≈ 1e-5 rad²/s²
     static_covariance_angular_velocity: [1.0e-5, 0.0,    0.0,

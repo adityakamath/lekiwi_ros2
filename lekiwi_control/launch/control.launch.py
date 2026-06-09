@@ -4,7 +4,7 @@ Launch the LeKiwi robot control stack.
 
 The 'payload' argument selects which hardware is present alongside the base:
   ""        — base drive + IMU only  [default: no payload]
-  "pantilt" — base drive + IMU + pan-tilt servos (k2 / LeKiwi2)
+  "pantilt" — base drive + IMU + pan-tilt servos
 """
 
 import yaml
@@ -29,11 +29,11 @@ def launch_setup(context):
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
     xacro    = FindExecutable(name='xacro').perform(context)
 
-    # Config directory matches the URDF config: base when no payload, k2 when pantilt payload.
-    config_dir = 'k2' if payload == 'pantilt' else 'base'
-    urdf = f'{pkg_desc}/urdf/k2.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
+    urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
 
-    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/{config_dir}/urdf_config.yaml'))
+    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/base/urdf_config.yaml'))
+    if payload:
+        _cfg.update(yaml.safe_load(open(f'{pkg_ctrl}/config/payloads/{payload}/urdf_config.yaml')))
     final_serial_port = serial_port if serial_port else _cfg['serial_port']
     final_use_mock    = use_mock if use_mock else str(_cfg['use_mock']).lower()
 
@@ -81,7 +81,8 @@ def launch_setup(context):
         executable='ros2_control_node',
         parameters=[
             robot_description,
-            f'{pkg_ctrl}/config/{config_dir}/control.yaml',
+            f'{pkg_ctrl}/config/base/control.yaml',
+            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
             {'use_sim_time': use_sim_time},
         ],
         remappings=[('/diagnostics', '/controller_manager/diagnostics')],
@@ -94,7 +95,11 @@ def launch_setup(context):
         package='joy_teleop',
         executable='joy_teleop',
         name='joy_teleop',
-        parameters=[f'{pkg_ctrl}/config/{config_dir}/teleop.yaml', {'use_sim_time': use_sim_time}],
+        parameters=[
+            f'{pkg_ctrl}/config/base/teleop.yaml',
+            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/teleop.yaml']),
+            {'use_sim_time': use_sim_time},
+        ],
         output='screen',
     )
 
@@ -112,7 +117,7 @@ def launch_setup(context):
         name='twist_switch',
         output='log',
         parameters=[
-            f'{pkg_ctrl}/config/twist_switch.yaml',
+            f'{pkg_ctrl}/config/base/twist_switch.yaml',
             {'use_sim_time': use_sim_time},
         ],
     )
@@ -171,7 +176,7 @@ def launch_setup(context):
                 name='bno055_diagnostics',
                 output='log',
                 parameters=[
-                    f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
+                    f'{pkg_ctrl}/config/base/bno055_diagnostics.yaml',
                     {'enable_mock_mode': final_use_mock},
                 ],
                 remappings=[('/diagnostics', '/imu/diagnostics')],
@@ -186,7 +191,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'payload',
             default_value='',
-            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt (k2)',
+            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
         ),
         DeclareLaunchArgument(
             'sts_serial_port',
