@@ -60,13 +60,13 @@
   <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
   <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_radius}"/>
 
-  <!-- Pan and tilt joint limits — properties sourced from args for use in pt100.module.xacro -->
+  <!-- Pan and tilt joint limits — properties sourced from args for use in pantilt.module.xacro -->
   <xacro:property name="pan_joint_lower"  value="$(arg pan_joint_lower)"/>
   <xacro:property name="pan_joint_upper"  value="$(arg pan_joint_upper)"/>
   <xacro:property name="tilt_joint_lower" value="$(arg tilt_joint_lower)"/>
   <xacro:property name="tilt_joint_upper" value="$(arg tilt_joint_upper)"/>
 
-  <xacro:include filename="$(find pt100_description)/urdf/pantilt.joints.xacro"/>
+  <xacro:include filename="$(find pt_description)/urdf/pantilt.joints.xacro"/>
 
   <!-- ROS 2 CONTROL -->
   <!-- System interface — all STS3215 joints on a single serial bus -->
@@ -124,7 +124,7 @@
       <state_interface name="current"/>
       <state_interface name="is_moving"/>
     </joint>
-    <xacro:pt100_joints
+    <xacro:pantilt_joints
         pan_motor_id="$(arg pan_motor_id)"
         tilt_motor_id="$(arg tilt_motor_id)"
         pan_center_steps="$(arg pan_center_steps)"

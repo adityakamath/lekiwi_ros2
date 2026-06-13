@@ -376,21 +376,21 @@
     <visual>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/pantilt_base.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pantilt_base_100.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <visual>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/pan_motor.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pan_motor.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/pantilt_base.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pantilt_base_100.stl"/>
       </geometry>
     </collision>
   </link>
@@ -404,21 +404,21 @@
     <visual>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/pan_joint.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pan_joint_100.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <visual>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/tilt_motor.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/tilt_motor.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/pan_joint.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pan_joint_100.stl"/>
       </geometry>
     </collision>
   </link>
@@ -432,14 +432,14 @@
     <visual>
       <origin rpy="1.5707963267948966 -1.5707963267948966 0" xyz="0.119 0.07579999999999999 -0.0002"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/tilt_joint.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/tilt_joint_oakd_s2.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 -1.5707963267948966 0" xyz="0.119 0.07579999999999999 -0.0002"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/tilt_joint.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/tilt_joint_oakd_s2.stl"/>
       </geometry>
     </collision>
   </link>
@@ -484,7 +484,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt100_description/meshes/oakd_s2.stl"/>
+        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/oakd_s2.stl"/>
       </geometry>
       <material name="mat">
         <color rgba="0.15 0.15 0.15 1.0"/>

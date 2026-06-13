@@ -4,7 +4,7 @@
   <xacro:include filename="$(find lekiwi_description)/urdf/base_pantilt/base_pantilt.common.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/base_pantilt/base_pantilt.control.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.module.xacro"/>
-  <xacro:include filename="$(find pt100_description)/urdf/pt100.module.xacro"/>
+  <xacro:include filename="$(find pt_description)/urdf/pantilt.module.xacro"/>
 
   <link name="base_footprint"/>
 
@@ -12,8 +12,8 @@
     <origin xyz="0 0 ${wheel_radius - wheel_base_offset_z}" rpy="0 0 0"/>
   </xacro:lekiwi_base_module>
 
-  <xacro:pt100_module parent="base_link">
+  <xacro:pantilt_module parent="base_link">
     <origin xyz="${pantilt_base_offset_x} 0 ${pantilt_base_offset_z}" rpy="0 0 0"/>
-  </xacro:pt100_module>
+  </xacro:pantilt_module>
 
 </robot>

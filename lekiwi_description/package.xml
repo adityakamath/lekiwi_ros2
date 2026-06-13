@@ -11,7 +11,7 @@
 
   <!-- Runtime dependency for processing xacro files -->
   <exec_depend>xacro</exec_depend>
-  <exec_depend>pt100_description</exec_depend>
+  <exec_depend>pt_description</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

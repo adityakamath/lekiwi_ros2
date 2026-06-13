@@ -19,6 +19,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context):
     payload        = LaunchConfiguration('payload').perform(context)
+    pantilt_config = LaunchConfiguration('pantilt_config').perform(context)
     serial_port  = LaunchConfiguration('sts_serial_port').perform(context)
     use_mock     = LaunchConfiguration('use_mock').perform(context)
     diagnostics  = LaunchConfiguration('diagnostics').perform(context)
@@ -51,6 +52,7 @@ def launch_setup(context):
     )
     if payload == 'pantilt':
         xacro_cmd += (
+            f' pantilt_config:={pantilt_config}'
             f' pan_motor_id:={_cfg["pan_motor_id"]}'
             f' tilt_motor_id:={_cfg["tilt_motor_id"]}'
             f' pan_center_steps:={_cfg["pan_center_steps"]}'
@@ -192,6 +194,11 @@ def generate_launch_description():
             'payload',
             default_value='',
             description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
+        ),
+        DeclareLaunchArgument(
+            'pantilt_config',
+            default_value='pt100',
+            description='Pan-tilt mesh variant when payload:=pantilt: "pt100" or "pt101"',
         ),
         DeclareLaunchArgument(
             'sts_serial_port',

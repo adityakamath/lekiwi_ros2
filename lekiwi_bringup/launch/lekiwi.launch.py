@@ -16,6 +16,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context):
     payload               = LaunchConfiguration('payload').perform(context)
+    pantilt_config      = LaunchConfiguration('pantilt_config').perform(context)
     control_diagnostics = LaunchConfiguration('control_diagnostics').perform(context)
     control_mock        = LaunchConfiguration('control_mock').perform(context)
     fusion_mode         = LaunchConfiguration('fusion_mode').perform(context)
@@ -28,7 +29,7 @@ def launch_setup(context):
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
     pkg_control = FindPackageShare('lekiwi_control').perform(context)
     pkg_nav     = FindPackageShare('lekiwi_navigation').perform(context)
-    pkg_pt100   = FindPackageShare('pt100_bringup').perform(context)
+    pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
 
     def include(pkg, path, args=None):
         return IncludeLaunchDescription(
@@ -38,6 +39,7 @@ def launch_setup(context):
 
     control = include(pkg_control, 'launch/control.launch.py', {
         'payload':        payload,
+        'pantilt_config': pantilt_config,
         'diagnostics':  control_diagnostics,
         'use_mock':     control_mock,
         'joy':          joy,
@@ -51,7 +53,7 @@ def launch_setup(context):
         'use_sim_time': use_sim_time,
     })
     laser = include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload})
-    oakd  = include(pkg_pt100,   'launch/oakd.launch.py',  {'pointcloud': pointcloud})
+    oakd  = include(pkg_pantilt, 'launch/oakd.launch.py',  {'pointcloud': pointcloud})
 
     actions = [control, nav, laser]
     if payload == 'pantilt':
@@ -65,6 +67,11 @@ def generate_launch_description():
             'payload',
             default_value='pantilt',
             description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
+        ),
+        DeclareLaunchArgument(
+            'pantilt_config',
+            default_value='pt100',
+            description='Pan-tilt mesh variant when payload:=pantilt: "pt100" or "pt101"',
         ),
         DeclareLaunchArgument(
             'control_diagnostics',
