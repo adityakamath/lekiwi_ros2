@@ -36,7 +36,8 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 | `fusion_mode`         | `base`    | EKF sensor fusion: `base` (wheel odom + BNO055), `imu` (BNO055 only), `odom` (wheel odom only)                    |
 | `slam_mode`           | `map`     | Navigation mode: `map` (build new map), `localize` (slam_toolbox localization), `amcl` (AMCL + nav2_map_server)   |
 | `map_name`            | `""`      | Map subdirectory to load for `localize`/`amcl` modes (required for those modes)                                  |
-| `pointcloud`          | `false`   | Enable RGBD point cloud output from the OAK-D (uses `oakd_vio_pcl.yaml`)                                          |
+| `pointcloud`          | `false`   | Use `oakd_vio_pcl.yaml` (depth aligned to RGB + point cloud) instead of `oakd_vio.yaml` (depth unaligned, no point cloud). Also gates point cloud compression. |
+| `octomap`             | `false`   | Run `octomap_server` on the OAK-D point cloud to build a persistent 3D octree (only takes effect when `pointcloud:=true`) |
 | `joy`                 | `false`   | Launch `joy_node` locally; leave `false` when `/joy` is published from a remote device                           |
 | `use_sim_time`        | `false`   | Use `/clock` from a simulator instead of system time                                                              |
 

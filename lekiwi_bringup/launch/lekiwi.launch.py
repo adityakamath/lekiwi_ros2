@@ -23,6 +23,7 @@ def launch_setup(context):
     joy                 = LaunchConfiguration('joy').perform(context)
     map_name            = LaunchConfiguration('map_name').perform(context)
     pointcloud          = LaunchConfiguration('pointcloud').perform(context)
+    octomap             = LaunchConfiguration('octomap').perform(context)
     slam_mode           = LaunchConfiguration('slam_mode').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
 
@@ -53,7 +54,10 @@ def launch_setup(context):
         'use_sim_time': use_sim_time,
     })
     laser = include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload})
-    oakd  = include(pkg_pantilt, 'launch/oakd.launch.py',  {'pointcloud': pointcloud})
+    oakd = include(pkg_pantilt, 'launch/oakd.launch.py', {
+        'pointcloud': pointcloud,
+        'octomap':    octomap,
+    })
 
     actions = [control, nav, laser]
     if payload == 'pantilt':
@@ -96,7 +100,14 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'pointcloud',
             default_value='false',
-            description='Enable RGBD point cloud output from OAK-D (uses oakd_vio_pcl.yaml)',
+            description='Enable RGBD point cloud output from OAK-D (uses oakd_vio_pcl.yaml).',
+        ),
+        DeclareLaunchArgument(
+            'octomap',
+            default_value='false',
+            description='Run octomap_server on /oak/rgbd/points to build a persistent 3D '
+                        'octree. Only takes effect when pointcloud:=true. Forwarded to '
+                        'pt_bringup/launch/oakd.launch.py.',
         ),
         DeclareLaunchArgument(
             'slam_mode',
