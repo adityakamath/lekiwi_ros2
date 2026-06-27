@@ -35,11 +35,62 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 | `control_mock`        | `""`      | Mock mode override (`true`/`false`); empty means use `urdf_config.yaml` value                                     |
 | `fusion_mode`         | `base`    | EKF sensor fusion: `base` (wheel odom + BNO055), `imu` (BNO055 only), `odom` (wheel odom only)                    |
 | `slam_mode`           | `map`     | Navigation mode: `map` (build new map), `localize` (slam_toolbox localization), `amcl` (AMCL + nav2_map_server)   |
-| `map_name`            | `""`      | Map subdirectory to load for `localize`/`amcl` modes (required for those modes)                                  |
+| `map_name`            | `""`      | Map subdirectory to load for `localize`/`amcl` modes (required for those modes). Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
 | `pointcloud`          | `false`   | Use `oakd_vio_pcl.yaml` (depth aligned to RGB + point cloud) instead of `oakd_vio.yaml` (depth unaligned, no point cloud). Also gates point cloud compression. |
 | `octomap`             | `false`   | Run `octomap_server` on the OAK-D point cloud to build a persistent 3D octree (only takes effect when `pointcloud:=true`) |
 | `joy`                 | `false`   | Launch `joy_node` locally; leave `false` when `/joy` is published from a remote device                           |
 | `use_sim_time`        | `false`   | Use `/clock` from a simulator instead of system time                                                              |
+
+## Joystick Configuration
+
+Teleoperation is configured for a **Steam Deck**, used as a generic joystick (via `joy_node`/`joy_teleop`) rather than through Steam Input — button and axis indices below are specific to how the Deck's controls show up over that interface, not a standard Xbox-style gamepad layout. See the `joy` launch argument above for running `joy_node` locally vs. receiving `/joy` from a remote device.
+
+**Drive** (base, requires the L1 deadman held):
+
+| Control            | Action                                  |
+|---------------------|------------------------------------------|
+| L1 (button 9)       | Deadman — hold to enable drive commands |
+| Left stick (axis 1) | Forward / backward                      |
+| Left stick (axis 0) | Strafe left / right                     |
+| Right stick (axis 2)| Rotate in place                         |
+
+**Pan-tilt** (`payload:=pantilt` only, shares the same L1 deadman):
+
+| Control          | Action       |
+|------------------|--------------|
+| D-pad (axis 6)   | Pan          |
+| D-pad (axis 7)   | Tilt         |
+
+**Single-button safety/mode controls**:
+
+| Control                | Action                                                                                          |
+|-------------------------|--------------------------------------------------------------------------------------------------|
+| B (button 1)            | Toggle `/emergency_stop` (via `bool_toggle_node`)                                                |
+| X (button 2)            | Toggle base control between teleop and Nav2 (via `bool_toggle_node`, `/twist_switch`)            |
+| R1 (button 10)          | Hold to disable `collision_monitor`'s predictive stop (deadman — releasing re-enables it automatically)                          |
+| Screenshot (button 4)   | Save the current SLAM map (`/save_map`, also callable from Foxglove)                              |
+
+**Waypoint patrol controls** (`waypoint_recorder_node`):
+
+Exposed as `std_srvs/srv/SetBool` services so the same controls work identically from `joy_teleop` button bindings or Foxglove's "Call Service" panel.
+
+| Control                | Service                          | Action                                                                          |
+|-------------------------|------------------------------------|----------------------------------------------------------------------------------|
+| Y (button 3)            | `/record_waypoint`               | Record the robot's current pose as the next waypoint (adds a marker on `/waypoint_markers`). Works even while patrolling - queued waypoints join the patrol at the start of the next loop rather than immediately. |
+| A (button 0)            | `/waypoint_follow_toggle`         | Toggle (via `bool_toggle_node`): 1st press starts/resumes the patrol; 2nd press pauses it. Waypoints and markers are untouched either way — only Settings clears those. |
+| Settings (button 11)    | `/reset_waypoints`               | Cancel the active patrol and clear the recorded waypoints + their markers       |
+
+`/waypoint_follow` (the underlying SetBool the toggle drives) stays directly callable too, e.g. from Foxglove, for explicit start (`true`) / stop (`false`) without the toggle. It's pause/resume, not stop/restart: stopping mid-route and starting again continues toward the same waypoint it was already heading to (via `FollowWaypoints.Goal.goal_index`), not back to the beginning - and is a no-op if it's already patrolling.
+
+Progress is published as `diagnostic_msgs/msg/DiagnosticArray` on `/diagnostics` (status name `waypoint_recorder: patrol`) rather than a visualization - `current_loop`, `from_waypoint`/`to_waypoint`, `total_waypoints`, plus `estimated_time_to_waypoint_sec`/`distance_to_waypoint_m`/`number_of_recoveries` forwarded live from `/navigate_to_pose`'s own feedback, and a derived `estimated_loop_duration_sec`. Level is `STALE` for a deliberate stop, `WARN` while paused waiting to auto-resume (see below).
+
+**Sending the robot a separate navigation goal (RViz "2D Nav Goal", Foxglove's goal-pose panel) while patrolling is a supported detour, not an error.** It preempts the current leg immediately (`stop_on_failure: true` makes this a clean abort rather than nav2_waypoint_follower silently skipping that waypoint), and `waypoint_recorder_node` automatically resumes toward the interrupted waypoint once `/navigate_to_pose` is free again - "go there, then continue the patrol." A pause via `/waypoint_follow false` or the A button cancels this auto-resume too, not just the patrol itself, and also clears the stale plan visualization (`/plan` and a few related topics) that nav2 otherwise leaves on screen after a cancel - it reappears on its own once a new plan is computed (resuming, or a fresh detour).
+
+## Costmap Zones
+
+Nav2's `KeepoutFilter` and `SpeedFilter` are wired up and active by default: no-go zones (the planner routes around them, the controller won't drive into them) and speed-limited zones (the controller slows down inside them). Each filter is backed by its own `map_server` mask instance and a dedicated lifecycle manager, so a bad mask file only disables that filter, not the rest of the nav stack.
+
+Zone masks live inside each map's own folder (`lekiwi_navigation/maps/<map_name>/filters/`), saved automatically by `map_saver_node` alongside the map itself - no separate save step. New maps start with no-op (all-clear) placeholder masks; painting real zone shapes into them is a manual step not yet covered by tooling here.
 
 ## Dependencies
 
