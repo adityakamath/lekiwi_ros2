@@ -15,10 +15,12 @@ Nodes launched (in lifecycle order):
     behavior_server        Spin / BackUp / Wait recoveries
     velocity_smoother      rate-limits MPPI output
     collision_monitor      last-resort safety stop
-    collision_toggle_node  R1 deadman, see collision_toggle_node.md (plain node)
-    waypoint_follower      patrol loop, see nav2_part2_plan.md Feature 2
-    waypoint_recorder_node see waypoint_recorder_node.md (plain node)
-    bt_navigator           Behavior Tree orchestrator (started last)
+    collision_toggle_node               R1 deadman, see collision_toggle_node.md (plain node)
+    waypoint_follower                   patrol loop, see nav2_part2_plan.md Feature 2
+    waypoint_recorder_node              see waypoint_recorder_node.md (plain node)
+    bt_navigator                        Behavior Tree orchestrator (started last)
+    keepout/speed_filter_mask_server    no-go/speed zone masks, see nav2_part2_plan.md
+    keepout/speed_costmap_filter_info_server  Feature 3 (each has its own lifecycle manager)
 
 Topic wiring (no namespace):
     controller_server  cmd_vel   → cmd_vel_raw      (MPPI output)
@@ -33,6 +35,8 @@ Topic wiring (no namespace):
 Launch arguments:
     params_file   full path to nav2.yaml
                   (default: lekiwi_navigation/config/nav2/nav2.yaml)
+    map_name      subdirectory under maps/ to load filter masks from
+                  (default: '' - no filters active, e.g. while actively mapping)
     use_sim_time  true | false  (default: false)
     autostart     true | false  (default: true)
     log_level     info | debug | warn | error  (default: info)
@@ -40,24 +44,30 @@ Launch arguments:
 Invoked from navigation.launch.py.
 """
 
+import os
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
+from launch.actions import (
+    DeclareLaunchArgument, GroupAction, LogInfo, OpaqueFunction, SetEnvironmentVariable,
+)
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node, SetParameter
 from launch_ros.descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 
 
-def generate_launch_description():
-    pkg_nav = FindPackageShare('lekiwi_navigation')
+def launch_setup(context, *args, **kwargs):
+    """Build and return the Nav2 nodes, resolving map_name to filter mask paths."""
+    pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
+    map_name = LaunchConfiguration('map_name').perform(context)
 
     params_file = LaunchConfiguration('params_file')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart    = LaunchConfiguration('autostart')
     log_level    = LaunchConfiguration('log_level')
 
-    # Lifecycle manager brings up nodes in this order; bt_navigator must be last
-    # because it depends on the other servers being active.
+    # bt_navigator must be last - it depends on the other servers being active. Costmap
+    # filters get their own lifecycle managers below - see nav2_part2_plan.md, Feature 3.
     lifecycle_nodes = [
         'controller_server',
         'planner_server',
@@ -67,6 +77,8 @@ def generate_launch_description():
         'waypoint_follower',
         'bt_navigator',
     ]
+    keepout_lifecycle_nodes = ['keepout_filter_mask_server', 'keepout_costmap_filter_info_server']
+    speed_lifecycle_nodes = ['speed_filter_mask_server', 'speed_costmap_filter_info_server']
 
     # Standard Nav2 TF remappings — required when running without a namespace.
     remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
@@ -76,135 +88,232 @@ def generate_launch_description():
     # yaml if ever needed.
     configured_params = ParameterFile(params_file, allow_substs=True)
 
-    load_nodes = GroupAction(
-        actions=[
-            SetParameter('use_sim_time', use_sim_time),
-            # ── Controller Server ────────────────────────────────────────────
-            # Remaps output cmd_vel → cmd_vel_raw so velocity_smoother can pick
-            # it up without a circular dependency on cmd_vel_nav.
-            Node(
-                package='nav2_controller',
-                executable='controller_server',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
-            ),
-            # ── Planner Server ───────────────────────────────────────────────
-            Node(
-                package='nav2_planner',
-                executable='planner_server',
-                name='planner_server',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings,
-            ),
-            # ── Behavior Server ──────────────────────────────────────────────
-            # BackUp and Spin also publish cmd_vel; remap to cmd_vel_raw so
-            # recovery velocities go through the same smoother/safety path.
-            Node(
-                package='nav2_behaviors',
-                executable='behavior_server',
-                name='behavior_server',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
-            ),
-            # ── BT Navigator ─────────────────────────────────────────────────
-            Node(
-                package='nav2_bt_navigator',
-                executable='bt_navigator',
-                name='bt_navigator',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings,
-            ),
-            # ── Waypoint Follower ────────────────────────────────────────────
-            # See nav2_part2_plan.md, Feature 2.
-            Node(
-                package='nav2_waypoint_follower',
-                executable='waypoint_follower',
-                name='waypoint_follower',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings,
-            ),
-            # ── Waypoint Recorder ────────────────────────────────────────────
-            # Not a lifecycle node - see waypoint_recorder_node.md.
-            Node(
-                package='lekiwi_navigation',
-                executable='waypoint_recorder_node',
-                name='waypoint_recorder_node',
-                output='log',
-                parameters=[
-                    PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'waypoint_recorder.yaml']),
-                ],
-                arguments=['--ros-args', '--log-level', log_level],
-            ),
-            # ── Velocity Smoother ────────────────────────────────────────────
-            Node(
-                package='nav2_velocity_smoother',
-                executable='velocity_smoother',
-                name='velocity_smoother',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
-            ),
-            # ── Collision Monitor ────────────────────────────────────────────
-            # Topic wiring set via nav2.yaml's cmd_vel_in/out_topic - see nav2_part2_plan.md
-            # (Feature 1) for why this sits downstream of twist_switch_node.
-            Node(
-                package='nav2_collision_monitor',
-                executable='collision_monitor',
-                name='collision_monitor',
-                output='screen',
-                parameters=[configured_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings,
-            ),
-            # ── Collision Toggle ─────────────────────────────────────────────
-            # Not a lifecycle node - see collision_toggle_node.md.
-            Node(
-                package='lekiwi_navigation',
-                executable='collision_toggle_node',
-                name='collision_toggle_node',
-                output='log',
-                parameters=[
-                    PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'collision_toggle.yaml']),
-                ],
-                arguments=['--ros-args', '--log-level', log_level],
-            ),
-            # ── Lifecycle Manager ────────────────────────────────────────────
-            Node(
-                package='nav2_lifecycle_manager',
-                executable='lifecycle_manager',
-                name='lifecycle_manager_navigation',
-                output='screen',
-                arguments=['--ros-args', '--log-level', log_level],
-                parameters=[
-                    configured_params,
-                    {'autostart': autostart},
-                    {'node_names': lifecycle_nodes},
-                ],
-            ),
-        ],
-    )
+    # realpath resolves the --symlink-install symlink to the source tree - see
+    # map_saver_node.md ("Path resolution").
+    _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
+    # yaml_filename must be a real, existing path or '' - see nav2_part2_plan.md,
+    # Feature 3 ("Bringup safety").
+    log_messages = []
+    if map_name:
+        filters_dir = os.path.join(_pkg_src, 'maps', map_name, 'filters')
+        keepout_yaml = os.path.join(filters_dir, 'keepout_mask.yaml')
+        speed_yaml = os.path.join(filters_dir, 'speed_mask.yaml')
+        keepout_mask_path = keepout_yaml if os.path.exists(keepout_yaml) else ''
+        speed_mask_path = speed_yaml if os.path.exists(speed_yaml) else ''
+        if not keepout_mask_path or not speed_mask_path:
+            log_messages.append(LogInfo(msg=(
+                f"[nav2.launch.py] map_name='{map_name}' has no filters/ (or it's "
+                'incomplete) - keepout/speed zones disabled for this map. '
+                'map_saver_node creates this automatically for maps saved after '
+                'Feature 3 - older maps were migrated once, but check '
+                f'{filters_dir} if this is unexpected.'
+            )))
+    else:
+        keepout_mask_path = ''
+        speed_mask_path = ''
+
+    load_nodes = [
+        SetParameter('use_sim_time', use_sim_time),
+        # ── Controller Server ────────────────────────────────────────────
+        # Remaps output cmd_vel → cmd_vel_raw so velocity_smoother can pick
+        # it up without a circular dependency on cmd_vel_nav.
+        Node(
+            package='nav2_controller',
+            executable='controller_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
+        ),
+        # ── Planner Server ───────────────────────────────────────────────
+        Node(
+            package='nav2_planner',
+            executable='planner_server',
+            name='planner_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        # ── Behavior Server ──────────────────────────────────────────────
+        # BackUp and Spin also publish cmd_vel; remap to cmd_vel_raw so
+        # recovery velocities go through the same smoother/safety path.
+        Node(
+            package='nav2_behaviors',
+            executable='behavior_server',
+            name='behavior_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
+        ),
+        # ── BT Navigator ─────────────────────────────────────────────────
+        Node(
+            package='nav2_bt_navigator',
+            executable='bt_navigator',
+            name='bt_navigator',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        # ── Waypoint Follower ────────────────────────────────────────────
+        # See nav2_part2_plan.md, Feature 2.
+        Node(
+            package='nav2_waypoint_follower',
+            executable='waypoint_follower',
+            name='waypoint_follower',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        # ── Waypoint Recorder ────────────────────────────────────────────
+        # Not a lifecycle node - see waypoint_recorder_node.md.
+        Node(
+            package='lekiwi_navigation',
+            executable='waypoint_recorder_node',
+            name='waypoint_recorder_node',
+            output='log',
+            parameters=[
+                PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'waypoint_recorder.yaml']),
+            ],
+            arguments=['--ros-args', '--log-level', log_level],
+        ),
+        # ── Velocity Smoother ────────────────────────────────────────────
+        Node(
+            package='nav2_velocity_smoother',
+            executable='velocity_smoother',
+            name='velocity_smoother',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
+        ),
+        # ── Collision Monitor ────────────────────────────────────────────
+        # Topic wiring set via nav2.yaml's cmd_vel_in/out_topic - see nav2_part2_plan.md
+        # (Feature 1) for why this sits downstream of twist_switch_node.
+        Node(
+            package='nav2_collision_monitor',
+            executable='collision_monitor',
+            name='collision_monitor',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        # ── Collision Toggle ─────────────────────────────────────────────
+        # Not a lifecycle node - see collision_toggle_node.md.
+        Node(
+            package='lekiwi_navigation',
+            executable='collision_toggle_node',
+            name='collision_toggle_node',
+            output='log',
+            parameters=[
+                PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'collision_toggle.yaml']),
+            ],
+            arguments=['--ros-args', '--log-level', log_level],
+        ),
+        # ── Costmap Filters (no-go + speed zones) ────────────────────────
+        # See nav2_part2_plan.md, Feature 3.
+        Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='keepout_filter_mask_server',
+            output='screen',
+            parameters=[{'yaml_filename': keepout_mask_path, 'topic_name': 'keepout_filter_mask'}],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        Node(
+            package='nav2_map_server',
+            executable='costmap_filter_info_server',
+            name='keepout_costmap_filter_info_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='speed_filter_mask_server',
+            output='screen',
+            parameters=[{'yaml_filename': speed_mask_path, 'topic_name': 'speed_filter_mask'}],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        Node(
+            package='nav2_map_server',
+            executable='costmap_filter_info_server',
+            name='speed_costmap_filter_info_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        # ── Lifecycle Managers ───────────────────────────────────────────
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_navigation',
+            output='screen',
+            arguments=['--ros-args', '--log-level', log_level],
+            parameters=[
+                configured_params,
+                {'autostart': autostart},
+                {'node_names': lifecycle_nodes},
+            ],
+        ),
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_keepout_zone',
+            output='screen',
+            arguments=['--ros-args', '--log-level', log_level],
+            parameters=[
+                {'autostart': autostart},
+                {'node_names': keepout_lifecycle_nodes},
+            ],
+        ),
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_speed_zone',
+            output='screen',
+            arguments=['--ros-args', '--log-level', log_level],
+            parameters=[
+                {'autostart': autostart},
+                {'node_names': speed_lifecycle_nodes},
+            ],
+        ),
+    ]
+
+    return log_messages + [GroupAction(actions=load_nodes)]
+
+
+def generate_launch_description():
+    """Declare Nav2 launch arguments and launch via launch_setup."""
     return LaunchDescription([
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1'),
         DeclareLaunchArgument(
             'params_file',
             default_value=PathJoinSubstitution([
-                pkg_nav, 'config', 'nav2', 'nav2.yaml',
+                FindPackageShare('lekiwi_navigation'), 'config', 'nav2', 'nav2.yaml',
             ]),
             description=(
                 'Full path to the Nav2 parameters YAML file. '
                 'Defaults to lekiwi_navigation/config/nav2/nav2.yaml.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'map_name',
+            default_value='',
+            description=(
+                'Subdirectory under lekiwi_navigation/maps/ to load keepout/speed filter '
+                'masks from (its filters/ subfolder). Empty disables both filters - the '
+                'normal case while actively mapping, since there is no saved map yet.'
             ),
         ),
         DeclareLaunchArgument(
@@ -222,5 +331,5 @@ def generate_launch_description():
             default_value='info',
             description='Log level for all Nav2 nodes (info | debug | warn | error).',
         ),
-        load_nodes,
+        OpaqueFunction(function=launch_setup),
     ])

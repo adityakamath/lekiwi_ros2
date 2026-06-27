@@ -39,6 +39,7 @@ controller_server:
     min_y_velocity_threshold: 0.001   # omni — y velocity is valid
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
+    speed_limit_topic: "speed_limit"  # must match local_costmap's speed_filter plugin
     progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["goal_checker"]
     controller_plugins: ["FollowPath"]
@@ -171,6 +172,16 @@ local_costmap:
       resolution: 0.05
       robot_radius: 0.17
       plugins: ["obstacle_layer", "inflation_layer"]
+      filters: ["keepout_filter", "speed_filter"]
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: true
+        filter_info_topic: "keepout_costmap_filter_info"
+      speed_filter:
+        plugin: "nav2_costmap_2d::SpeedFilter"
+        enabled: true
+        filter_info_topic: "speed_costmap_filter_info"
+        speed_limit_topic: "speed_limit"
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
@@ -204,6 +215,11 @@ global_costmap:
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      filters: ["keepout_filter"]
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: true
+        filter_info_topic: "keepout_costmap_filter_info"
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
@@ -226,6 +242,25 @@ global_costmap:
         cost_scaling_factor: 3.0
         inflation_radius: 0.30
       always_send_full_costmap: false  # global map is large — only publish on change
+
+# Publish CostmapFilterInfo for the keepout_filter/speed_filter plugins above. The matching
+# *_filter_mask_server map_server instances are launched separately (no section here) - their
+# yaml_filename is always set at launch from map_name.
+keepout_costmap_filter_info_server:
+  ros__parameters:
+    type: 0  # 0 = keepout
+    filter_info_topic: "keepout_costmap_filter_info"
+    mask_topic: "keepout_filter_mask"
+    base: 0.0
+    multiplier: 1.0
+
+speed_costmap_filter_info_server:
+  ros__parameters:
+    type: 1  # 1 = speed limit, percentage of max speed
+    filter_info_topic: "speed_costmap_filter_info"
+    mask_topic: "speed_filter_mask"
+    base: 100.0  # speed_limit = mask_value * multiplier + base
+    multiplier: -1.0
 
 # ── Planner Server (SMAC 2D) ──────────────────────────────────────────────────
 # SmacPlanner2D uses A* on the 2D costmap with no kinematic constraints — the

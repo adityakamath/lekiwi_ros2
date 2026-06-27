@@ -25,6 +25,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
+    """Declare navigation arguments and include ekf/slam/nav2 launch files."""
     pkg_nav = FindPackageShare('lekiwi_navigation')
 
     ekf = IncludeLaunchDescription(
@@ -53,6 +54,7 @@ def generate_launch_description():
             PathJoinSubstitution([pkg_nav, 'launch', 'nav2.launch.py']),
         ]),
         launch_arguments={
+            'map_name':     LaunchConfiguration('map_name'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
         }.items(),
     )
@@ -83,7 +85,9 @@ def generate_launch_description():
             default_value='',
             description=(
                 'Subdirectory name under lekiwi_navigation/maps/ to load '
-                '(e.g. livingroom). Required for localize and amcl modes.'
+                '(e.g. livingroom). Required for localize and amcl modes. Also tells '
+                'nav2.launch.py where to load this map\'s keepout/speed filter masks '
+                'from (its filters/ subfolder) - empty disables both filters.'
             ),
         ),
         DeclareLaunchArgument(

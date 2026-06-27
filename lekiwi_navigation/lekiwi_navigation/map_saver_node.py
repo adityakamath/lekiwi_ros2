@@ -8,7 +8,9 @@ One std_srvs/srv/SetBool service, usable from joy_teleop button bindings or Foxg
   /save_map
       true  - save the map (slam_toolbox save_map + serialize_map) into a timestamped
               directory under maps/, plus the robot's current map-frame pose for
-              localization startup. Rejected if a save is already in progress.
+              localization startup, plus a filters/ subdirectory containing placeholder
+              keepout/speed masks sized to match (see nav2_part2_plan.md, Feature 3).
+              Rejected if a save is already in progress.
       false - no-op
 
 Parameters:
@@ -20,6 +22,8 @@ import math
 import os
 import yaml
 from datetime import datetime
+
+from PIL import Image
 
 import rclpy
 from rclpy.duration import Duration
@@ -123,11 +127,12 @@ class MapSaverNode(Node):
         self._saving = False
 
     def _on_save_done(self, future):
-        """Log the save_map result, then serialize."""
+        """Log the save_map result, create placeholder filter masks, then serialize."""
         try:
             result = future.result()
             if result.result == 0:
                 self.get_logger().info(f'Map saved: {self._map_name}.pgm / .yaml')
+                self._create_placeholder_filters()
             else:
                 self.get_logger().error(f'save_map returned error code {result.result}')
         except Exception as e:
@@ -139,6 +144,42 @@ class MapSaverNode(Node):
 
         future2 = self._serialize_client.call_async(ser_req)
         future2.add_done_callback(self._on_serialize_done)
+
+    def _create_placeholder_filters(self):
+        """Create filters/ with no-op keepout/speed masks sized to match the saved map.
+
+        See nav2_part2_plan.md, Feature 3 for why these are needed and why keepout/speed use
+        different mask modes.
+        """
+        save_dir = os.path.dirname(self._map_name)
+        filters_dir = os.path.join(save_dir, 'filters')
+        try:
+            os.makedirs(filters_dir, exist_ok=True)
+            with open(f'{self._map_name}.yaml') as f:
+                map_yaml = yaml.safe_load(f)
+            width, height = Image.open(f'{self._map_name}.pgm').size
+
+            mask = Image.new('L', (width, height), 255)
+            mask_configs = {
+                'keepout_mask': {'mode': 'trinary', 'occupied_thresh': 0.65, 'free_thresh': 0.196},
+                'speed_mask': {'mode': 'scale', 'occupied_thresh': 1.0, 'free_thresh': 0.0},
+            }
+            for name, mode_params in mask_configs.items():
+                mask.save(os.path.join(filters_dir, f'{name}.pgm'))
+                with open(os.path.join(filters_dir, f'{name}.yaml'), 'w') as f:
+                    yaml.dump({
+                        'image': f'{name}.pgm',
+                        'resolution': map_yaml['resolution'],
+                        'origin': map_yaml['origin'],
+                        'negate': 0,
+                        **mode_params,
+                    }, f)
+            self.get_logger().info(f'Placeholder filter masks created: {filters_dir}')
+        except Exception as e:
+            self.get_logger().warn(
+                f'Could not create placeholder filter masks - no-go/speed zones will be '
+                f'unavailable for this map until masks exist: {e}'
+            )
 
     def _on_serialize_done(self, future):
         """Log the serialize_map result, then save the starting pose."""
