@@ -15,6 +15,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context):
+    """Launch ldlidar_ros2_node, plus a scan filter chain if payload or custom_filter needs one."""
     payload_value = LaunchConfiguration('payload').perform(context).lower()
     custom_filter_name = LaunchConfiguration('custom_filter').perform(context)
     config_file = PathJoinSubstitution([
@@ -83,6 +84,7 @@ def launch_setup(context):
         return [laser_node]
 
 def generate_launch_description():
+    """Declare payload/custom_filter and launch the laser stack via launch_setup."""
     declared_arguments = [
         DeclareLaunchArgument(
             'payload',

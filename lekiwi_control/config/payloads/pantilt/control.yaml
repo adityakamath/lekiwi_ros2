@@ -1,6 +1,4 @@
 # Pantilt payload additions — merged on top of base/control.yaml.
-# Registers the pantilt_controller type and its joint limits with the controller manager,
-# and configures the ForwardCommandController for pan/tilt position commands.
 controller_manager:
   ros__parameters:
     pantilt_controller:

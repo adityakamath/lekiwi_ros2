@@ -1,33 +1,23 @@
+# Odometry-only debug EKF (no IMU).
 ekf_node:
   ros__parameters:
     # Filter settings
-    frequency: 50.0      # Hz — matches controller_manager update_rate
-    sensor_timeout: 0.1  # s — max gap before sensor is considered stale
-    two_d_mode: true     # Planar ground robot; ignores z, roll, pitch states
+    frequency: 50.0      # Hz
+    sensor_timeout: 0.1  # s
+    two_d_mode: true
 
     # Frame IDs
     map_frame: map
     odom_frame: odom
     base_link_frame: base_footprint
-    world_frame: odom  # EKF runs relative to odom (no GPS / map frame)
+    world_frame: odom
 
     # Output
-    publish_tf: true  # EKF owns and publishes odom → base_footprint TF
+    publish_tf: true
     publish_acceleration: false
 
-    # Odometry-only debug mode
-    # IMU is intentionally excluded. All available odometry values (position, heading,
-    # velocity) are fused directly from the wheel controller. The controller computes
-    # pose and heading using its own internal dead-reckoning, so heading will drift if
-    # the robot is physically rotated without the wheels moving. This mode is purely for
-    # simulating and debugging wheel odometry in isolation — not for normal operation.
-
-    # Sensor 0: Wheel odometry from omni_wheel_drive_controller
-    # Topic: /base_controller/odom  (nav_msgs/Odometry)
-    # Fuses: x, y, z position + yaw heading + vx, vy linear velocities + vyaw angular rate.
-    # All values come from the controller's internal dead-reckoning — heading is the
-    # controller's own estimate and will diverge without IMU correction.
-    #
+    # Sensor 0: Wheel odometry from omni_wheel_drive_controller (/base_controller/odom)
+    # Fuses: x, y, z, yaw, vx, vy, vyaw - all from the controller's own dead-reckoning.
     # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
     odom0: /base_controller/odom
     odom0_config: [true,  true,  true,

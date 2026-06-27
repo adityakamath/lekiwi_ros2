@@ -1,8 +1,8 @@
 controller_manager:
   ros__parameters:
-    update_rate: 50  # Hz — limited by STS serial I/O latency (~14 ms/cycle)
+    update_rate: 50  # Hz
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
-    
+
     # Command and error handling
     enforce_command_limits: true  # Enforce URDF joint limits via JointSaturationLimiter
     handle_exceptions: true       # Graceful error handling
@@ -25,69 +25,59 @@ controller_manager:
 
 base_controller:
   ros__parameters:
-    # Wheel geometry - 3 wheels at 60°, 180°, 300° from +X axis
-    wheel_offset: 1.0471975511965976  # 60° in radians (π/3 exactly)
+    # 3 wheels at 60°/180°/300° from +X
+    wheel_offset: 1.0471975511965976  # rad (π/3)
     wheel_names:
-      - left_wheel_joint   # 60° from +X
-      - back_wheel_joint   # 180° from +X (60° + 120°)
-      - right_wheel_joint  # 300° from +X (60° + 240°)
+      - left_wheel_joint
+      - back_wheel_joint
+      - right_wheel_joint
 
-    # Robot dimensions
-    robot_radius: 0.132239  # meters (distance from center to wheel contact point)
-    wheel_radius: 0.051  # meters
+    robot_radius: 0.132239  # m
+    wheel_radius: 0.051     # m
 
-    # Frame IDs
     odom_frame_id: odom
     base_frame_id: base_footprint
 
-    # Odometry settings
-    enable_odom_tf: false # TF is published by EKF, fusing the /base_controller/odom and the IMU topic
-    open_loop: false  # Use wheel feedback for odometry
-    position_feedback: false  # Use velocity-based odometry when false
+    enable_odom_tf: false     # EKF publishes odom TF instead
+    open_loop: false
+    position_feedback: false
 
-    # Command timeout
-    cmd_vel_timeout: 0.5  # seconds
+    cmd_vel_timeout: 0.5  # s
 
-    # Velocity/acceleration limits ensure safe omnidirectional motion and match URDF joint limits.
-    # Values are set for 3-DoF safety and can be overridden in launch if needed.
+    # 3-DoF safe limits - must stay in sync with nav2.yaml/control.launch.py.
     linear:
       x:
-        max_velocity: 0.2    # m/s  (3-DoF safe: 0.866*0.2 + 0.5*0.17 + R*0.68 ≈ 0.348 m/s)
-        max_acceleration: 1.0   # m/s^2  (~200ms ramp to full speed)
+        max_velocity: 0.2      # m/s
+        max_acceleration: 1.0  # m/s^2
       y:
-        max_velocity: 0.17   # m/s  (3-DoF safe: leaves budget for vx and ωz contributions)
-        max_acceleration: 0.85  # m/s^2  (~200ms ramp to full speed)
+        max_velocity: 0.17      # m/s
+        max_acceleration: 0.85  # m/s^2
     angular:
       z:
-        max_velocity: 0.68   # rad/s  (3-DoF safe: R*0.68 = 0.090 m/s wheel contribution)
-        max_acceleration: 3.4   # rad/s^2  (~200ms ramp to full speed)
+        max_velocity: 0.68     # rad/s
+        max_acceleration: 3.4  # rad/s^2
 
 imu_sensor_broadcaster:
   ros__parameters:
-    sensor_name: bno055     # Must match the <sensor name="..."> in the URDF ros2_control block
-    frame_id: imu_frame     # TF frame for published Imu messages
+    sensor_name: bno055  # must match the URDF ros2_control block's <sensor name="...">
+    frame_id: imu_frame
 
-    # Static covariance matrices (row-major 3x3, diagonal — cross-correlations are zero).
-    # Values derived from BNO055 datasheet and typical noise density at 100 Hz.
-    #
-    # Orientation: ±2.5° magnetometer heading accuracy(datasheet) → 0.002 rad²
+    # Static covariance (row-major 3x3, diagonal) - derived from the BNO055 datasheet's noise
+    # specs at 100 Hz.
     static_covariance_orientation: [0.001, 0.0,   0.0,
                                      0.0,  0.001,  0.0,
                                      0.0,  0.0,   0.001]
 
-    # Angular velocity: ~0.014 °/s/√Hz gyro noise @ 100 Hz → (~2.4e-4 rad/s)² ≈ 1e-5 rad²/s²
     static_covariance_angular_velocity: [1.0e-5, 0.0,    0.0,
                                           0.0,   1.0e-5,  0.0,
                                           0.0,   0.0,    1.0e-5]
 
-    # Linear acceleration: ~150 µg/√Hz accel noise @ 100 Hz → (~0.015 m/s²)² ≈ 2e-4 m²/s⁴
     static_covariance_linear_acceleration: [2.0e-4, 0.0,    0.0,
                                              0.0,   2.0e-4,  0.0,
                                              0.0,   0.0,    2.0e-4]
 
-    # Software rotation on top of hardware axis_remap (Z-Y'-X'' / extrinsic RPY).
-    # Uncomment and set values if the sensor has a residual angular offset.
+    # Residual angular mounting offset on top of the URDF's axis_remap - not currently needed.
     # rotation_offset:
-    #   roll:  0.0  # radians
-    #   pitch: 0.0  # radians
-    #   yaw:   0.0  # radians
+    #   roll:  0.0  # rad
+    #   pitch: 0.0  # rad
+    #   yaw:   0.0  # rad

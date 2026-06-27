@@ -28,6 +28,7 @@ _EKF_CONFIGS = {
 
 
 def launch_setup(context, *args, **kwargs):
+    """Build the ekf_node Node for the selected fusion_mode config file."""
     fusion_mode  = LaunchConfiguration('fusion_mode').perform(context)
     use_sim_time = LaunchConfiguration('use_sim_time').perform(context).lower() in ('true', '1')
 
@@ -57,6 +58,7 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
+    """Declare fusion_mode/use_sim_time and launch ekf_node via launch_setup."""
     return LaunchDescription([
         DeclareLaunchArgument(
             'fusion_mode',
