@@ -3,7 +3,7 @@
 Launch localization and SLAM for LeKiwi.
 
 Handles all three slam_mode cases:
-    map      — slam_toolbox in mapping mode + map_saver_node (joystick R1 to save)
+    map      — slam_toolbox in mapping mode + map_saver_node (/save_map service)
     localize — slam_toolbox in localization mode (re-use serialized map)
     amcl     — nav2_map_server + AMCL (localize on a static map)
 
@@ -26,6 +26,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
+    """Build the slam_toolbox or map_server+AMCL nodes for the selected slam_mode."""
     use_sim_time = LaunchConfiguration('use_sim_time')
     slam_mode    = LaunchConfiguration('slam_mode').perform(context)
     map_name     = LaunchConfiguration('map_name').perform(context)
@@ -49,30 +50,27 @@ def launch_setup(context, *args, **kwargs):
             FindPackageShare('lekiwi_navigation'), 'config', 'nav2', 'slam_toolbox.yaml',
         ])
 
+        # See slam_toolbox_yaml.md ("Runtime overrides") for why these three are set here
+        # instead of in slam_toolbox.yaml.
         _st_mode = {'map': 'mapping', 'localize': 'localization'}
         extra_params = {
             'use_sim_time': use_sim_time,
             'mode': _st_mode[slam_mode],
-            # Prevent slam_toolbox from self-activating; let lifecycle_manager_slam
-            # control configure/activate so lifecycle transitions are tracked.
             'use_lifecycle_manager': True,
         }
 
         if slam_mode == 'localize':
-            # os.path.realpath resolves the symlink created by --symlink-install so
-            # that _pkg_src always points to the source tree where maps/ lives.
-            # Maps are not installed — they remain in the source tree only.
+            # realpath resolves the --symlink-install symlink to the source tree - see
+            # map_saver_node.md ("Path resolution").
             _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
             map_file_path = os.path.join(_pkg_src, 'maps', map_name, 'map')
             extra_params['map_file_name'] = map_file_path
 
-            # Load saved starting pose so slam_toolbox starts from the right position.
             pose_file = os.path.join(_pkg_src, 'maps', map_name, 'starting_pose.yaml')
             if os.path.exists(pose_file):
                 with open(pose_file) as f:
                     pose = yaml.safe_load(f)
                 extra_params['map_start_pose'] = [pose['x'], pose['y'], pose['theta']]
-            # If no starting_pose.yaml, slam_toolbox starts at map origin (0, 0, 0).
 
         actions = [
             LifecycleNode(
@@ -97,7 +95,7 @@ def launch_setup(context, *args, **kwargs):
         ]
 
         if slam_mode in ('map', 'localize'):
-            # map_saver_node listens on /joy and saves the map when R1 (button 5) is pressed.
+            # map_saver_node exposes /save_map (std_srvs/srv/SetBool) - see map_saver_node.md.
             actions.append(Node(
                 package='lekiwi_navigation',
                 executable='map_saver_node',
@@ -113,9 +111,8 @@ def launch_setup(context, *args, **kwargs):
 
     else:  # amcl
         # ── map_server + AMCL ──────────────────────────────────────────────
-        # os.path.realpath resolves the symlink created by --symlink-install so
-        # that _pkg_src always points to the source tree where maps/ lives.
-        # Maps are not installed — they remain in the source tree only.
+        # realpath resolves the --symlink-install symlink to the source tree - see
+        # map_saver_node.md ("Path resolution").
         _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         map_yaml = os.path.join(_pkg_src, 'maps', map_name, 'map.yaml')
 
@@ -155,6 +152,7 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
+    """Declare slam_mode/map_name/use_sim_time and launch via launch_setup."""
     return LaunchDescription([
         DeclareLaunchArgument(
             'slam_mode', default_value='map',
