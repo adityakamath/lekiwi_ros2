@@ -2,11 +2,10 @@
 """
 Launch the Nav2 navigation nodes for LeKiwi.
 
-Mirrors nav2_bringup/launch/navigation_launch.py but limited to the six
-nodes LeKiwi actually uses.  Unused nav2_bringup nodes are omitted:
+Mirrors nav2_bringup/launch/navigation_launch.py but limited to the nodes
+LeKiwi actually uses.  Unused nav2_bringup nodes are omitted:
     - smoother_server   (SmacPlanner2D has a built-in path smoother)
     - route_server      (graph-based routing — not needed for free-space nav)
-    - waypoint_follower (single-goal navigation only)
     - docking_server    (no docking hardware)
     - following_server  (no following use-case)
 
@@ -17,6 +16,8 @@ Nodes launched (in lifecycle order):
     velocity_smoother      rate-limits MPPI output
     collision_monitor      last-resort safety stop
     collision_toggle_node  R1 deadman, see collision_toggle_node.md (plain node)
+    waypoint_follower      patrol loop, see nav2_part2_plan.md Feature 2
+    waypoint_recorder_node see waypoint_recorder_node.md (plain node)
     bt_navigator           Behavior Tree orchestrator (started last)
 
 Topic wiring (no namespace):
@@ -63,6 +64,7 @@ def generate_launch_description():
         'behavior_server',
         'velocity_smoother',
         'collision_monitor',
+        'waypoint_follower',
         'bt_navigator',
     ]
 
@@ -119,6 +121,29 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=['--ros-args', '--log-level', log_level],
                 remappings=remappings,
+            ),
+            # ── Waypoint Follower ────────────────────────────────────────────
+            # See nav2_part2_plan.md, Feature 2.
+            Node(
+                package='nav2_waypoint_follower',
+                executable='waypoint_follower',
+                name='waypoint_follower',
+                output='screen',
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings,
+            ),
+            # ── Waypoint Recorder ────────────────────────────────────────────
+            # Not a lifecycle node - see waypoint_recorder_node.md.
+            Node(
+                package='lekiwi_navigation',
+                executable='waypoint_recorder_node',
+                name='waypoint_recorder_node',
+                output='log',
+                parameters=[
+                    PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'waypoint_recorder.yaml']),
+                ],
+                arguments=['--ros-args', '--log-level', log_level],
             ),
             # ── Velocity Smoother ────────────────────────────────────────────
             Node(

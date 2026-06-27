@@ -34,6 +34,29 @@ joy_teleop:
       service_name: /twist_switch_toggle
       buttons: [2]  # X
 
+    # waypoint_recorder_node's services.
+    record_waypoint:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /record_waypoint
+      service_request:
+        data: true
+      buttons: [3]  # Y
+
+    waypoint_follow_toggle:
+      type: service
+      interface_type: std_srvs/srv/Trigger
+      service_name: /waypoint_follow_toggle
+      buttons: [0]  # A
+
+    reset_waypoints:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /reset_waypoints
+      service_request:
+        data: true
+      buttons: [11]  # settings
+
     # map_saver_node's service.
     save_map:
       type: service
@@ -46,7 +69,7 @@ joy_teleop:
 # bool_toggle_node also reads this file (see control.launch.py).
 bool_toggle_node:
   ros__parameters:
-    toggles: ["emergency_stop", "twist_switch"]
+    toggles: ["emergency_stop", "twist_switch", "waypoint_follow"]
 
     emergency_stop:
       trigger_service: /emergency_stop_toggle
@@ -56,4 +79,9 @@ bool_toggle_node:
     twist_switch:
       trigger_service: /twist_switch_toggle
       target_service: /twist_switch
+      initial_state: false
+
+    waypoint_follow:
+      trigger_service: /waypoint_follow_toggle
+      target_service: /waypoint_follow
       initial_state: false

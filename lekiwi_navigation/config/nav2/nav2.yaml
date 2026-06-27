@@ -50,8 +50,8 @@ controller_server:
 
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.08
+      yaw_goal_tolerance: 0.15
       stateful: true
 
     FollowPath:
@@ -258,7 +258,18 @@ planner_server:
         do_refinement: true
         refinement_num: 2
 
-# ── Behavior Server ───────────────────────────────────────────────────────────
+# Drives navigate_to_pose once per waypoint in a loop.
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20
+    stop_on_failure: true
+    action_server_result_timeout: 900.0
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 0  # ms
+
 behavior_server:
   ros__parameters:
     local_costmap_topic: local_costmap/costmap_raw
