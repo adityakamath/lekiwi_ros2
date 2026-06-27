@@ -15,7 +15,8 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context):
-    payload               = LaunchConfiguration('payload').perform(context)
+    """Include control/navigation/laser (and oakd, if payload:=pantilt) with forwarded args."""
+    payload             = LaunchConfiguration('payload').perform(context)
     pantilt_config      = LaunchConfiguration('pantilt_config').perform(context)
     control_diagnostics = LaunchConfiguration('control_diagnostics').perform(context)
     control_mock        = LaunchConfiguration('control_mock').perform(context)
@@ -47,7 +48,7 @@ def launch_setup(context):
         'use_sim_time': use_sim_time,
     })
 
-    nav   = include(pkg_nav,     'launch/navigation.launch.py', {
+    nav = include(pkg_nav,     'launch/navigation.launch.py', {
         'fusion_mode':  fusion_mode,
         'slam_mode':    slam_mode,
         'map_name':     map_name,
@@ -66,6 +67,7 @@ def launch_setup(context):
 
 
 def generate_launch_description():
+    """Declare all top-level LeKiwi launch arguments and launch via launch_setup."""
     declared_arguments = [
         DeclareLaunchArgument(
             'payload',
