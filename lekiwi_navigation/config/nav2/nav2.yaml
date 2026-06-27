@@ -304,22 +304,14 @@ velocity_smoother:
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
 
-# ── Collision Monitor ─────────────────────────────────────────────────────────
-# Last-resort safety layer: reads cmd_vel_smoothed from velocity_smoother,
-# checks the robot's footprint approach zone against /scan, and either passes
-# the command through or stops the robot before a collision.
-#
-# cmd_vel_in_topic  — output of velocity_smoother (hardcoded topic name)
-# cmd_vel_out_topic — goes to twist_switch_node (/cmd_vel_nav)
-#
-# FootprintApproach: uses the live local_costmap footprint polygon.
-# time_before_collision: 1.2 s at 0.2 m/s ≈ 24 cm look-ahead.
+# Last-resort safety layer downstream of twist_switch_node, not nav2's stock position
+# upstream of it - so it protects teleop too, not just Nav2 goals.
 collision_monitor:
   ros__parameters:
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"
-    cmd_vel_in_topic: "cmd_vel_smoothed"
-    cmd_vel_out_topic: "cmd_vel_nav"  # twist_switch_node subscribes here
+    cmd_vel_in_topic: "cmd_vel_presafety"
+    cmd_vel_out_topic: "base_controller/cmd_vel"
     state_topic: "collision_monitor_state"
     transform_tolerance: 0.2
     source_timeout: 1.0
@@ -330,7 +322,7 @@ collision_monitor:
       type: "polygon"
       action_type: "approach"
       footprint_topic: "local_costmap/published_footprint"
-      time_before_collision: 1.2
+      time_before_collision: 1.2  # s
       simulation_time_step: 0.1
       min_points: 6
       visualize: false
@@ -339,6 +331,4 @@ collision_monitor:
     scan:
       type: "scan"
       topic: "/scan"
-      min_height: 0.05   # low — LeKiwi body is close to the floor
-      max_height: 2.0
       enabled: true

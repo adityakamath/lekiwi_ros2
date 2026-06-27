@@ -4,13 +4,13 @@ twist_switch:
     input_topic_default: /cmd_vel_teleop
     input_topic_default.stamped: true
 
-    # Switched input: Nav2 Kilted collision_monitor publishes TwistStamped on /cmd_vel_nav
-    # (enable_stamped_cmd_vel defaults to true in Kilted's nav2_util TwistPublisher)
-    input_topic_switched: /cmd_vel_nav
+    # Switched input: Nav2 velocity_smoother publishes TwistStamped on /cmd_vel_smoothed.
+    input_topic_switched: /cmd_vel_smoothed
     input_topic_switched.stamped: true
 
-    # Output: base_controller expects TwistStamped
-    output_topic: /base_controller/cmd_vel
+    # Output feeds collision_monitor (cmd_vel_in_topic in nav2.yaml), downstream of this
+    # switch rather than upstream, so it protects teleop too, not just Nav2 goals.
+    output_topic: /cmd_vel_presafety
     output_topic.stamped: true
 
     frame_id: base_link

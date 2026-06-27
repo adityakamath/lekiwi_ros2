@@ -2,37 +2,20 @@
 """
 twist_switch_node — generic velocity command switcher.
 
-Two input topics feed a single output topic.  The active input is selected via
-a SetBool service.  Input/output types are independently configurable as either
-Twist or TwistStamped; the node converts between them as needed.
-
-Subscribes to:
-    <input_topic_default>   (Twist or TwistStamped — see input_topic_default.stamped)
-    <input_topic_switched>  (Twist or TwistStamped — see input_topic_switched.stamped)
-
-Publishes:
-    <output_topic>          (Twist or TwistStamped — see output_topic.stamped)
+Two input topics feed a single output topic. The active input is selected via a SetBool
+service. Input/output types are independently configurable as either Twist or TwistStamped;
+the node converts between them as needed. Only messages from the active input are forwarded -
+if it stops publishing, nothing is published (no fallback, no zero-velocity injection).
 
 Service:
     /twist_switch  (std_srvs/SetBool)
         false — activate default input  (initial state)
         true  — activate switched input
 
-Behaviour:
-    Only messages from the currently active input are forwarded to the output.
-    If the active input stops publishing, nothing is published — there is no
-    fallback to the other input and no zero-velocity injection.
-    Call service(false) to return to the default input at any time.
-
-Conversion rules:
-    Twist in  + TwistStamped out → stamp with now() and frame_id
-    TwistStamped in + Twist out  → strip header, forward twist only
-    Same type in/out             → pass through (TwistStamped header refreshed)
-
 Parameters:
     input_topic_default          str   Default input topic name  (default: /cmd_vel_teleop)
     input_topic_default.stamped  bool  True = TwistStamped, False = Twist  (default: true)
-    input_topic_switched         str   Switched input topic name (default: /cmd_vel_nav)
+    input_topic_switched         str   Switched input topic name (default: /cmd_vel_smoothed)
     input_topic_switched.stamped bool  True = TwistStamped, False = Twist  (default: true)
     output_topic                 str   Output topic name  (default: /base_controller/cmd_vel)
     output_topic.stamped         bool  True = TwistStamped, False = Twist  (default: true)
@@ -48,14 +31,15 @@ from std_srvs.srv import SetBool
 
 
 class TeleopSwitchNode(Node):
+    """Forwards whichever of two velocity input topics is currently selected to one output."""
 
     def __init__(self):
+        """Declare parameters, wire up the publisher/subscribers, and create /twist_switch."""
         super().__init__('twist_switch_node')
 
-        # ── Parameters ───────────────────────────────────────────────────────
         self.declare_parameter('input_topic_default',          '/cmd_vel_teleop')
         self.declare_parameter('input_topic_default.stamped',  True)
-        self.declare_parameter('input_topic_switched',         '/cmd_vel_nav')
+        self.declare_parameter('input_topic_switched',         '/cmd_vel_smoothed')
         self.declare_parameter('input_topic_switched.stamped', True)
         self.declare_parameter('output_topic',                 '/base_controller/cmd_vel')
         self.declare_parameter('output_topic.stamped',         True)
@@ -71,13 +55,11 @@ class TeleopSwitchNode(Node):
 
         self._switched = False
 
-        # ── Publisher ─────────────────────────────────────────────────────────
         if self._output_stamped:
             self._pub = self.create_publisher(TwistStamped, topic_output, 10)
         else:
             self._pub = self.create_publisher(Twist, topic_output, 10)
 
-        # ── Subscribers ───────────────────────────────────────────────────────
         if default_stamped:
             self.create_subscription(
                 TwistStamped, topic_default,
@@ -100,7 +82,6 @@ class TeleopSwitchNode(Node):
                 lambda msg: self._handle(msg, switched=True, in_stamped=False),
                 10)
 
-        # ── Service: /twist_switch ────────────────────────────────────────────
         self._srv = self.create_service(SetBool, '/twist_switch', self._switch_cb)
 
         self.get_logger().info(
@@ -110,8 +91,6 @@ class TeleopSwitchNode(Node):
             f'  output:   {topic_output} ({"TwistStamped" if self._output_stamped else "Twist"})\n'
             f'  service:  /twist_switch'
         )
-
-    # ── Message handling ──────────────────────────────────────────────────────
 
     def _handle(self, msg, *, switched: bool, in_stamped: bool) -> None:
         """Forward msg to output only if it is from the currently active input."""
@@ -142,13 +121,12 @@ class TeleopSwitchNode(Node):
         # Twist → Twist: pass through
         return msg
 
-    # ── Service callback ──────────────────────────────────────────────────────
-
     def _switch_cb(
         self,
         request: SetBool.Request,
         response: SetBool.Response,
     ) -> SetBool.Response:
+        """Select the active input per request.data and report the new mode."""
         self._switched = request.data
         response.success = True
         if self._switched:
@@ -161,6 +139,7 @@ class TeleopSwitchNode(Node):
 
 
 def main(args=None):
+    """Initialize rclpy, spin TeleopSwitchNode, and shut down cleanly."""
     rclpy.init(args=args)
     node = TeleopSwitchNode()
     try:

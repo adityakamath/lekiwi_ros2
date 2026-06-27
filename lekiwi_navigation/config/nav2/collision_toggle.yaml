@@ -1,0 +1,5 @@
+collision_toggle_node:
+  ros__parameters:
+    button: 10  # R1
+    target_node: /collision_monitor
+    parameter_name: FootprintApproach.enabled

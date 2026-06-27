@@ -11,19 +11,23 @@ nodes LeKiwi actually uses.  Unused nav2_bringup nodes are omitted:
     - following_server  (no following use-case)
 
 Nodes launched (in lifecycle order):
-    controller_server   MPPI Omni @ 10 Hz
-    planner_server      SmacPlanner2D (A* + built-in smoother)
-    behavior_server     Spin / BackUp / Wait recoveries
-    velocity_smoother   rate-limits MPPI output
-    collision_monitor   last-resort safety stop
-    bt_navigator        Behavior Tree orchestrator (started last)
+    controller_server      MPPI Omni @ 10 Hz
+    planner_server         SmacPlanner2D (A* + built-in smoother)
+    behavior_server        Spin / BackUp / Wait recoveries
+    velocity_smoother      rate-limits MPPI output
+    collision_monitor      last-resort safety stop
+    collision_toggle_node  R1 deadman, see collision_toggle_node.md (plain node)
+    bt_navigator           Behavior Tree orchestrator (started last)
 
 Topic wiring (no namespace):
     controller_server  cmd_vel   → cmd_vel_raw      (MPPI output)
     behavior_server    cmd_vel   → cmd_vel_raw      (BackUp / Spin output)
     velocity_smoother  cmd_vel   → cmd_vel_raw      (input remap; output is cmd_vel_smoothed)
-    collision_monitor  reads cmd_vel_smoothed, writes cmd_vel_nav (set in nav2.yaml params)
-    twist_switch_node  subscribes /cmd_vel_nav → base_controller
+    twist_switch_node  switched input is cmd_vel_smoothed / cmd_vel_teleop, output is
+                        cmd_vel_presafety (lekiwi_control's twist_switch.yaml)
+    collision_monitor  reads cmd_vel_presafety, writes base_controller/cmd_vel - see
+                        nav2_part2_plan.md (Feature 1) for why it sits downstream of
+                        twist_switch_node instead of Nav2's stock position
 
 Launch arguments:
     params_file   full path to nav2.yaml
@@ -117,8 +121,6 @@ def generate_launch_description():
                 remappings=remappings,
             ),
             # ── Velocity Smoother ────────────────────────────────────────────
-            # Input remap: cmd_vel → cmd_vel_raw  (reads raw controller output)
-            # Output: publishes to cmd_vel_smoothed  (collision_monitor reads it)
             Node(
                 package='nav2_velocity_smoother',
                 executable='velocity_smoother',
@@ -129,8 +131,8 @@ def generate_launch_description():
                 remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
             ),
             # ── Collision Monitor ────────────────────────────────────────────
-            # Reads cmd_vel_smoothed, applies safety polygon, writes cmd_vel_nav.
-            # The output topic name is set via cmd_vel_out_topic in nav2.yaml.
+            # Topic wiring set via nav2.yaml's cmd_vel_in/out_topic - see nav2_part2_plan.md
+            # (Feature 1) for why this sits downstream of twist_switch_node.
             Node(
                 package='nav2_collision_monitor',
                 executable='collision_monitor',
@@ -139,6 +141,18 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=['--ros-args', '--log-level', log_level],
                 remappings=remappings,
+            ),
+            # ── Collision Toggle ─────────────────────────────────────────────
+            # Not a lifecycle node - see collision_toggle_node.md.
+            Node(
+                package='lekiwi_navigation',
+                executable='collision_toggle_node',
+                name='collision_toggle_node',
+                output='log',
+                parameters=[
+                    PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'collision_toggle.yaml']),
+                ],
+                arguments=['--ros-args', '--log-level', log_level],
             ),
             # ── Lifecycle Manager ────────────────────────────────────────────
             Node(
