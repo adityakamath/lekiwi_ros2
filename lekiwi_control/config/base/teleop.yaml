@@ -4,7 +4,7 @@ joy_teleop:
       type: topic
       interface_type: geometry_msgs/msg/TwistStamped
       topic_name: /cmd_vel_teleop
-      deadman_buttons: [9] # L1; set to an invalid number like 99 to disable
+      deadman_buttons: [9] # L1
       axis_mappings:
         twist-linear-x:
           axis: 1 # Left stick vertical
@@ -21,34 +21,39 @@ joy_teleop:
         header-frame_id:
           value: 'base_link'
 
-    nav_twist:
+    # Fires bool_toggle_node's Trigger services below.
+    estop_toggle:
+      type: service
+      interface_type: std_srvs/srv/Trigger
+      service_name: /emergency_stop_toggle
+      buttons: [1]  # B
+
+    twist_switch_toggle:
+      type: service
+      interface_type: std_srvs/srv/Trigger
+      service_name: /twist_switch_toggle
+      buttons: [2]  # X
+
+    # map_saver_node's service.
+    save_map:
       type: service
       interface_type: std_srvs/srv/SetBool
-      service_name: /twist_switch
+      service_name: /save_map
       service_request:
         data: true
-      buttons: [3]  # Y = switch to nav mode
+      buttons: [4]  # screenshot
 
-    teleop_twist:
-      type: service
-      interface_type: std_srvs/srv/SetBool
-      service_name: /twist_switch
-      service_request:
-        data: false
-      buttons: [2]  # X = switch to teleop mode
+# bool_toggle_node also reads this file (see control.launch.py).
+bool_toggle_node:
+  ros__parameters:
+    toggles: ["emergency_stop", "twist_switch"]
 
-    estop_enable:
-      type: service
-      interface_type: std_srvs/srv/SetBool
-      service_name: /emergency_stop
-      service_request:
-        data: true
-      buttons: [0]  # A = enable
+    emergency_stop:
+      trigger_service: /emergency_stop_toggle
+      target_service: /emergency_stop
+      initial_state: false
 
-    estop_disable:
-      type: service
-      interface_type: std_srvs/srv/SetBool
-      service_name: /emergency_stop
-      service_request:
-        data: false
-      buttons: [1]  # B = disable
+    twist_switch:
+      trigger_service: /twist_switch_toggle
+      target_service: /twist_switch
+      initial_state: false

@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-map_saver_node — save the slam_toolbox map on joystick button press.
+map_saver_node — save the slam_toolbox map on request.
 
-Subscribes to /joy and on R1 button (button 10) press:
-  1. Creates maps/<YYYY_MM_DD_HH_MM_SS>/ in the source tree
-  2. Calls /slam_toolbox/save_map      → writes map.pgm + map.yaml
-  3. Calls /slam_toolbox/serialize_map → writes map.posegraph + map.data
-                                         (needed for slam_mode:=localization)
-  4. Looks up map→base_footprint TF    → writes starting_pose.yaml
-                                         (used by nav2.launch.py for map_start_pose)
+One std_srvs/srv/SetBool service, usable from joy_teleop button bindings or Foxglove's
+"Call Service" panel:
+
+  /save_map
+      true  - save the map (slam_toolbox save_map + serialize_map) into a timestamped
+              directory under maps/, plus the robot's current map-frame pose for
+              localization startup. Rejected if a save is already in progress.
+      false - no-op
 
 Parameters:
-    button  int  Button index for save trigger (default: 10 = R1)
+    save_timeout  float  Seconds before a stuck save/serialize chain is forcibly cleared,
+                          so /save_map doesn't refuse every later call (default: 15.0)
 """
 
 import math
@@ -23,25 +25,26 @@ import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.time import Time
-from sensor_msgs.msg import Joy
 from slam_toolbox.srv import SaveMap, SerializePoseGraph
+from std_srvs.srv import SetBool
 import tf2_ros
 
 
 class MapSaverNode(Node):
+    """Saves the slam_toolbox map and starting pose on request."""
 
     def __init__(self):
+        """Resolve the maps directory and create the /save_map service."""
         super().__init__('map_saver_node')
 
-        # os.path.realpath resolves the symlink created by --symlink-install
-        # so _maps_dir always points to the source tree:
-        #   src/lekiwi_ros2/lekiwi_navigation/maps/
+        # realpath resolves the --symlink-install symlink, so this always points to the
+        # source tree (src/lekiwi_ros2/lekiwi_navigation/maps/), not the install directory.
         _src_pkg = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         self._maps_dir = os.path.join(_src_pkg, 'maps')
         os.makedirs(self._maps_dir, exist_ok=True)
 
-        self.declare_parameter('button', 10)
-        self._button = self.get_parameter('button').value
+        self.declare_parameter('save_timeout', 15.0)
+        self._save_timeout = self.get_parameter('save_timeout').value
 
         self._save_client      = self.create_client(SaveMap, '/slam_toolbox/save_map')
         self._serialize_client = self.create_client(SerializePoseGraph, '/slam_toolbox/serialize_map')
@@ -49,25 +52,35 @@ class MapSaverNode(Node):
         self._tf_buffer   = tf2_ros.Buffer()
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
-        self._last_button_state = False
         self._saving = False
+        self._save_watchdog = None
 
-        self._joy_sub = self.create_subscription(Joy, '/joy', self._joy_callback, 10)
-        self.get_logger().info(
-            f'map_saver_node ready — press button {self._button} (R1) to save map to {self._maps_dir!r}'
-        )
+        self.create_service(SetBool, '/save_map', self._handle_save)
+        self.get_logger().info(f'map_saver_node ready: /save_map -> {self._maps_dir!r}')
 
-    def _joy_callback(self, msg: Joy):
-        if self._button >= len(msg.buttons):
-            return
+    def _handle_save(self, request: SetBool.Request, response: SetBool.Response):
+        """Start a map save, rejecting if one is already in progress."""
+        if not request.data:
+            response.success = True
+            response.message = 'No-op (set data: true to save).'
+            return response
 
-        pressed = bool(msg.buttons[self._button])
-        # Rising edge only
-        if pressed and not self._last_button_state and not self._saving:
-            self._trigger_save()
-        self._last_button_state = pressed
+        if self._saving:
+            response.success = False
+            response.message = (
+                f'Save already in progress (clears automatically after '
+                f'{self._save_timeout:.0f}s if stuck).'
+            )
+            return response
+
+        self._trigger_save()
+        response.success = True
+        response.message = f'Save started: {self._map_name!r}'
+        self.get_logger().info(response.message)
+        return response
 
     def _trigger_save(self):
+        """Create the timestamped output directory and call /slam_toolbox/save_map."""
         self._saving = True
         timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         save_dir = os.path.join(self._maps_dir, timestamp)
@@ -84,13 +97,33 @@ class MapSaverNode(Node):
             self._saving = False
             return
 
+        self._save_watchdog = self.create_timer(self._save_timeout, self._on_save_watchdog)
+
         save_req = SaveMap.Request()
         save_req.name.data = self._map_name
 
         future = self._save_client.call_async(save_req)
         future.add_done_callback(self._on_save_done)
 
+    def _on_save_watchdog(self):
+        """Force-clear a save/serialize chain that never finished (e.g. a slam_toolbox
+        lifecycle hiccup dropping the response), so /save_map isn't stuck refusing forever."""
+        self._clear_saving()
+        self.get_logger().error(
+            f'Save watchdog fired after {self._save_timeout:.0f}s - the chain never '
+            'completed. Cleared the in-progress flag; check whether map/pose-graph files '
+            'were actually written before retrying.'
+        )
+
+    def _clear_saving(self):
+        """Cancel the watchdog if still pending and clear the in-progress flag."""
+        if self._save_watchdog is not None:
+            self._save_watchdog.cancel()
+            self._save_watchdog = None
+        self._saving = False
+
     def _on_save_done(self, future):
+        """Log the save_map result, then serialize."""
         try:
             result = future.result()
             if result.result == 0:
@@ -108,6 +141,7 @@ class MapSaverNode(Node):
         future2.add_done_callback(self._on_serialize_done)
 
     def _on_serialize_done(self, future):
+        """Log the serialize_map result, then save the starting pose."""
         try:
             result = future.result()
             if result.result == 0:
@@ -118,7 +152,7 @@ class MapSaverNode(Node):
             self.get_logger().error(f'serialize_map call failed: {e}')
         finally:
             self._save_starting_pose()
-            self._saving = False
+            self._clear_saving()
 
     def _save_starting_pose(self):
         """Look up map→base_footprint and write starting_pose.yaml next to the map files."""
@@ -146,6 +180,7 @@ class MapSaverNode(Node):
 
 
 def main(args=None):
+    """Initialize rclpy, spin MapSaverNode, and shut down cleanly."""
     rclpy.init(args=args)
     node = MapSaverNode()
     try:

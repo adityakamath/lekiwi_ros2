@@ -18,6 +18,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context):
+    """Build the control-stack nodes for the selected payload."""
     payload        = LaunchConfiguration('payload').perform(context)
     pantilt_config = LaunchConfiguration('pantilt_config').perform(context)
     serial_port  = LaunchConfiguration('sts_serial_port').perform(context)
@@ -124,6 +125,17 @@ def launch_setup(context):
         ],
     )
 
+    bool_toggle_node = Node(
+        package='lekiwi_control',
+        executable='bool_toggle_node',
+        name='bool_toggle_node',
+        output='log',
+        parameters=[
+            f'{pkg_ctrl}/config/base/teleop.yaml',  # shared with joy_teleop - see bool_toggle_node.md
+            {'use_sim_time': use_sim_time},
+        ],
+    )
+
     joint_state_broadcaster_spawner = TimerAction(
         period=2.0,
         actions=[Node(
@@ -163,6 +175,7 @@ def launch_setup(context):
         extra_spawners,
         teleop_node,
         twist_switch_node,
+        bool_toggle_node,
     ]
 
     if launch_joy:
@@ -189,6 +202,7 @@ def launch_setup(context):
 
 
 def generate_launch_description():
+    """Declare control-stack launch arguments and launch via launch_setup."""
     declared_arguments = [
         DeclareLaunchArgument(
             'payload',
