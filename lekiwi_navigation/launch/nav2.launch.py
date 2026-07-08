@@ -45,9 +45,6 @@ Invoked from navigation.launch.py.
 """
 
 import os
-import tempfile
-
-import yaml
 
 from launch import LaunchDescription
 from launch.actions import (
@@ -64,7 +61,7 @@ def launch_setup(context, *args, **kwargs):
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
     map_name = LaunchConfiguration('map_name').perform(context)
 
-    params_file = LaunchConfiguration('params_file')
+    params_file  = LaunchConfiguration('params_file')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart    = LaunchConfiguration('autostart')
     log_level    = LaunchConfiguration('log_level')
@@ -116,24 +113,23 @@ def launch_setup(context, *args, **kwargs):
         keepout_mask_path = ''
         speed_mask_path = ''
 
-    # When filter masks are available, enable the filter plugins via an ephemeral param
-    # overlay. The plugins default to enabled: false in nav2.yaml so no override is
-    # needed (and no separate file is needed) when running without a map.
+    # Filter plugins default to enabled: false in nav2.yaml.
+    # Re-enable by restoring the block below once video recording is done.
     filter_enable_params = []
-    if keepout_mask_path:
-        _filter_dict = {
-            'local_costmap': {'local_costmap': {'ros__parameters': {
-                'keepout_filter': {'enabled': True},
-                'speed_filter': {'enabled': True},
-            }}},
-            'global_costmap': {'global_costmap': {'ros__parameters': {
-                'keepout_filter': {'enabled': True},
-            }}},
-        }
-        _tf = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
-        yaml.dump(_filter_dict, _tf)
-        _tf.close()
-        filter_enable_params = [ParameterFile(_tf.name)]
+    # if keepout_mask_path:
+    #     _filter_dict = {
+    #         'local_costmap': {'local_costmap': {'ros__parameters': {
+    #             'keepout_filter': {'enabled': True},
+    #             'speed_filter': {'enabled': True},
+    #         }}},
+    #         'global_costmap': {'global_costmap': {'ros__parameters': {
+    #             'keepout_filter': {'enabled': True},
+    #         }}},
+    #     }
+    #     _tf = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+    #     yaml.dump(_filter_dict, _tf)
+    #     _tf.close()
+    #     filter_enable_params = [ParameterFile(_tf.name)]
 
     load_nodes = [
         SetParameter('use_sim_time', use_sim_time),
