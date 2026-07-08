@@ -25,7 +25,7 @@ def launch_setup(context):
     map_name            = LaunchConfiguration('map_name').perform(context)
     pointcloud          = LaunchConfiguration('pointcloud').perform(context)
     octomap             = LaunchConfiguration('octomap').perform(context)
-    slam_mode           = LaunchConfiguration('slam_mode').perform(context)
+    nav_mode           = LaunchConfiguration('nav_mode').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
@@ -50,7 +50,7 @@ def launch_setup(context):
 
     nav = include(pkg_nav,     'launch/navigation.launch.py', {
         'fusion_mode':  fusion_mode,
-        'slam_mode':    slam_mode,
+        'nav_mode':    nav_mode,
         'map_name':     map_name,
         'use_sim_time': use_sim_time,
     })
@@ -112,13 +112,14 @@ def generate_launch_description():
                         'pt_bringup/launch/oakd.launch.py.',
         ),
         DeclareLaunchArgument(
-            'slam_mode',
-            default_value='map',
+            'nav_mode',
+            default_value='',
             description=(
-                'Navigation mode: '
-                'map = build new map with slam_toolbox + map_saver_node; '
-                'localize = localize with slam_toolbox (no saving); '
-                'amcl = localize with AMCL + nav2_map_server (no saving).'
+                'Navigation mode (auto-detected from map_name if not set): '
+                'not set + no map_name = slam_toolbox mapping; '
+                'not set + map_name = amcl; '
+                'slam = slam_toolbox mapping (or localization if map_name is set); '
+                'amcl = AMCL on static map (requires map_name; warns and falls back to mapping if not provided).'
             ),
         ),
         DeclareLaunchArgument(

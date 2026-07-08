@@ -25,7 +25,8 @@ Three std_srvs/srv/SetBool services, usable from joy_teleop button bindings or F
               forget the pause/resume position - the next start is a true fresh start
       false - no-op
 
-number_of_loops + 1 is the total number of passes through the waypoint list.
+number_of_loops is the total number of passes through the waypoint list per start; 0 means
+loop forever.
 
 If something else sends the robot a /navigate_to_pose goal mid-patrol (RViz's "2D Nav Goal",
 Foxglove's goal-pose panel), it's treated as a deliberate detour rather than an error: the
@@ -35,7 +36,7 @@ max_retries times in a row instead (no detour resolving it - genuinely unreachab
 removed from the list and the patrol continues to the next one; later loops never target it.
 
 Progress (current loop, from/to waypoint, ETA, distance, recovery count) is published as
-diagnostic_msgs/msg/DiagnosticArray on /diagnostics rather than a visualization - WARN while
+diagnostic_msgs/msg/DiagnosticArray on /patrol_diagnostics rather than a visualization - WARN while
 paused waiting to auto-resume, STALE when stopped deliberately, OK/WARN(recoveries>0) while
 actively patrolling.
 
@@ -44,8 +45,8 @@ which otherwise keep showing the last path received even after the goal that pro
 gone.
 
 Parameters:
-    number_of_loops  int  FollowWaypoints.Goal.number_of_loops sent on start
-                          (default: 4294967295, i.e. effectively continuous; 0 = single pass)
+    number_of_loops  int  Total passes through the waypoint list per start
+                          (default: 0, i.e. loop forever; N>0 = exactly N passes)
     frame_id         str  TF frame waypoints are recorded in (default: map)
     marker_topic     str  Topic for the waypoint MarkerArray (default: /waypoint_markers)
     max_retries      int  Consecutive failures at the same waypoint before giving up on it
@@ -78,6 +79,10 @@ _PLAN_TOPICS = [
     '/controller_server/optimal_path',
 ]
 
+# FollowWaypoints.Goal.number_of_loops is a uint32 - this is its max value, used as the
+# practical stand-in for "loop forever" (the field has no literal infinite option).
+_UINT32_MAX = 4294967295
+
 
 class WaypointRecorderNode(Node):
     """Records waypoints from the robot's pose and drives a looping patrol between them."""
@@ -86,7 +91,7 @@ class WaypointRecorderNode(Node):
         """Declare parameters, set up TF/publishers/the action client, and create the services."""
         super().__init__('waypoint_recorder_node')
 
-        self.declare_parameter('number_of_loops', 4294967295)
+        self.declare_parameter('number_of_loops', 0)
         self.declare_parameter('frame_id', 'map')
         self.declare_parameter('marker_topic', '/waypoint_markers')
         self.declare_parameter('max_retries', 3)
@@ -116,7 +121,7 @@ class WaypointRecorderNode(Node):
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
         self._marker_pub = self.create_publisher(MarkerArray, marker_topic, 10)
-        self._diagnostics_pub = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
+        self._diagnostics_pub = self.create_publisher(DiagnosticArray, '/patrol_diagnostics', 10)
         self._plan_pubs = [self.create_publisher(Path, topic, 10) for topic in _PLAN_TOPICS]
         self._action_client = ActionClient(self, FollowWaypoints, '/follow_waypoints')
         self.create_subscription(
@@ -271,14 +276,19 @@ class WaypointRecorderNode(Node):
             return response
 
         resuming, start_index = self._send_patrol_goal()
+        passes_desc = 'continuous' if self._number_of_loops == 0 else f'{self._number_of_loops} pass(es)'
         response.success = True
         response.message = (
             f'Patrol {"resumed at" if resuming else "requested:"} waypoint {start_index}, '
-            f'{len(self._waypoints)} waypoints total, {self._number_of_loops} additional '
-            f'loop(s).'
+            f'{len(self._waypoints)} waypoints total, {passes_desc}.'
         )
         self.get_logger().info(response.message)
         return response
+
+    def _total_passes(self) -> int:
+        """Total passes through the waypoint list (the number_of_loops parameter's 0 means
+        loop forever, mapped here to the action field's max representable value)."""
+        return self._number_of_loops if self._number_of_loops > 0 else _UINT32_MAX
 
     def _send_patrol_goal(self):
         """Send a FollowWaypoints goal, resuming from self._to_waypoint if applicable.
@@ -297,7 +307,9 @@ class WaypointRecorderNode(Node):
         goal = FollowWaypoints.Goal()
         goal.poses = list(self._waypoints)
         goal.goal_index = start_index
-        goal.number_of_loops = self._number_of_loops
+        # FollowWaypoints.Goal.number_of_loops is loops *after* the first pass, not total
+        # passes - see _total_passes for the number_of_loops parameter's actual semantics.
+        goal.number_of_loops = self._total_passes() - 1
 
         if not resuming:
             self._current_loop = 0
@@ -543,7 +555,7 @@ class WaypointRecorderNode(Node):
             pub.publish(empty_path)
 
     def _publish_diagnostics(self, active: bool = True, waiting: bool = False):
-        """Publish the current patrol status to /diagnostics."""
+        """Publish the current patrol status to /patrol_diagnostics."""
         status = DiagnosticStatus()
         status.name = 'waypoint_recorder: patrol'
         status.hardware_id = ''

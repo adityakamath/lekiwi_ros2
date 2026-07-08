@@ -34,8 +34,8 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 | `control_diagnostics` | `false`   | Launch motor and IMU diagnostics nodes in `lekiwi_control`                                                        |
 | `control_mock`        | `""`      | Mock mode override (`true`/`false`); empty means use `urdf_config.yaml` value                                     |
 | `fusion_mode`         | `base`    | EKF sensor fusion: `base` (wheel odom + BNO055), `imu` (BNO055 only), `odom` (wheel odom only)                    |
-| `slam_mode`           | `map`     | Navigation mode: `map` (build new map), `localize` (slam_toolbox localization), `amcl` (AMCL + nav2_map_server)   |
-| `map_name`            | `""`      | Map subdirectory to load for `localize`/`amcl` modes (required for those modes). Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
+| `nav_mode`            | `slam`    | Navigation mode: `slam` (slam_toolbox mapping; or localization if `map_name` is set), `amcl` (AMCL + nav2_map_server, requires `map_name`) |
+| `map_name`            | `""`      | Map subdirectory to load (e.g. `livingroom1`). With `nav_mode:=slam` triggers slam_toolbox localization on the existing map; with `nav_mode:=amcl` loads the static map for AMCL. Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
 | `pointcloud`          | `false`   | Use `oakd_vio_pcl.yaml` (depth aligned to RGB + point cloud) instead of `oakd_vio.yaml` (depth unaligned, no point cloud). Also gates point cloud compression. |
 | `octomap`             | `false`   | Run `octomap_server` on the OAK-D point cloud to build a persistent 3D octree (only takes effect when `pointcloud:=true`) |
 | `joy`                 | `false`   | Launch `joy_node` locally; leave `false` when `/joy` is published from a remote device                           |

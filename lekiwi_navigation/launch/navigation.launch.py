@@ -6,14 +6,17 @@ Thin wrapper: declares all navigation arguments and includes ekf.launch.py,
 slam.launch.py, and nav2.launch.py.
 
     ekf.launch.py   — robot_localization EKF (wheel odom + IMU → /odometry/filtered)
-    slam.launch.py  — slam_toolbox (map / localize) or AMCL + map_server (amcl)
+    slam.launch.py  — slam_toolbox (mapping or localization) or AMCL + map_server
     nav2.launch.py  — Nav2 nodes (controller, planner, behavior, bt_navigator,
                        velocity_smoother, collision_monitor)
 
 Launch arguments:
     fusion_mode  base | imu | odom  (default: base)
-    slam_mode    map | localize | amcl  (default: map)
-    map_name     subdirectory under maps/ (required for localize/amcl)
+    nav_mode     slam | amcl  (default: slam)
+                   slam            — slam_toolbox mapping from scratch
+                   slam + map_name — slam_toolbox localization on existing map
+                   amcl            — AMCL on static map (requires map_name)
+    map_name     subdirectory under maps/ (optional; triggers localization when set)
     use_sim_time true | false  (default: false)
 """
 
@@ -43,7 +46,7 @@ def generate_launch_description():
             PathJoinSubstitution([pkg_nav, 'launch', 'slam.launch.py']),
         ]),
         launch_arguments={
-            'slam_mode':    LaunchConfiguration('slam_mode'),
+            'nav_mode':    LaunchConfiguration('nav_mode'),
             'map_name':     LaunchConfiguration('map_name'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
         }.items(),
@@ -71,13 +74,14 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
-            'slam_mode',
-            default_value='map',
+            'nav_mode',
+            default_value='',
             description=(
-                'Navigation mode: '
-                'map = build new map with slam_toolbox + map_saver_node; '
-                'localize = localize with slam_toolbox (no saving); '
-                'amcl = localize with AMCL + nav2_map_server (no saving).'
+                'Navigation mode (auto-detected from map_name if not set): '
+                'not set + no map_name = slam_toolbox mapping; '
+                'not set + map_name = amcl; '
+                'slam = slam_toolbox mapping (or localization if map_name is set); '
+                'amcl = AMCL on static map (requires map_name; warns and falls back to mapping if not provided).'
             ),
         ),
         DeclareLaunchArgument(

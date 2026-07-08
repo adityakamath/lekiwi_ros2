@@ -1,6 +1,6 @@
 waypoint_recorder_node:
   ros__parameters:
-    number_of_loops: 4294967295  # uint32 max - effectively continuous patrol; 0 = single pass
+    number_of_loops: 0  # total passes per start; 0 = loop forever, N>0 = exactly N passes
     frame_id: map
     marker_topic: /waypoint_markers
     max_retries: 3  # consecutive failures at the same waypoint before dropping it
