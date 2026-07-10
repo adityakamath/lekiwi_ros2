@@ -193,8 +193,17 @@ class WaypointRecorderNode(Node):
         return response
 
     def _publish_markers(self):
-        """Publish an arrow + index label for every recorded waypoint, including queued ones."""
+        """Publish an arrow + index label for every recorded waypoint, including queued ones.
+
+        Leading DELETEALL ensures stale markers (e.g. orange ghosts left over when pending
+        waypoints are merged into the active patrol) are cleared atomically before the fresh
+        state is added.  RViz2 and Foxglove both process MarkerArrays sequentially within a
+        single message, so this produces no visible flicker.
+        """
         markers = MarkerArray()
+        delete_all = Marker()
+        delete_all.action = Marker.DELETEALL
+        markers.markers.append(delete_all)
         self._append_waypoint_markers(markers, self._waypoints, 'waypoints', (0.0, 1.0, 0.0))
         self._append_waypoint_markers(
             markers, self._pending_waypoints, 'pending_waypoints', (1.0, 0.65, 0.0),
@@ -460,8 +469,7 @@ class WaypointRecorderNode(Node):
             f'Waypoint {index} unreachable after {self._max_retries} attempts - removed from '
             f'the patrol ({len(self._waypoints)} waypoint(s) left).'
         )
-        self._clear_markers()  # redraw from scratch - removal shifts every later marker ID
-        self._publish_markers()
+        self._publish_markers()  # DELETEALL + redraw — removal shifts every later marker ID
 
         if not self._waypoints:
             if self._pending_waypoints:

@@ -174,7 +174,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.20
+        inflation_radius: 0.10        # reduced from 0.20; robot_radius=0.17 + 0.10 = 0.27m clearance
       always_send_full_costmap: false
 
 global_costmap:
@@ -213,7 +213,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.30
+        inflation_radius: 0.15        # reduced from 0.30; slightly larger than local for global planner conservatism
       always_send_full_costmap: false
 
 keepout_costmap_filter_info_server:
@@ -331,7 +331,7 @@ collision_monitor:
       type: "polygon"
       action_type: "approach"
       footprint_topic: "local_costmap/published_footprint"
-      time_before_collision: 0.8   # s
+      time_before_collision: 0.8
       simulation_time_step: 0.1
       min_points: 10
       visualize: true

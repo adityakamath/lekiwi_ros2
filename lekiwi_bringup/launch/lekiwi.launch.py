@@ -76,8 +76,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'pantilt_config',
-            default_value='pt100',
-            description='Pan-tilt mesh variant when payload:=pantilt: "pt100" or "pt101"',
+            default_value='pt101',
+            description='Pan-tilt mesh variant when payload:="pt100" or "pt101"',
         ),
         DeclareLaunchArgument(
             'control_diagnostics',
