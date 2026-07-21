@@ -2,7 +2,9 @@
 """
 Launch the LeKiwi navigation stack.
 
-Thin wrapper: declares all navigation arguments and includes ekf.launch.py,
+Main entry point for the lekiwi_navigation package.
+
+Declares shared navigation arguments and forwards them to ekf.launch.py,
 slam.launch.py, and nav2.launch.py.
 
     ekf.launch.py   — robot_localization EKF (wheel odom + IMU → /odometry/filtered)
@@ -12,11 +14,9 @@ slam.launch.py, and nav2.launch.py.
 
 Launch arguments:
     fusion_mode  base | imu | odom  (default: base)
-    nav_mode     slam | amcl  (default: slam)
-                   slam            — slam_toolbox mapping from scratch
-                   slam + map_name — slam_toolbox localization on existing map
-                   amcl            — AMCL on static map (requires map_name)
-    map_name     subdirectory under maps/ (optional; triggers localization when set)
+    mission      map | slam | amcl  (default: auto-detected from map_name;
+                   see slam.launch.py for full semantics)
+    map_name     subdirectory under maps/
     use_sim_time true | false  (default: false)
 """
 
@@ -46,7 +46,7 @@ def generate_launch_description():
             PathJoinSubstitution([pkg_nav, 'launch', 'slam.launch.py']),
         ]),
         launch_arguments={
-            'nav_mode':    LaunchConfiguration('nav_mode'),
+            'mission':      LaunchConfiguration('mission'),
             'map_name':     LaunchConfiguration('map_name'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
         }.items(),
@@ -74,14 +74,11 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
-            'nav_mode',
+            'mission',
             default_value='',
             description=(
-                'Navigation mode (auto-detected from map_name if not set): '
-                'not set + no map_name = slam_toolbox mapping; '
-                'not set + map_name = amcl; '
-                'slam = slam_toolbox mapping (or localization if map_name is set); '
-                'amcl = AMCL on static map (requires map_name; warns and falls back to mapping if not provided).'
+                'Navigation mission selector. For exact mode behavior, '
+                'map requirements, and validation rules see slam.launch.py.'
             ),
         ),
         DeclareLaunchArgument(
@@ -89,7 +86,7 @@ def generate_launch_description():
             default_value='',
             description=(
                 'Subdirectory name under lekiwi_navigation/maps/ to load '
-                '(e.g. livingroom). Required for localize and amcl modes. Also tells '
+                '(e.g. livingroom). Also tells '
                 'nav2.launch.py where to load this map\'s keepout/speed filter masks '
                 'from (its filters/ subfolder) - empty disables both filters.'
             ),

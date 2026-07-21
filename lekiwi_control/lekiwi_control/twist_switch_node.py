@@ -23,8 +23,10 @@ Parameters:
 """
 
 import rclpy
+from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionState
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import qos_profile_services_default
 
 from geometry_msgs.msg import Twist, TwistStamped
 from std_srvs.srv import SetBool
@@ -83,6 +85,10 @@ class TeleopSwitchNode(Node):
                 10)
 
         self._srv = self.create_service(SetBool, '/twist_switch', self._switch_cb)
+        # Lets a listener (e.g. the audio indicator node) observe every call's
+        # request+response on /twist_switch/_service_event, regardless of caller.
+        self._srv.configure_introspection(
+            self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
 
         self.get_logger().info(
             f'twist_switch_node ready\n'

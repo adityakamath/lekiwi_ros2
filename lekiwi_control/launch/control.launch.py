@@ -10,12 +10,25 @@ The 'payload' argument selects which hardware is present alongside the base:
 import yaml
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, TimerAction
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, RegisterEventHandler, TimerAction
+from launch.event_handlers import OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node, SetRemap
+from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
+
+
+def _launch_arg_as_bool(context, name: str) -> bool:
+    """Resolve a launch argument as a strict boolean."""
+    value = LaunchConfiguration(name).perform(context).strip().lower()
+    if value in ('true', '1'):
+        return True
+    if value in ('false', '0'):
+        return False
+    raise RuntimeError(
+        f"[control.launch.py] Launch argument '{name}' must be true/false or 1/0, got {value!r}."
+    )
 
 def launch_setup(context):
     """Build the control-stack nodes for the selected payload."""
@@ -23,9 +36,9 @@ def launch_setup(context):
     pantilt_config = LaunchConfiguration('pantilt_config').perform(context)
     serial_port  = LaunchConfiguration('sts_serial_port').perform(context)
     use_mock     = LaunchConfiguration('use_mock').perform(context)
-    diagnostics  = LaunchConfiguration('diagnostics').perform(context)
-    launch_joy   = LaunchConfiguration('joy').perform(context).lower() in ('true', '1')
-    use_sim_time = LaunchConfiguration('use_sim_time').perform(context).lower() in ('true', '1')
+    diagnostics  = _launch_arg_as_bool(context, 'diagnostics')
+    launch_joy   = _launch_arg_as_bool(context, 'joy')
+    use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
@@ -88,7 +101,6 @@ def launch_setup(context):
             *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
             {'use_sim_time': use_sim_time},
         ],
-        remappings=[('/diagnostics', '/controller_manager/diagnostics')],
         output='log',
         emulate_tty=True,
         arguments=['--ros-args', '--log-level', 'rclcpp:=ERROR'],
@@ -131,48 +143,55 @@ def launch_setup(context):
         name='bool_toggle_node',
         output='log',
         parameters=[
-            f'{pkg_ctrl}/config/base/teleop.yaml',  # shared with joy_teleop - see bool_toggle_node.md
+            f'{pkg_ctrl}/config/base/toggles.yaml',
             {'use_sim_time': use_sim_time},
         ],
     )
 
-    joint_state_broadcaster_spawner = TimerAction(
-        period=2.0,
-        actions=[Node(
-            package='controller_manager',
-            executable='spawner',
-            arguments=['joint_state_broadcaster', '-c', '/controller_manager'],
-            output='both',
-        )],
-    )
-
     extra_spawner_nodes = [
         Node(package='controller_manager', executable='spawner',
-             arguments=['base_controller', '-c', '/controller_manager'], output='both'),
+             arguments=['base_controller', '-c', '/controller_manager',
+                        '--controller-manager-timeout', '30'], output='both'),
         Node(package='controller_manager', executable='spawner',
-             arguments=['imu_sensor_broadcaster', '-c', '/controller_manager'], output='both'),
+             arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
+                        '--controller-manager-timeout', '30'], output='both'),
     ]
     if payload == 'pantilt':
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
-                 arguments=['pantilt_controller', '-c', '/controller_manager'], output='both'),
+                 arguments=['pantilt_controller', '-c', '/controller_manager',
+                            '--controller-manager-timeout', '30'], output='both'),
         )
-    extra_spawners = TimerAction(period=2.5, actions=extra_spawner_nodes)
 
-    motor_diagnostics = GroupAction([
-        SetRemap('/diagnostics', '/base/diagnostics'),
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                PathJoinSubstitution([FindPackageShare('sts_hardware_interface'), 'launch', 'motor_diagnostics.launch.py'])
-            ])
-        ),
-    ])
+    # Start spawners as soon as the controller_manager process starts.
+    # joint_state_broadcaster first; other controllers follow after a brief stagger
+    # so they do not all race to activate simultaneously.
+    controller_spawner = RegisterEventHandler(
+        OnProcessStart(
+            target_action=controller_manager,
+            on_start=[
+                Node(
+                    package='controller_manager',
+                    executable='spawner',
+                    arguments=['joint_state_broadcaster', '-c', '/controller_manager',
+                               '--controller-manager-timeout', '30'],
+                    output='both',
+                ),
+                TimerAction(period=1.0, actions=extra_spawner_nodes),
+            ],
+        )
+    )
+
+    motor_diagnostics = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([FindPackageShare('sts_hardware_interface'), 'launch', 'motor_diagnostics.launch.py'])
+        ])
+    )
 
     actions = [
         robot_state_publisher,
         controller_manager,
-        joint_state_broadcaster_spawner,
-        extra_spawners,
+        controller_spawner,
         teleop_node,
         twist_switch_node,
         bool_toggle_node,
@@ -181,7 +200,7 @@ def launch_setup(context):
     if launch_joy:
         actions.append(joy_node)
 
-    if diagnostics.lower() == 'true':
+    if diagnostics:
         actions.append(TimerAction(period=3.0, actions=[motor_diagnostics]))
         actions.append(TimerAction(
             period=3.0,
@@ -194,7 +213,6 @@ def launch_setup(context):
                     f'{pkg_ctrl}/config/base/bno055_diagnostics.yaml',
                     {'enable_mock_mode': final_use_mock},
                 ],
-                remappings=[('/diagnostics', '/imu/diagnostics')],
             )],
         ))
 

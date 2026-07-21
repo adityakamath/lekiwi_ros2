@@ -31,15 +31,17 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 |-----------------------|-----------|------------------------------------------------------------------------------------------------------------------|
 | `payload`             | `pantilt` | Hardware payload: `""` for base only, `pantilt` for base + pan-tilt + OAK-D                                       |
 | `pantilt_config`      | `pt100`   | Pan-tilt mesh variant when `payload:=pantilt`: `pt100` or `pt101`                                                 |
-| `control_diagnostics` | `false`   | Launch motor and IMU diagnostics nodes in `lekiwi_control`                                                        |
+| `diagnostics`         | `false`   | Launch motor and IMU diagnostics nodes in `lekiwi_control`                                                        |
 | `control_mock`        | `""`      | Mock mode override (`true`/`false`); empty means use `urdf_config.yaml` value                                     |
 | `fusion_mode`         | `base`    | EKF sensor fusion: `base` (wheel odom + BNO055), `imu` (BNO055 only), `odom` (wheel odom only)                    |
-| `nav_mode`            | `slam`    | Navigation mode: `slam` (slam_toolbox mapping; or localization if `map_name` is set), `amcl` (AMCL + nav2_map_server, requires `map_name`) |
-| `map_name`            | `""`      | Map subdirectory to load (e.g. `livingroom1`). With `nav_mode:=slam` triggers slam_toolbox localization on the existing map; with `nav_mode:=amcl` loads the static map for AMCL. Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
+| `mission`             | `""`      | Navigation mission: empty preserves current behavior (`map_name` empty -> `map`, `map_name` set -> `amcl`); `map` runs slam_toolbox mapping, `slam` runs slam_toolbox localization and requires `map_name`, `amcl` runs AMCL + nav2_map_server and requires `map_name` |
+| `map_name`            | `""`      | Map subdirectory to load (e.g. `livingroom1`). With `mission:=slam` loads slam_toolbox localization on the existing map; with `mission:=amcl` loads the static map for AMCL. Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
 | `pointcloud`          | `false`   | Use `oakd_vio_pcl.yaml` (depth aligned to RGB + point cloud) instead of `oakd_vio.yaml` (depth unaligned, no point cloud). Also gates point cloud compression. |
 | `octomap`             | `false`   | Run `octomap_server` on the OAK-D point cloud to build a persistent 3D octree (only takes effect when `pointcloud:=true`) |
 | `joy`                 | `false`   | Launch `joy_node` locally; leave `false` when `/joy` is published from a remote device                           |
 | `use_sim_time`        | `false`   | Use `/clock` from a simulator instead of system time                                                              |
+
+Earlier iterations called `mission` `nav_mode`.
 
 ## Joystick Configuration
 

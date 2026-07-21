@@ -27,10 +27,22 @@ _EKF_CONFIGS = {
 }
 
 
+def _launch_arg_as_bool(context, name: str) -> bool:
+    """Resolve a launch argument as a strict boolean."""
+    value = LaunchConfiguration(name).perform(context).strip().lower()
+    if value in ('true', '1'):
+        return True
+    if value in ('false', '0'):
+        return False
+    raise RuntimeError(
+        f"[ekf.launch.py] Launch argument '{name}' must be true/false or 1/0, got {value!r}."
+    )
+
+
 def launch_setup(context, *args, **kwargs):
     """Build the ekf_node Node for the selected fusion_mode config file."""
     fusion_mode  = LaunchConfiguration('fusion_mode').perform(context)
-    use_sim_time = LaunchConfiguration('use_sim_time').perform(context).lower() in ('true', '1')
+    use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
 
     config_file = _EKF_CONFIGS.get(fusion_mode)
     if config_file is None:

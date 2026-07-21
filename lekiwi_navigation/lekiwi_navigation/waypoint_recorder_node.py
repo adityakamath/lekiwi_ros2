@@ -58,9 +58,11 @@ import copy
 from action_msgs.msg import GoalStatus, GoalStatusArray
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 import rclpy
+from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionState
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import qos_profile_services_default
 from rclpy.time import Time
 
 from geometry_msgs.msg import PoseStamped
@@ -137,9 +139,14 @@ class WaypointRecorderNode(Node):
             10,
         )
 
-        self.create_service(SetBool, '/record_waypoint', self._handle_record)
-        self.create_service(SetBool, '/waypoint_follow', self._handle_set_following)
-        self.create_service(SetBool, '/reset_waypoints', self._handle_reset)
+        # Introspection lets a listener (e.g. the audio indicator node) observe every
+        # call's request+response on <service>/_service_event, regardless of caller.
+        record_srv = self.create_service(SetBool, '/record_waypoint', self._handle_record)
+        follow_srv = self.create_service(SetBool, '/waypoint_follow', self._handle_set_following)
+        reset_srv = self.create_service(SetBool, '/reset_waypoints', self._handle_reset)
+        for srv in (record_srv, follow_srv, reset_srv):
+            srv.configure_introspection(
+                self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
 
         self.get_logger().info(
             'waypoint_recorder_node ready: /record_waypoint, /waypoint_follow, /reset_waypoints'

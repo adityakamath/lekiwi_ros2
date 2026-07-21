@@ -26,8 +26,10 @@ from datetime import datetime
 from PIL import Image
 
 import rclpy
+from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionState
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import qos_profile_services_default
 from rclpy.time import Time
 from slam_toolbox.srv import SaveMap, SerializePoseGraph
 from std_srvs.srv import SetBool
@@ -59,7 +61,11 @@ class MapSaverNode(Node):
         self._saving = False
         self._save_watchdog = None
 
-        self.create_service(SetBool, '/save_map', self._handle_save)
+        # Introspection lets a listener (e.g. the audio indicator node) observe every
+        # call's request+response on /save_map/_service_event, regardless of caller.
+        save_srv = self.create_service(SetBool, '/save_map', self._handle_save)
+        save_srv.configure_introspection(
+            self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
         self.get_logger().info(f'map_saver_node ready: /save_map -> {self._maps_dir!r}')
 
     def _handle_save(self, request: SetBool.Request, response: SetBool.Response):

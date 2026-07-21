@@ -65,23 +65,3 @@ joy_teleop:
       service_request:
         data: true
       buttons: [4]  # screenshot
-
-# bool_toggle_node also reads this file (see control.launch.py).
-bool_toggle_node:
-  ros__parameters:
-    toggles: ["emergency_stop", "twist_switch", "waypoint_follow"]
-
-    emergency_stop:
-      trigger_service: /emergency_stop_toggle
-      target_service: /emergency_stop
-      initial_state: false
-
-    twist_switch:
-      trigger_service: /twist_switch_toggle
-      target_service: /twist_switch
-      initial_state: false
-
-    waypoint_follow:
-      trigger_service: /waypoint_follow_toggle
-      target_service: /waypoint_follow
-      initial_state: false

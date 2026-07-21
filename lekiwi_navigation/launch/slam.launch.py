@@ -2,19 +2,18 @@
 """
 Launch localization and SLAM for LeKiwi.
 
-nav_mode controls which backend is used:
+mission controls which backend is used:
     not set + no map_name — slam_toolbox mapping from scratch + map_saver_node
     not set + map_name    — nav2_map_server + AMCL (auto-detected)
-    slam (no map_name)    — slam_toolbox mapping from scratch + map_saver_node
+    map                   — slam_toolbox mapping from scratch + map_saver_node
     slam + map_name       — slam_toolbox localization on existing map (can extend it)
     amcl + map_name       — nav2_map_server + AMCL (static map, no extension)
-    amcl (no map_name)    — warning, falls back to slam_toolbox mapping
 
 Invoked from navigation.launch.py.
 
 Launch arguments:
-    nav_mode     slam | amcl  (default: auto-detected from map_name)
-    map_name     subdirectory name under maps/ (optional; triggers localization when set)
+    mission      map | slam | amcl  (default: auto-detected from map_name)
+    map_name     subdirectory name under maps/ (optional; triggers AMCL when mission is not set)
     use_sim_time true | false  (default: false)
 """
 
@@ -29,35 +28,31 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
-    """Build the slam_toolbox or map_server+AMCL nodes for the selected nav_mode."""
+    """Build the slam_toolbox or map_server+AMCL nodes for the selected mission."""
     use_sim_time = LaunchConfiguration('use_sim_time')
-    nav_mode     = LaunchConfiguration('nav_mode').perform(context)
+    mission      = LaunchConfiguration('mission').perform(context)
     map_name     = LaunchConfiguration('map_name').perform(context)
 
-    if nav_mode not in ('', 'slam', 'amcl'):
+    if mission not in ('', 'map', 'slam', 'amcl'):
         raise RuntimeError(
-            f"[slam.launch.py] Unknown nav_mode '{nav_mode}'. "
-            "Valid values: slam, amcl."
+            f"[slam.launch.py] Unknown mission '{mission}'. "
+            "Valid values: map, slam, amcl."
         )
 
-    # Auto-detect when nav_mode is not explicitly set.
-    if not nav_mode:
-        nav_mode = 'amcl' if map_name else 'slam'
+    # Preserve the current default behavior when mission is not explicitly set.
+    if not mission:
+        mission = 'amcl' if map_name else 'map'
 
-    # amcl without a map → warn and fall back to slam_toolbox mapping.
-    if nav_mode == 'amcl' and not map_name:
-        import logging
-        logging.getLogger('launch').warning(
-            "[slam.launch.py] nav_mode:=amcl requires map_name but none was provided. "
-            "Falling back to slam_toolbox mapping mode."
+    if mission in ('slam', 'amcl') and not map_name:
+        raise RuntimeError(
+            f"[slam.launch.py] mission:={mission} requires map_name to be set."
         )
-        nav_mode = 'slam'
 
-    # Translate user-facing nav_mode to internal slam_toolbox mode.
-    # nav_mode==slam + map_name → localize (on existing map, can extend it)
-    # nav_mode==slam            → map (mapping from scratch)
-    if nav_mode == 'slam':
-        slam_mode = 'localize' if map_name else 'map'
+    # Translate the user-facing mission to the internal backend/mode.
+    if mission == 'map':
+        slam_mode = 'map'
+    elif mission == 'slam':
+        slam_mode = 'localize'
     else:
         slam_mode = 'amcl'
 
@@ -82,7 +77,20 @@ def launch_setup(context, *args, **kwargs):
             # realpath resolves the --symlink-install symlink to the source tree - see
             # map_saver_node.md ("Path resolution").
             _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-            map_file_path = os.path.join(_pkg_src, 'maps', map_name, 'map')
+            map_dir = os.path.join(_pkg_src, 'maps', map_name)
+
+            # Find the posegraph file - the stem may not be 'map'.
+            posegraph_files = [
+                f for f in os.listdir(map_dir) if f.endswith('.posegraph')
+            ] if os.path.isdir(map_dir) else []
+            if not posegraph_files:
+                raise RuntimeError(
+                    f"[slam.launch.py] No .posegraph file found in maps/{map_name}/ "
+                    f"for slam_toolbox localization. "
+                    "Run mission:=map first to build and save the map."
+                )
+            map_stem = os.path.splitext(posegraph_files[0])[0]
+            map_file_path = os.path.join(map_dir, map_stem)
             extra_params['map_file_name'] = map_file_path
 
             pose_file = os.path.join(_pkg_src, 'maps', map_name, 'starting_pose.yaml')
@@ -132,7 +140,19 @@ def launch_setup(context, *args, **kwargs):
         # realpath resolves the --symlink-install symlink to the source tree - see
         # map_saver_node.md ("Path resolution").
         _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        map_yaml = os.path.join(_pkg_src, 'maps', map_name, 'map.yaml')
+        map_dir = os.path.join(_pkg_src, 'maps', map_name)
+
+        # Find the map yaml file - the stem may not be 'map'.
+        map_yaml_files = [
+            f for f in os.listdir(map_dir)
+            if f.endswith('.yaml') and not f.startswith('starting_pose')
+        ] if os.path.isdir(map_dir) else []
+        if not map_yaml_files:
+            raise RuntimeError(
+                f"[slam.launch.py] No map .yaml file found in maps/{map_name}/ for AMCL. "
+                "Run mission:=map first to build and save the map."
+            )
+        map_yaml = os.path.join(map_dir, map_yaml_files[0])
 
         amcl_extra_params = {'use_sim_time': use_sim_time}
         pose_file = os.path.join(_pkg_src, 'maps', map_name, 'starting_pose.yaml')
@@ -189,22 +209,23 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    """Declare nav_mode/map_name/use_sim_time and launch via launch_setup."""
+    """Declare mission/map_name/use_sim_time and launch via launch_setup."""
     return LaunchDescription([
         DeclareLaunchArgument(
-            'nav_mode', default_value='',
+            'mission', default_value='',
             description=(
-                "Navigation mode (auto-detected from map_name if not set): "
+                "Navigation mission (auto-detected from map_name if not set): "
                 "not set + no map_name = slam_toolbox mapping; "
                 "not set + map_name = amcl; "
-                "slam = slam_toolbox mapping (or localization if map_name is set); "
-                "amcl = AMCL on static map (requires map_name; falls back to mapping with a warning if not provided)."
+                "map = slam_toolbox mapping; "
+                "slam = slam_toolbox localization (requires map_name); "
+                "amcl = AMCL on static map (requires map_name)."
             ),
         ),
         DeclareLaunchArgument(
             'map_name', default_value='',
             description=(
-                'Subdirectory name of the map to load for amcl mode or slam_toolbox localization '
+                'Subdirectory name of the map to load for amcl or slam_toolbox localization '
                 '(e.g. livingroom1). The full path is constructed automatically.'
             ),
         ),

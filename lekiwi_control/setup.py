@@ -22,6 +22,7 @@ setup(
     description='Control stack for LeKiwi robot: launch, teleop config, and velocity switching',
     license='Apache-2.0',
     extras_require={'test': ['pytest']},
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'twist_switch_node = lekiwi_control.twist_switch_node:main',
