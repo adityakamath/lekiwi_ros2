@@ -59,6 +59,9 @@ jobs:
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
 
       - name: colcon build
+        # lekiwi_audio isn't built here - it isn't committed to this repo yet (still local-only,
+        # not ready to publish), so it doesn't exist in this checkout at all.
+        #
         # lekiwi_bringup's package.xml declares pt_control and pt_bringup as dependencies.
         # --packages-select alone isn't enough to leave them out: colcon still discovers them
         # (they're on disk via the payloads/pantilt100 submodule) and, since lekiwi_bringup
@@ -70,7 +73,7 @@ jobs:
         run: |
           . /opt/ros/kilted/setup.sh
           colcon build --packages-select \
-            lekiwi_control lekiwi_navigation lekiwi_audio lekiwi_description lekiwi_bringup \
+            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup \
             pt_description \
             --packages-ignore pt_control pt_bringup
 
@@ -85,5 +88,4 @@ jobs:
           pytest \
             src/lekiwi_ros2/lekiwi_control/test \
             src/lekiwi_ros2/lekiwi_navigation/test \
-            src/lekiwi_ros2/lekiwi_audio/test \
             src/lekiwi_ros2/lekiwi_description/test
