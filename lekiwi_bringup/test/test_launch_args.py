@@ -11,8 +11,6 @@ These tests do NOT start any nodes - they only validate the launch surface.
 
 import subprocess
 
-import pytest
-
 
 def _show_arguments(package, launch_file, extra_args=None):
     """Run `ros2 launch --show-arguments` and return stdout + returncode."""

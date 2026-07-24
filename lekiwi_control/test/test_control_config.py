@@ -9,7 +9,6 @@ Launch tests: validate argument declarations using `ros2 launch --show-arguments
 import os
 import subprocess
 
-import pytest
 import yaml
 
 # Resolve source package root (works with both symlink-install and regular install).

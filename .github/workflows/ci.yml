@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: ruff check
+        run: ruff check .
+
+  test:
+    name: pytest (ros:kilted)
+    # rclpy and the ROS message packages the test suite needs aren't on PyPI, so this
+    # runs inside a ROS image instead of alongside the pip-only lint job above.
+    runs-on: ubuntu-latest
+    container: ros:kilted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          path: src/lekiwi_ros2
+
+      - name: Install ROS dependencies
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            python3-pip python3-pil git \
+            ros-kilted-ament-index-python \
+            ros-kilted-controller-manager \
+            ros-kilted-forward-command-controller \
+            ros-kilted-generate-parameter-library \
+            ros-kilted-imu-sensor-broadcaster \
+            ros-kilted-joint-state-broadcaster \
+            ros-kilted-joy-teleop \
+            ros-kilted-nav2-bringup \
+            ros-kilted-navigation2 \
+            ros-kilted-omni-wheel-drive-controller \
+            ros-kilted-robot-localization \
+            ros-kilted-robot-state-publisher \
+            ros-kilted-ros2-control \
+            ros-kilted-ros2-controllers \
+            ros-kilted-slam-toolbox \
+            ros-kilted-teleop-twist-joy \
+            ros-kilted-teleop-twist-keyboard \
+            ros-kilted-xacro
+          pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
+
+      - name: colcon build
+        run: |
+          . /opt/ros/kilted/setup.sh
+          colcon build --packages-select \
+            lekiwi_control lekiwi_navigation lekiwi_audio lekiwi_description lekiwi_bringup \
+            pt_description
+
+      - name: pytest
+        # lekiwi_bringup's own test (test_launch_args.py) is excluded: it launches the full
+        # default payload stack end-to-end, which pulls in pt_bringup - and pt_bringup needs
+        # cloudini, point_cloud_interfaces, and depthai-ros, none of which are plain apt
+        # packages here. Everything else is self-contained and needs only the packages above.
+        run: |
+          . /opt/ros/kilted/setup.sh
+          . install/setup.sh
+          pytest \
+            src/lekiwi_ros2/lekiwi_control/test \
+            src/lekiwi_ros2/lekiwi_navigation/test \
+            src/lekiwi_ros2/lekiwi_audio/test \
+            src/lekiwi_ros2/lekiwi_description/test

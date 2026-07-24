@@ -48,6 +48,7 @@ def launch_setup(context):
     pkg_control = FindPackageShare('lekiwi_control').perform(context)
     pkg_nav     = FindPackageShare('lekiwi_navigation').perform(context)
     pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
+    pkg_audio   = FindPackageShare('lekiwi_audio').perform(context)
 
     def include(pkg, path, args=None):
         return IncludeLaunchDescription(
@@ -71,12 +72,13 @@ def launch_setup(context):
         'use_sim_time': use_sim_time,
     })
     laser = include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload})
+    audio = include(pkg_audio, 'launch/audio.launch.py')
     oakd = include(pkg_pantilt, 'launch/oakd.launch.py', {
         'pointcloud': pointcloud,
         'octomap':    octomap,
     })
 
-    actions = [control, nav, laser]
+    actions = [control, nav, laser, audio]
     if payload == 'pantilt':
         actions.append(oakd)
     return actions

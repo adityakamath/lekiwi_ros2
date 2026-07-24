@@ -15,9 +15,9 @@ Nodes launched (in lifecycle order):
     behavior_server        Spin / BackUp / Wait recoveries
     velocity_smoother      rate-limits MPPI output
     collision_monitor      last-resort safety stop
-    collision_toggle_node               R1 deadman, see collision_toggle_node.md (plain node)
+    collision_toggle_node               R1 deadman disable for FootprintApproach (plain node)
     waypoint_follower                   patrol loop, see nav2_part2_plan.md Feature 2
-    waypoint_recorder_node              see waypoint_recorder_node.md (plain node)
+    waypoint_recorder_node              record/follow/reset waypoint services (plain node)
     bt_navigator                        Behavior Tree orchestrator (started last)
     keepout/speed_filter_mask_server    no-go/speed zone masks, see nav2_part2_plan.md
     keepout/speed_costmap_filter_info_server  Feature 3 (each has its own lifecycle manager)
@@ -48,10 +48,13 @@ import os
 import tempfile
 
 import yaml
-
 from launch import LaunchDescription
 from launch.actions import (
-    DeclareLaunchArgument, GroupAction, LogInfo, OpaqueFunction, SetEnvironmentVariable,
+    DeclareLaunchArgument,
+    GroupAction,
+    LogInfo,
+    OpaqueFunction,
+    SetEnvironmentVariable,
 )
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node, SetParameter
@@ -91,8 +94,8 @@ def launch_setup(context, *args, **kwargs):
     # yaml if ever needed.
     configured_params = ParameterFile(params_file, allow_substs=True)
 
-    # realpath resolves the --symlink-install symlink to the source tree - see
-    # map_saver_node.md ("Path resolution").
+    # realpath resolves the --symlink-install symlink to the source tree, so this always
+    # points at the real maps/ directory rather than the install/build tree.
     _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
     # yaml_filename must be a real, existing path or '' - see nav2_part2_plan.md,
@@ -192,7 +195,7 @@ def launch_setup(context, *args, **kwargs):
             remappings=remappings,
         ),
         # ── Waypoint Recorder ────────────────────────────────────────────
-        # Not a lifecycle node - see waypoint_recorder_node.md.
+        # Not a lifecycle node.
         Node(
             package='lekiwi_navigation',
             executable='waypoint_recorder_node',
@@ -226,7 +229,7 @@ def launch_setup(context, *args, **kwargs):
             remappings=remappings,
         ),
         # ── Collision Toggle ─────────────────────────────────────────────
-        # Not a lifecycle node - see collision_toggle_node.md.
+        # Not a lifecycle node.
         Node(
             package='lekiwi_navigation',
             executable='collision_toggle_node',

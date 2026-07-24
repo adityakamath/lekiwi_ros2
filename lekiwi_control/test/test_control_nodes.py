@@ -16,8 +16,7 @@ import rclpy
 from geometry_msgs.msg import Twist, TwistStamped
 
 from lekiwi_control.twist_switch_node import TeleopSwitchNode
-from lekiwi_control.bool_toggle_node import BoolToggle, BoolToggleNode
-
+from lekiwi_control.bool_toggle_node import BoolToggle
 
 # rclpy is initialized by conftest.py (session-scoped, idempotent).
 

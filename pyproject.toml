@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+
+[tool.ruff.lint]
+# E, F, W only - deliberately not "I" (import sorting). ament_flake8's bundled
+# flake8-import-order plugin is the existing convention for every package here
+# (declared as a test_depend, run via `colcon test`/local ament_flake8), and its
+# ordering rules don't match ruff's isort-style output. Running both would mean
+# every commit fights itself. ament_flake8 stays the source of truth for import
+# order; ruff covers everything else quickly, without a ROS environment.
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # line length - not enforced here; several pre-existing lines already exceed it
+]

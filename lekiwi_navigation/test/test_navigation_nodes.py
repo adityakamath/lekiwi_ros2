@@ -7,12 +7,10 @@ Tests the observable state changes in _last_state without needing a live service
 """
 
 import pytest
-import rclpy
 from sensor_msgs.msg import Joy
 from unittest.mock import MagicMock
 
 from lekiwi_navigation.collision_toggle_node import CollisionToggleNode
-
 
 # rclpy is initialized by conftest.py (session-scoped, idempotent).
 _BUTTON = 10   # R1, matches collision_toggle.yaml

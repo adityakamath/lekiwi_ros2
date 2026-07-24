@@ -74,7 +74,7 @@ class TestBaseUrdf:
 
     def test_base_link_present(self):
         root = ET.fromstring(self.stdout)
-        link_names = [l.get('name') for l in root.findall('link')]
+        link_names = [link.get('name') for link in root.findall('link')]
         assert 'base_link' in link_names or 'base_footprint' in link_names, \
             "Expected base_link or base_footprint in URDF"
 

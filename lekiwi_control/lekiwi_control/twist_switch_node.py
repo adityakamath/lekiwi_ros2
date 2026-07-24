@@ -24,12 +24,26 @@ Parameters:
 
 import rclpy
 from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionState
+from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_services_default
+from rclpy.qos import DurabilityPolicy, LivelinessPolicy, QoSProfile, ReliabilityPolicy
 
 from geometry_msgs.msg import Twist, TwistStamped
 from std_srvs.srv import SetBool
+
+# /twist_switch reflects ongoing mode state (teleop vs. Nav2), not a one-shot action - a
+# late-joining subscriber (e.g. the audio indicator node, or bool_toggle_node syncing its own
+# belief about current state) should learn the current mode on connect rather than waiting for
+# the next switch. Depth 2 is enough to cache the last request+response pair. The liveliness
+# lease lets a subscriber notice if this node dies without a clean exit.
+STATE_SERVICE_QOS = QoSProfile(
+    depth=2,
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    liveliness=LivelinessPolicy.AUTOMATIC,
+    liveliness_lease_duration=Duration(seconds=1),
+)
 
 
 class TeleopSwitchNode(Node):
@@ -88,7 +102,7 @@ class TeleopSwitchNode(Node):
         # Lets a listener (e.g. the audio indicator node) observe every call's
         # request+response on /twist_switch/_service_event, regardless of caller.
         self._srv.configure_introspection(
-            self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
+            self.get_clock(), STATE_SERVICE_QOS, ServiceIntrospectionState.CONTENTS)
 
         self.get_logger().info(
             f'twist_switch_node ready\n'

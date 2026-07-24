@@ -31,6 +31,7 @@
   <exec_depend>generate_parameter_library</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>service_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>

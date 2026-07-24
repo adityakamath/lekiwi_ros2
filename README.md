@@ -4,9 +4,13 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-kamathrobotics.com-blue)](https://kamathrobotics.com)
 
-> This repository is a work in progress and includes experimental and AI-generated content. Proceed with caution.
+> ROS 2 software stack for LeKiwi 3-wheel omnidirectional mobile robot and payloads.
 
-> ROS 2 software stack for LeKiwi 3-wheel omnidirectional mobile robot.
+## ⚠️ Safety
+
+**This is a real, motorized robot with no hardwired physical emergency stop.** `/emergency_stop` is a software service call (toggled via joystick button or Foxglove) that tells the hardware interface to stop issuing motor commands. It is not a hardware kill switch, and it will not help if the software stack itself has hung, crashed, or lost connection to the joystick. Do not run this stack near people, pets, or fragile objects without a way to physically cut power to the base.
+
+This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes and incomplete safety coverage. No warranty, express or implied — see [LICENSE](LICENSE).
 
 ## Overview
 

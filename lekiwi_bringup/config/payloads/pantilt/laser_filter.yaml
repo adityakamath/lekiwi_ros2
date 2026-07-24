@@ -1,5 +1,16 @@
 laser_scan_filter_chain:
   ros__parameters:
+    # scan_to_scan_filter_chain's own upstream subscription to the raw scan already uses
+    # SensorDataQoS (best-effort), but its "scan_filtered" publisher - what Nav2 and
+    # slam_toolbox actually consume as /scan - defaults to reliable with a 1000-deep
+    # history (scan_filtered_history_depth's own default). Best-effort in, reliable-with-
+    # a-thousand-deep-buffer out. This overrides it to match the sensor-stream QoS the
+    # rest of the LiDAR pipeline (ldlidar_ros2_node, this node's own subscription) uses.
+    qos_overrides:
+      scan_filtered:
+        publisher:
+          reliability: best_effort
+          depth: 5
     filter1:
       name: angle
       type: laser_filters/LaserScanAngularBoundsFilter

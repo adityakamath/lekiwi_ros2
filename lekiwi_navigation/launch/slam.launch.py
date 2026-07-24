@@ -18,8 +18,8 @@ Launch arguments:
 """
 
 import os
-import yaml
 
+import yaml
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -64,8 +64,8 @@ def launch_setup(context, *args, **kwargs):
             FindPackageShare('lekiwi_navigation'), 'config', 'nav2', 'slam_toolbox.yaml',
         ])
 
-        # See slam_toolbox_yaml.md ("Runtime overrides") for why these three are set here
-        # instead of in slam_toolbox.yaml.
+        # Set here rather than in slam_toolbox.yaml since all three depend on
+        # slam_mode/map_name, only known at launch time.
         _st_mode = {'map': 'mapping', 'localize': 'localization'}
         extra_params = {
             'use_sim_time': use_sim_time,
@@ -74,8 +74,8 @@ def launch_setup(context, *args, **kwargs):
         }
 
         if slam_mode == 'localize':
-            # realpath resolves the --symlink-install symlink to the source tree - see
-            # map_saver_node.md ("Path resolution").
+            # realpath resolves the --symlink-install symlink to the source tree, so this
+            # always points at the real maps/ directory rather than the install/build tree.
             _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
             map_dir = os.path.join(_pkg_src, 'maps', map_name)
 
@@ -121,7 +121,7 @@ def launch_setup(context, *args, **kwargs):
             ),
         ]
 
-        # map_saver_node exposes /save_map (std_srvs/srv/SetBool) - see map_saver_node.md.
+        # map_saver_node exposes /save_map (std_srvs/srv/SetBool).
         actions.append(Node(
             package='lekiwi_navigation',
             executable='map_saver_node',
@@ -137,8 +137,8 @@ def launch_setup(context, *args, **kwargs):
 
     else:  # amcl
         # ── map_server + AMCL ──────────────────────────────────────────────
-        # realpath resolves the --symlink-install symlink to the source tree - see
-        # map_saver_node.md ("Path resolution").
+        # realpath resolves the --symlink-install symlink to the source tree, so this
+        # always points at the real maps/ directory rather than the install/build tree.
         _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         map_dir = os.path.join(_pkg_src, 'maps', map_name)
 

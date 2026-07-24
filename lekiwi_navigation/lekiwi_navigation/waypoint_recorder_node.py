@@ -62,7 +62,13 @@ from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionStat
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.node import Node
-from rclpy.qos import qos_profile_services_default
+from rclpy.qos import (
+    DurabilityPolicy,
+    LivelinessPolicy,
+    qos_profile_services_default,
+    QoSProfile,
+    ReliabilityPolicy,
+)
 from rclpy.time import Time
 
 from geometry_msgs.msg import PoseStamped
@@ -71,6 +77,20 @@ from nav_msgs.msg import Path
 from std_srvs.srv import SetBool
 from visualization_msgs.msg import Marker, MarkerArray
 import tf2_ros
+
+# /waypoint_follow reflects ongoing patrol state (running vs. stopped), not a one-shot action
+# like /record_waypoint and /reset_waypoints - a late-joining subscriber (e.g. the audio
+# indicator node, or bool_toggle_node syncing its own belief about current state) should learn
+# whether a patrol is active on connect rather than waiting for the next start/stop. Depth 2 is
+# enough to cache the last request+response pair. The liveliness lease lets a subscriber notice
+# if this node dies without a clean exit.
+STATE_SERVICE_QOS = QoSProfile(
+    depth=2,
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    liveliness=LivelinessPolicy.AUTOMATIC,
+    liveliness_lease_duration=Duration(seconds=1),
+)
 
 # nav2's own plan-visualization topics - cleared explicitly on pause/reset (see
 # _clear_plan_visualizations), since nav2 leaves them showing a stale path after a cancel.
@@ -144,9 +164,14 @@ class WaypointRecorderNode(Node):
         record_srv = self.create_service(SetBool, '/record_waypoint', self._handle_record)
         follow_srv = self.create_service(SetBool, '/waypoint_follow', self._handle_set_following)
         reset_srv = self.create_service(SetBool, '/reset_waypoints', self._handle_reset)
-        for srv in (record_srv, follow_srv, reset_srv):
+        for srv in (record_srv, reset_srv):
             srv.configure_introspection(
                 self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
+        # /waypoint_follow gets the transient-local state QoS (see STATE_SERVICE_QOS above) -
+        # record/reset are one-shot actions where replaying a stale call on a late-joining
+        # subscriber would announce something that didn't just happen.
+        follow_srv.configure_introspection(
+            self.get_clock(), STATE_SERVICE_QOS, ServiceIntrospectionState.CONTENTS)
 
         self.get_logger().info(
             'waypoint_recorder_node ready: /record_waypoint, /waypoint_follow, /reset_waypoints'
@@ -179,8 +204,9 @@ class WaypointRecorderNode(Node):
         response.success = True
 
         if self._goal_handle is not None:
-            # Queued, not spliced in immediately - see waypoint_recorder_node.md
-            # ("Recording while patrolling").
+            # Queued, not spliced in immediately - an immediate splice would preempt the
+            # in-flight goal, and nav2_waypoint_follower resets goal_index to 0 on any
+            # preemption, jumping the patrol to the wrong waypoint.
             self._pending_waypoints.append(pose)
             index = len(self._waypoints) + len(self._pending_waypoints) - 1
             response.message = (
@@ -246,7 +272,8 @@ class WaypointRecorderNode(Node):
             label.id = i * 2 + 1
             label.type = Marker.TEXT_VIEW_FACING
             label.action = Marker.ADD
-            # deepcopy - see waypoint_recorder_node.md ("Waypoint markers floating above the floor").
+            # deepcopy - without it, label.pose and the waypoint's own stored pose are the same
+            # object, and the += 0.3 below would mutate the waypoint's actual stored z in place.
             label.pose = copy.deepcopy(pose.pose)
             label.pose.position.z += 0.3
             label.scale.z = 0.2
@@ -392,8 +419,7 @@ class WaypointRecorderNode(Node):
         """Fold queued recordings into self._waypoints and resend the goal.
 
         Called from a loop wrap in _on_feedback, and from _remove_unreachable_waypoint when
-        removing the last active waypoint would otherwise orphan pending ones - see
-        waypoint_recorder_node.md ("Recording while patrolling").
+        removing the last active waypoint would otherwise orphan pending ones.
         """
         count = len(self._pending_waypoints)
         self._waypoints.extend(self._pending_waypoints)
@@ -443,8 +469,9 @@ class WaypointRecorderNode(Node):
             self.get_logger().info('Patrol finished.')
             return
 
-        # Not a deliberate stop - wait until /navigate_to_pose is free, then resume. See
-        # waypoint_recorder_node.md ("Bounded retries") for the consecutive-failure tracking.
+        # Not a deliberate stop - wait until /navigate_to_pose is free, then resume. Track
+        # consecutive failures at the same waypoint index so a genuinely unreachable waypoint
+        # eventually gets dropped instead of retried forever (see _remove_unreachable_waypoint).
         if self._to_waypoint == self._failed_waypoint:
             self._consecutive_failures += 1
         else:
@@ -494,7 +521,7 @@ class WaypointRecorderNode(Node):
             return
 
         # self._to_waypoint (left untouched) now naturally refers to the waypoint that shifted
-        # into the removed index - see waypoint_recorder_node.md ("Bounded retries").
+        # into the removed index, since list indices shift down by one after a deletion.
         self._send_patrol_goal()
 
     def _try_resume_after_handoff(self):
