@@ -11,4 +11,13 @@
     <origin xyz="0 0 ${wheel_radius - wheel_base_offset_z}" rpy="0 0 0"/>
   </xacro:lekiwi_base_module>
 
+  <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
+       $(arg simulation_controllers). Inert (ignored) outside Gazebo, so this is safe to
+       leave in place regardless of ros2_control_hardware_type. -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg simulation_controllers)</parameters>
+    </plugin>
+  </gazebo>
+
 </robot>

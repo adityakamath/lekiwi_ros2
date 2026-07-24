@@ -42,8 +42,9 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 | `map_name`            | `""`      | Map subdirectory to load (e.g. `livingroom1`). With `mission:=slam` loads slam_toolbox localization on the existing map; with `mission:=amcl` loads the static map for AMCL. Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
 | `pointcloud`          | `false`   | Use `oakd_vio_pcl.yaml` (depth aligned to RGB + point cloud) instead of `oakd_vio.yaml` (depth unaligned, no point cloud). Also gates point cloud compression. |
 | `octomap`             | `false`   | Run `octomap_server` on the OAK-D point cloud to build a persistent 3D octree (only takes effect when `pointcloud:=true`) |
-| `joy`                 | `false`   | Launch `joy_node` locally; leave `false` when `/joy` is published from a remote device                           |
 | `use_sim_time`        | `false`   | Use `/clock` from a simulator instead of system time                                                              |
+| `sim`                 | `false`   | Run against Gazebo instead of real hardware: starts `gz_sim`, uses `gz_ros2_control` for the base, forces `use_sim_time`/`control_mock`, and skips laser/audio/OAK-D (no simulated equivalent yet) |
+| `gui`                 | `true`    | [`sim` only] Launch Gazebo with the GUI client attached                                                           |
 
 Earlier iterations called `mission` `nav_mode`.
 

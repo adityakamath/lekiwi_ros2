@@ -45,12 +45,21 @@ def launch_setup(context):
     diagnostics  = _launch_arg_as_bool(context, 'diagnostics')
     launch_joy   = _launch_arg_as_bool(context, 'joy')
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
+    hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
+    simulation_controllers = LaunchConfiguration('simulation_controllers').perform(context)
+    payload_simulation_controllers = LaunchConfiguration('payload_simulation_controllers').perform(context)
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
+
+    final_simulation_controllers = simulation_controllers if simulation_controllers else f'{pkg_ctrl}/config/base/control.yaml'
+    final_payload_simulation_controllers = (
+        payload_simulation_controllers if payload_simulation_controllers
+        else (f'{pkg_ctrl}/config/payloads/{payload}/control.yaml' if payload else '')
+    )
 
     _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/base/urdf_config.yaml'))
     if payload:
@@ -83,6 +92,13 @@ def launch_setup(context):
             f' tilt_joint_lower:={_cfg["tilt_joint_lower"]}'
             f' tilt_joint_upper:={_cfg["tilt_joint_upper"]}'
         )
+    if hw_type != 'real':
+        xacro_cmd += (
+            f' ros2_control_hardware_type:={hw_type}'
+            f' simulation_controllers:={final_simulation_controllers}'
+        )
+        if payload == 'pantilt':
+            xacro_cmd += f' payload_simulation_controllers:={final_payload_simulation_controllers}'
 
     robot_description = {
         'robot_description': ParameterValue(Command([xacro_cmd]), value_type=str)
@@ -158,10 +174,18 @@ def launch_setup(context):
         Node(package='controller_manager', executable='spawner',
              arguments=['base_controller', '-c', '/controller_manager',
                         '--controller-manager-timeout', '30'], output='both'),
-        Node(package='controller_manager', executable='spawner',
-             arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
-                        '--controller-manager-timeout', '30'], output='both'),
     ]
+    if hw_type == 'real':
+        # In gazebo mode, base.module.xacro's native IMU sensor + ros_gz_bridge already
+        # publishes directly onto /imu_sensor_broadcaster/imu - spawning the broadcaster
+        # here too would either fail (base.control.xacro omits the lekiwi_imu hardware
+        # component it needs in gazebo mode) or, if a payload's xacro still has it, race
+        # a second publisher onto the same topic.
+        extra_spawner_nodes.append(
+            Node(package='controller_manager', executable='spawner',
+                 arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
+                            '--controller-manager-timeout', '30'], output='both'),
+        )
     if payload == 'pantilt':
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
@@ -169,24 +193,36 @@ def launch_setup(context):
                             '--controller-manager-timeout', '30'], output='both'),
         )
 
-    # Start spawners as soon as the controller_manager process starts.
-    # joint_state_broadcaster first; other controllers follow after a brief stagger
-    # so they do not all race to activate simultaneously.
-    controller_spawner = RegisterEventHandler(
-        OnProcessStart(
-            target_action=controller_manager,
-            on_start=[
-                Node(
-                    package='controller_manager',
-                    executable='spawner',
-                    arguments=['joint_state_broadcaster', '-c', '/controller_manager',
-                               '--controller-manager-timeout', '30'],
-                    output='both',
-                ),
-                TimerAction(period=1.0, actions=extra_spawner_nodes),
-            ],
-        )
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_state_broadcaster', '-c', '/controller_manager',
+                   '--controller-manager-timeout', '30'],
+        output='both',
     )
+
+    if hw_type == 'real':
+        # Start spawners as soon as the controller_manager process starts.
+        # joint_state_broadcaster first; other controllers follow after a brief stagger
+        # so they do not all race to activate simultaneously.
+        controller_spawner_actions = [
+            RegisterEventHandler(
+                OnProcessStart(
+                    target_action=controller_manager,
+                    on_start=[
+                        joint_state_broadcaster_spawner,
+                        TimerAction(period=1.0, actions=extra_spawner_nodes),
+                    ],
+                )
+            )
+        ]
+    else:
+        # gz_ros2_control's <gazebo> plugin (base.urdf.xacro) spawns controller_manager
+        # itself, embedded inside the gz_sim process - there's no local controller_manager
+        # action here to hook an event handler to. The spawners' own
+        # --controller-manager-timeout already handles waiting for that service to appear,
+        # so they can just run immediately rather than being gated on a process-start event.
+        controller_spawner_actions = [joint_state_broadcaster_spawner, *extra_spawner_nodes]
 
     motor_diagnostics = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -196,8 +232,8 @@ def launch_setup(context):
 
     actions = [
         robot_state_publisher,
-        controller_manager,
-        controller_spawner,
+        *([controller_manager] if hw_type == 'real' else []),
+        *controller_spawner_actions,
         teleop_node,
         twist_switch_node,
         bool_toggle_node,
@@ -263,6 +299,25 @@ def generate_launch_description():
             default_value='false',
             description='Launch joy_node on this device. Set true when the joystick is connected locally; '
                         'leave false when /joy is published from a remote device.',
+        ),
+        DeclareLaunchArgument(
+            'ros2_control_hardware_type',
+            default_value='real',
+            description='"real" for STS/BNO055 hardware plugins, "gazebo" for gz_ros2_control/GazeboSimSystem '
+                        '(base and pantilt payload both supported).',
+        ),
+        DeclareLaunchArgument(
+            'simulation_controllers',
+            default_value='',
+            description='Base controllers YAML for the embedded gz_ros2_control controller_manager; empty means '
+                        'config/base/control.yaml. Only used when ros2_control_hardware_type != "real".',
+        ),
+        DeclareLaunchArgument(
+            'payload_simulation_controllers',
+            default_value='',
+            description='Payload controllers YAML for the embedded gz_ros2_control controller_manager; empty '
+                        'means config/payloads/<payload>/control.yaml. Only used when payload:="pantilt" and '
+                        'ros2_control_hardware_type != "real".',
         ),
     ]
 

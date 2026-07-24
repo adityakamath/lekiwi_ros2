@@ -30,6 +30,21 @@
   <xacro:arg name="tilt_joint_lower"       default="-1.5708"/>  <!-- rad, default -π/2 -->
   <xacro:arg name="tilt_joint_upper"       default="1.5708"/>   <!-- rad, default +π/2 -->
 
+  <!-- Gazebo simulation -->
+  <!-- "real" (default) keeps the STS3215 serial hardware plugin below unchanged.
+       "gazebo" swaps the base's <hardware> plugin for gz_ros2_control/GazeboSimSystem,
+       which drives the wheels AND the pan/tilt joints (both live in the same lekiwi_base
+       system interface, sharing one serial bus on real hardware) - the joints and
+       controllers stay identical either way. -->
+  <xacro:arg name="ros2_control_hardware_type" default="real"/>
+  <!-- Controllers YAML paths for the embedded controller_manager; only used when the
+       <gazebo> plugin below is actually instantiated (i.e. in sim). Two separate files
+       (not one merged file) because gz_ros2_control's <parameters> tag can be given
+       multiple times and controller_manager merges them - same base + payload split
+       control.launch.py already uses for the real, standalone ros2_control_node. -->
+  <xacro:arg name="simulation_controllers" default=""/>
+  <xacro:arg name="payload_simulation_controllers" default=""/>
+
   <!-- Base operating mode -->
   <xacro:property name="base_operating_mode" value="1"/>  <!-- Velocity mode -->
 
@@ -66,24 +81,36 @@
   <xacro:property name="tilt_joint_lower" value="$(arg tilt_joint_lower)"/>
   <xacro:property name="tilt_joint_upper" value="$(arg tilt_joint_upper)"/>
 
+  <!-- Pan/tilt velocity ceiling for pantilt.module.xacro's gazebo-mode <limit velocity> -
+       duplicates pt_description/urdf/pantilt.control.xacro's own promoted property (that
+       file isn't included here; base_pantilt uses its own copy of the pantilt control
+       block instead, sharing this file's sts_max_velocity_steps arg). -->
+  <xacro:property name="pantilt_max_velocity_steps" value="${int(sts_max_velocity_steps * 0.85)}"/>
+  <xacro:property name="pantilt_max_velocity_rads"  value="${pantilt_max_velocity_steps * 2 * pi / 4096}"/>
+
   <xacro:include filename="$(find pt_description)/urdf/pantilt.joints.xacro"/>
 
   <!-- ROS 2 CONTROL -->
   <!-- System interface — all STS3215 joints on a single serial bus -->
   <ros2_control name="lekiwi_base" type="system">
     <hardware>
-      <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
-      <!-- Serial communication parameters -->
-      <param name="serial_port">$(arg serial_port)</param>
-      <param name="baud_rate">$(arg baud_rate)</param>
-      <param name="use_sync_write">$(arg use_sync_write)</param>
-      <param name="enable_mock_mode">$(arg use_mock)</param>
-      <!-- Motor-specific parameter (adjust for different STS motor models) -->
-      <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
-      <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
-      <param name="proportional_acc_max">${proportional_acc_max}</param>
-      <!-- Proportional VEL: scale per-joint speed so all position joints arrive simultaneously -->
-      <param name="proportional_vel_max">$(arg proportional_vel_max)</param>
+      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </xacro:if>
+      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+        <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
+        <!-- Serial communication parameters -->
+        <param name="serial_port">$(arg serial_port)</param>
+        <param name="baud_rate">$(arg baud_rate)</param>
+        <param name="use_sync_write">$(arg use_sync_write)</param>
+        <param name="enable_mock_mode">$(arg use_mock)</param>
+        <!-- Motor-specific parameter (adjust for different STS motor models) -->
+        <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
+        <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
+        <param name="proportional_acc_max">${proportional_acc_max}</param>
+        <!-- Proportional VEL: scale per-joint speed so all position joints arrive simultaneously -->
+        <param name="proportional_vel_max">$(arg proportional_vel_max)</param>
+      </xacro:unless>
     </hardware>
     <!-- Left wheel joint (Motor ID 7) -->
     <joint name="left_wheel_joint">
@@ -93,10 +120,14 @@
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
+      <!-- Real-hardware-only telemetry: gz_ros2_control/GazeboSimSystem only knows
+           position/velocity/effort, and simulated wheels have no real telemetry for these. -->
+      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+        <state_interface name="voltage"/>
+        <state_interface name="temperature"/>
+        <state_interface name="current"/>
+        <state_interface name="is_moving"/>
+      </xacro:unless>
     </joint>
     <!-- Back wheel joint (Motor ID 8) -->
     <joint name="back_wheel_joint">
@@ -106,10 +137,14 @@
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
+      <!-- Real-hardware-only telemetry: gz_ros2_control/GazeboSimSystem only knows
+           position/velocity/effort, and simulated wheels have no real telemetry for these. -->
+      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+        <state_interface name="voltage"/>
+        <state_interface name="temperature"/>
+        <state_interface name="current"/>
+        <state_interface name="is_moving"/>
+      </xacro:unless>
     </joint>
     <!-- Right wheel joint (Motor ID 9) -->
     <joint name="right_wheel_joint">
@@ -119,10 +154,14 @@
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <state_interface name="voltage"/>
-      <state_interface name="temperature"/>
-      <state_interface name="current"/>
-      <state_interface name="is_moving"/>
+      <!-- Real-hardware-only telemetry: gz_ros2_control/GazeboSimSystem only knows
+           position/velocity/effort, and simulated wheels have no real telemetry for these. -->
+      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+        <state_interface name="voltage"/>
+        <state_interface name="temperature"/>
+        <state_interface name="current"/>
+        <state_interface name="is_moving"/>
+      </xacro:unless>
     </joint>
     <xacro:pantilt_joints
         pan_motor_id="$(arg pan_motor_id)"
@@ -133,35 +172,42 @@
         pan_joint_lower="${pan_joint_lower}"
         pan_joint_upper="${pan_joint_upper}"
         tilt_joint_lower="${tilt_joint_lower}"
-        tilt_joint_upper="${tilt_joint_upper}"/>
+        tilt_joint_upper="${tilt_joint_upper}"
+        ros2_control_hardware_type="$(arg ros2_control_hardware_type)"/>
   </ros2_control>
 
   <!-- ROS 2 CONTROL -->
-  <!-- Sensor interface (BNO055 IMU) -->
-  <ros2_control name="lekiwi_imu" type="sensor">
-    <hardware>
-      <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
-      <param name="i2c_bus">$(arg imu_i2c_bus)</param>       <!-- I2C bus number (default: 1 → /dev/i2c-1) -->
-      <param name="i2c_addr">$(arg imu_i2c_addr)</param>     <!-- I2C address in hex, no 0x prefix (default: 28 = 0x28) -->
-      <param name="axis_remap">$(arg imu_axis_remap)</param> <!-- Axis placement config: P0-P7 (default: P1) -->
-      <param name="sensor_mode">$(arg imu_sensor_mode)</param> <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS (default: NDOF) -->
-      <param name="enable_mock_mode">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
-    </hardware>
-    <sensor name="bno055">
-      <!-- Orientation (quaternion, unit norm) -->
-      <state_interface name="orientation.x"/>
-      <state_interface name="orientation.y"/>
-      <state_interface name="orientation.z"/>
-      <state_interface name="orientation.w"/>
-      <!-- Angular velocity (rad/s) -->
-      <state_interface name="angular_velocity.x"/>
-      <state_interface name="angular_velocity.y"/>
-      <state_interface name="angular_velocity.z"/>
-      <!-- Linear acceleration (m/s²), gravity-compensated -->
-      <state_interface name="linear_acceleration.x"/>
-      <state_interface name="linear_acceleration.y"/>
-      <state_interface name="linear_acceleration.z"/>
-    </sensor>
-  </ros2_control>
+  <!-- Sensor interface (BNO055 IMU). Omitted entirely in gazebo mode: base.module.xacro's
+       native Gazebo IMU sensor + ros_gz_bridge supplies /imu_sensor_broadcaster/imu
+       directly instead (see the comment there), so there's nothing for this mock
+       hardware component to usefully do in sim - and imu_sensor_broadcaster itself isn't
+       spawned in gazebo mode either (control.launch.py), so it would go unclaimed anyway. -->
+  <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+    <ros2_control name="lekiwi_imu" type="sensor">
+      <hardware>
+        <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
+        <param name="i2c_bus">$(arg imu_i2c_bus)</param>       <!-- I2C bus number (default: 1 → /dev/i2c-1) -->
+        <param name="i2c_addr">$(arg imu_i2c_addr)</param>     <!-- I2C address in hex, no 0x prefix (default: 28 = 0x28) -->
+        <param name="axis_remap">$(arg imu_axis_remap)</param> <!-- Axis placement config: P0-P7 (default: P1) -->
+        <param name="sensor_mode">$(arg imu_sensor_mode)</param> <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS (default: NDOF) -->
+        <param name="enable_mock_mode">$(arg use_mock)</param>  <!-- Reuse the system-level mock flag -->
+      </hardware>
+      <sensor name="bno055">
+        <!-- Orientation (quaternion, unit norm) -->
+        <state_interface name="orientation.x"/>
+        <state_interface name="orientation.y"/>
+        <state_interface name="orientation.z"/>
+        <state_interface name="orientation.w"/>
+        <!-- Angular velocity (rad/s) -->
+        <state_interface name="angular_velocity.x"/>
+        <state_interface name="angular_velocity.y"/>
+        <state_interface name="angular_velocity.z"/>
+        <!-- Linear acceleration (m/s²), gravity-compensated -->
+        <state_interface name="linear_acceleration.x"/>
+        <state_interface name="linear_acceleration.y"/>
+        <state_interface name="linear_acceleration.z"/>
+      </sensor>
+    </ros2_control>
+  </xacro:unless>
 
 </robot>

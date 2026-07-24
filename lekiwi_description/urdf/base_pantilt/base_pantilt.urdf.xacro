@@ -16,4 +16,18 @@
     <origin xyz="${pantilt_base_offset_x} 0 ${pantilt_base_offset_z}" rpy="0 0 0"/>
   </xacro:pantilt_module>
 
+  <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
+       both $(arg simulation_controllers) (base) and $(arg payload_simulation_controllers)
+       (pantilt) - gz_ros2_control's <parameters> tag can be given multiple times and
+       controller_manager merges them, same as the real robot's standalone
+       ros2_control_node merges base/control.yaml + payloads/pantilt/control.yaml.
+       Inert (ignored) outside Gazebo, so this is safe to leave in place regardless of
+       ros2_control_hardware_type. -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg simulation_controllers)</parameters>
+      <parameters>$(arg payload_simulation_controllers)</parameters>
+    </plugin>
+  </gazebo>
+
 </robot>
