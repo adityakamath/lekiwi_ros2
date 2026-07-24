@@ -61,7 +61,9 @@ def launch_setup(context):
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
     pkg_control = FindPackageShare('lekiwi_control').perform(context)
     pkg_nav     = FindPackageShare('lekiwi_navigation').perform(context)
-    pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
+    # pt_bringup is only resolved down in the real-hardware/payload:="pantilt" branch below
+    # (for oakd) - not needed at all in sim mode (oakd has no simulated equivalent yet), so
+    # resolving it here unconditionally would fail any sim:=true run where it isn't built.
 
     def include(pkg, path, args=None):
         return IncludeLaunchDescription(
@@ -140,6 +142,7 @@ def launch_setup(context):
         except PackageNotFoundError:
             print("[lekiwi.launch.py] lekiwi_audio not found - skipping audio (mic will not be available).")
         if payload == 'pantilt':
+            pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
             oakd = include(pkg_pantilt, 'launch/oakd.launch.py', {
                 'pointcloud': pointcloud,
                 'octomap':    octomap,
