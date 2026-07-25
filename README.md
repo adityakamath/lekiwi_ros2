@@ -48,6 +48,8 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 
 Earlier iterations called `mission` `nav_mode`.
 
+**`sim:=true` (Gazebo) is highly experimental.** The configuration is grounded in real hardware where possible (LiDAR/IMU rates, noise, and frame IDs measured off the real robot), but it has not been verified running end-to-end. Base drive, LiDAR, IMU, and the pan-tilt payload are wired up; a physics-simulated camera is not. Expect rough edges.
+
 ## Joystick Configuration
 
 Teleoperation is configured for a **Steam Deck**, used as a generic joystick (via `joy_node`/`joy_teleop`) rather than through Steam Input — button and axis indices below are specific to how the Deck's controls show up over that interface, not a standard Xbox-style gamepad layout. See the `joy` launch argument above for running `joy_node` locally vs. receiving `/joy` from a remote device.
