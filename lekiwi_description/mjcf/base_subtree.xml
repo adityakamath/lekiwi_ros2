@@ -428,4 +428,11 @@
       <site name="imu_site" pos="0 0 0" group="4"/>
     </body>
   </body>
+
+  <!-- mic_link (base.module.xacro's mic_joint, mic_base_offset_x/z from base.common.xacro) -
+       visual only, no audio simulation: the reSpeaker Flex ring mounts around the lidar
+       housing and needs to be visible, but nothing here models microphone behavior. -->
+  <body name="mic_link" pos="-0.045042 0 0.109010">
+    <geom class="marker" mesh="respeaker_flex_mic" material="base_charcoal"/>
+  </body>
 </mujoco>

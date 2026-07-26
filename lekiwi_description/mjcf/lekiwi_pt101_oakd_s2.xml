@@ -54,16 +54,19 @@
          purpose, kept as a separate asset since MuJoCo assets are namespaced per-model and
          this file's own "transparent" needs to exist independently of pantilt's. -->
     <material name="base_transparent" rgba="1 0 0 0.3"/>
-    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048). -->
+    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048,
+         respeaker_flex_mic: ~89886). -->
     <mesh file="../meshes/ld06_lidar.stl" name="ld06_lidar"/>
     <mesh file="../meshes/bno055_imu.stl" name="bno055_imu"/>
+    <mesh file="../meshes/respeaker_flex_mic.stl" name="respeaker_flex_mic"/>
     <!-- lekiwi_base.stl (739500 faces) and omni_wheel.stl (543010 faces) both exceed
-         MuJoCo's 200000-face STL limit outright. These are quadric-decimated copies
-         (fast-simplification, target_reduction tuned per-mesh) kept alongside the full-
-         resolution originals - decimation quality verified by comparing convex-hull volume
-         and bounding-box extent before/after (base: 100k faces, ~5.5% volume delta; wheel:
-         40k faces, ~1.3% volume delta). Visual only - collision still uses the cylinder
-         primitives below, unchanged. -->
+         MuJoCo's 200000-face STL limit outright. These are decimated copies kept alongside
+         the full-resolution originals - decimation quality verified by comparing convex-hull
+         volume before/after. base: pymeshlab (boundary/normal/topology-preserving quadric
+         edge collapse), 150k faces, ~0.03% volume delta - fast-simplification's defaults
+         were noticeably worse quality at a similar face count (~5.5% delta at 100k) despite
+         matching bounding-box extent. wheel: 196710 faces, ~0.15% volume delta. Visual only -
+         collision still uses the cylinder primitives below, unchanged. -->
     <mesh file="../meshes/lekiwi_base_mujoco.stl" name="lekiwi_base_visual"/>
     <mesh file="../meshes/omni_wheel_mujoco.stl" name="omni_wheel_visual"/>
   </asset>

@@ -49,9 +49,11 @@
          purpose, kept as a separate asset since MuJoCo assets are namespaced per-model and
          this file's own "transparent" needs to exist independently of pantilt's. -->
     <material name="base_transparent" rgba="1 0 0 0.3"/>
-    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048). -->
+    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048,
+         respeaker_flex_mic: ~89886). -->
     <mesh name="ld06_lidar" file="$(find lekiwi_description)/meshes/ld06_lidar.stl"/>
     <mesh name="bno055_imu" file="$(find lekiwi_description)/meshes/bno055_imu.stl"/>
+    <mesh name="respeaker_flex_mic" file="$(find lekiwi_description)/meshes/respeaker_flex_mic.stl"/>
     <!-- lekiwi_base.stl (739500 faces) and omni_wheel.stl (543010 faces) both exceed
          MuJoCo's 200000-face STL limit outright. These are decimated copies kept alongside
          the full-resolution originals - decimation quality verified by comparing convex-hull
