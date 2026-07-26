@@ -28,9 +28,12 @@
         <geom friction="0.4 0.005 0.0001" size="0.051 0.02125" type="cylinder"/>
       </default>
       <default class="marker">
-        <!-- Non-colliding decorative placeholders for laser_link/imu_link - real sensor
-             behavior comes from the sites/sensors below, not these geoms. -->
-        <geom conaffinity="0" contype="0" group="2"/>
+        <!-- Non-colliding visual meshes for laser_link/imu_link - real sensor behavior comes
+             from the sites/sensors below, not these geoms. type="mesh" is required here: a
+             geom's type does NOT default to "mesh" just because a mesh= attribute is given -
+             it silently defaults to "sphere" (auto-sized from the mesh's bounding radius),
+             discarding the actual mesh shape entirely. -->
+        <geom conaffinity="0" contype="0" group="2" type="mesh"/>
       </default>
     </default>
   </default>
