@@ -36,6 +36,10 @@
   <asset>
     <material name="base_light_grey" rgba="0.8 0.8 0.8 1.0"/>
     <material name="base_charcoal" rgba="0.15 0.15 0.15 1.0"/>
+    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048) -
+         unlike lekiwi_base.stl/omni_wheel.stl, which exceed it and stay cylinder primitives. -->
+    <mesh file="../meshes/ld06_lidar.stl" name="ld06_lidar"/>
+    <mesh file="../meshes/bno055_imu.stl" name="bno055_imu"/>
   </asset>
   <actuator>
     <!-- Velocity-mode, matching base_controller/STS3215 (operating_mode=1). kv is an
