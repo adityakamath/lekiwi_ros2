@@ -93,8 +93,13 @@ class SpeechQueue:
     def __init__(self, sounds_dir: Path, speaker_device: str, logger, max_depth: int = 4) -> None:
         """Set the mixer volume and start the worker thread that plays queued phrases."""
         # Not assumed to be handled elsewhere (e.g. by voice_pipeline.py, if
-        # that's even running) - this node sets its own audible volume.
-        subprocess.run(['amixer', '-c', '0', 'sset', 'PCM', '100%'], capture_output=True)
+        # that's even running) - this node sets its own audible volume. Missing
+        # amixer (no ALSA utilities - e.g. CI, or a machine with no audio hardware)
+        # shouldn't prevent the node from starting; playback would no-op the same way.
+        try:
+            subprocess.run(['amixer', '-c', '0', 'sset', 'PCM', '100%'], capture_output=True)
+        except FileNotFoundError:
+            logger.warning('amixer not found - skipping mixer volume setup.')
         self._sounds_dir = sounds_dir
         self._speaker_device = speaker_device
         self._logger = logger
@@ -135,11 +140,14 @@ class SpeechQueue:
                     f'no rendered audio for {text!r} ({wav_path.name}) - rebuild the package.'
                 )
                 continue
-            subprocess.run(
-                ['aplay', '-D', self._speaker_device, str(wav_path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            try:
+                subprocess.run(
+                    ['aplay', '-D', self._speaker_device, str(wav_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except FileNotFoundError:
+                self._logger.warning('aplay not found - cannot play audio.')
 
 
 class IndicatorNode(Node):
