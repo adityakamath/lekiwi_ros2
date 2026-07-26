@@ -34,15 +34,30 @@
              discarding the actual mesh shape entirely. -->
         <geom conaffinity="0" contype="0" group="2" type="mesh"/>
       </default>
+      <default class="base_visual">
+        <!-- Non-colliding decimated meshes for base_link/wheels - the base_link_collision/
+             wheel_*_collision cylinder primitives (base_subtree.xml) still do the actual
+             physics; these are visual-only siblings. See lekiwi_base_mujoco.stl/
+             omni_wheel_mujoco.stl comments below for why decimated copies exist at all. -->
+        <geom conaffinity="0" contype="0" group="2" type="mesh"/>
+      </default>
     </default>
   </default>
   <asset>
     <material name="base_light_grey" rgba="0.8 0.8 0.8 1.0"/>
     <material name="base_charcoal" rgba="0.15 0.15 0.15 1.0"/>
-    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048) -
-         unlike lekiwi_base.stl/omni_wheel.stl, which exceed it and stay cylinder primitives. -->
+    <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048). -->
     <mesh file="../meshes/ld06_lidar.stl" name="ld06_lidar"/>
     <mesh file="../meshes/bno055_imu.stl" name="bno055_imu"/>
+    <!-- lekiwi_base.stl (739500 faces) and omni_wheel.stl (543010 faces) both exceed
+         MuJoCo's 200000-face STL limit outright. These are quadric-decimated copies
+         (fast-simplification, target_reduction tuned per-mesh) kept alongside the full-
+         resolution originals - decimation quality verified by comparing convex-hull volume
+         and bounding-box extent before/after (base: 100k faces, ~5.5% volume delta; wheel:
+         40k faces, ~1.3% volume delta). Visual only - collision still uses the cylinder
+         primitives below, unchanged. -->
+    <mesh file="../meshes/lekiwi_base_mujoco.stl" name="lekiwi_base_visual"/>
+    <mesh file="../meshes/omni_wheel_mujoco.stl" name="omni_wheel_visual"/>
   </asset>
   <actuator>
     <!-- Velocity-mode, matching base_controller/STS3215 (operating_mode=1). kv is an
