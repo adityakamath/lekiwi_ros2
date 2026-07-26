@@ -33,9 +33,13 @@
 
   <!-- laser_link + laser_frame (base.module.xacro), matching ldlidar_ros2_node's frame. -->
   <body name="laser_link" pos="-0.045042 0 0.091500">
-    <!-- euler matches base.module.xacro's laser_offset_rx (pi/2 about X) - safe to port
-         directly since it's a single-axis rotation, unlike pantilt's multi-axis meshes. -->
-    <geom class="marker" mesh="ld06_lidar" material="base_charcoal" euler="1.5707963267948966 0 0"/>
+    <!-- quat, not euler: MuJoCo auto-aligns every mesh geom to its own principal-inertia
+         frame at compile time, and composes that correction with an explicit euler=
+         differently (and wrongly here) than with an explicit quat= - verified empirically
+         by comparing this mesh's world-frame bounding box against the two paths (euler
+         produced a sideways lidar; quat produces the correct upright one, matching
+         base.module.xacro's laser_offset_rx = pi/2 about X). -->
+    <geom class="marker" mesh="ld06_lidar" material="base_charcoal" quat="0.70710678 0.70710678 0 0"/>
     <body name="laser_frame" pos="0 0 0.027000">
       <!-- 360 rangefinders at 1 deg resolution (real LD19: 452/rev, ~0.797 deg - reduced
            for a clean integer sweep count). Each site's quat sweeps local +Z CCW about
