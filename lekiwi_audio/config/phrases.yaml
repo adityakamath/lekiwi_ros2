@@ -1,0 +1,45 @@
+# Phrase table for the audio indicator node.
+#
+# services: <service name>.<request "true"|"false">.<"success"|"failure"> -> spoken text
+# nav_goal: <"success"|"failure"> -> spoken text (ad-hoc /navigate_to_pose outcomes only)
+#
+# A missing entry means "don't announce anything". A missing "failure" entry falls back to a
+# generic "Error" in code.
+
+services:
+  /emergency_stop:
+    "true":
+      success: "Emergency stop enabled"
+    "false":
+      success: "Emergency stop disabled"
+
+  /twist_switch:
+    "true":
+      success: "Autonomous mode"
+    "false":
+      success: "Tele-op mode"
+
+  /record_waypoint:
+    "true":
+      success: "Waypoint recorded"
+      failure: "Error"
+
+  /reset_waypoints:
+    "true":
+      success: "Waypoints reset"
+
+  /waypoint_follow:
+    "true":
+      success: "Waypoint following enabled"
+      failure: "Error. No waypoints found"
+    "false":
+      success: "Waypoint following disabled"
+
+  /save_map:
+    "true":
+      success: "Saving map"
+      failure: "Error"
+
+nav_goal:
+  success: "Goal reached"
+  failure: "Goal failed"

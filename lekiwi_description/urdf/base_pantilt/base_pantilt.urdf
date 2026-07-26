@@ -104,8 +104,6 @@
       <state_interface name="is_moving"/>
     </joint>
   </ros2_control>
-  <!-- ROS 2 CONTROL -->
-  <!-- Sensor interface (BNO055 IMU) -->
   <ros2_control name="lekiwi_imu" type="sensor">
     <hardware>
       <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
@@ -196,6 +194,51 @@
   </link>
   <!-- Laser frame -->
   <link name="laser_frame"/>
+  <!-- Gazebo simulation: LD19 lidar, values measured directly off the real robot
+         (ros2 launch lekiwi_bringup laser.launch.py, then `ros2 topic hz /scan` and
+         echoing individual messages) rather than the datasheet:
+           - update_rate=10: measured /scan rate was a steady 10.00-10.01 Hz.
+           - samples=452: angle_increment measured ~0.0139 rad/point average across
+             several messages; 2*pi/0.0139 ~= 452. (The real driver actually publishes
+             partial ~129-point slices per message rather than one full 452-point sweep -
+             that's a chunking quirk of ldlidar_ros2_node's publishing, not something
+             SLAM/Nav2 depend on, so it's not replicated here; a clean full sweep at the
+             same angular resolution is the right target.)
+           - min_angle/max_angle=0..2pi and range 0.02-12m: read directly off the real
+             /scan message fields (angle_min/angle_max/range_min/range_max).
+         gz_frame_id overrides gz-sim's default scoped sensor frame_id
+         (e.g. lekiwi/laser_frame/lidar) to the plain "laser_frame" the real
+         ldlidar_ros2_node publishes (lekiwi_bringup/config/laser.yaml), so TF lookups
+         resolve the same way in sim as on hardware - unofficial SDF tag (emits a
+         "not defined in SDF" warning) but functional: gazebosim/gz-sensors#306.
+         nav2/slam_toolbox's own range caps (obstacle_max_range: 5.5, max_laser_range:
+         8.0) are intentionally below this sensor's 12m max, same as with the real LD19.
+         Inert outside Gazebo, like the <gazebo> control plugin in base.urdf.xacro. -->
+  <gazebo reference="laser_frame">
+    <sensor name="lidar" type="gpu_lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>scan</topic>
+      <gz_frame_id>laser_frame</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>452</samples>
+            <resolution>1</resolution>
+            <min_angle>0.0</min_angle>
+            <max_angle>6.283185307179586</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.02</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </lidar>
+    </sensor>
+  </gazebo>
   <!-- BNO055 IMU link -->
   <link name="imu_link">
     <visual>
@@ -218,6 +261,74 @@
   </link>
   <!-- IMU frame -->
   <link name="imu_frame"/>
+  <!-- Gazebo simulation: BNO055 IMU. Matches imu_sensor_broadcaster's frame_id
+         (lekiwi_control/config/base/control.yaml: frame_id=imu_frame) by attaching
+         directly to the imu_frame link, and topic is set to the exact topic name
+         imu_sensor_broadcaster would publish on (/imu_sensor_broadcaster/imu) so EKF
+         (lekiwi_navigation/config/robot_localization/ekf*.yaml: imu0) needs no
+         reconfiguration between real and sim. Because of this, imu_sensor_broadcaster
+         itself is NOT spawned in gazebo mode (control.launch.py) - it would otherwise
+         publish the mock bno055_hardware_interface's fake static data onto the same
+         topic, racing with this bridged one. update_rate=50 matches controller_manager's
+         update_rate (lekiwi_control/config/base/control.yaml) - the effective rate
+         imu_sensor_broadcaster publishes at on real hardware regardless of the BNO055's
+         own internal fusion rate. angular_velocity/linear_acceleration noise stddev
+         values are sqrt() of imu_sensor_broadcaster's static_covariance_* parameters
+         (same yaml file) - gz's IMU sensor has no equivalent independent orientation
+         noise parameter, so orientation comes out physics-consistent/noise-free instead.
+         gz_frame_id and inertness outside Gazebo: see the lidar sensor above. -->
+  <gazebo reference="imu_frame">
+    <sensor name="imu" type="imu">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>imu_sensor_broadcaster/imu</topic>
+      <gz_frame_id>imu_frame</gz_frame_id>
+      <update_rate>50</update_rate>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <imu>
+        <angular_velocity>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.00316</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.00316</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.00316</stddev>
+            </noise>
+          </z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01414</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01414</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01414</stddev>
+            </noise>
+          </z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
   <!-- Respeaker flex mic link -->
   <link name="mic_link">
     <visual>
@@ -443,19 +554,23 @@
       </geometry>
     </collision>
   </link>
-  <!-- For the Pan and Tilt joints below, velocity="1e6": 
+  <!-- For the Pan and Tilt joints below, velocity="1e6" in real mode:
     URDF requires a velocity attribute on revolute joints, but hardware-enforced
     velocity profiling makes software rate-limiting redundant and causes spurious
     "command out of limits" errors from ros2_control when joy_teleop sends large absolute
     position steps. 1e6 rad/s is physically unreachable and effectively disables the
-    JointSaturationLimiter's per-cycle velocity clipping for these joints. -->
+    JointSaturationLimiter's per-cycle velocity clipping for these joints.
+    In gazebo mode there's no hardware doing that profiling - GazeboSimSystem uses this
+    same <limit velocity> to bound the simulated joint's motion, so 1e6 there would mean
+    the joint snaps to commanded position essentially instantly. Use the real computed
+    ceiling (pantilt_max_velocity_rads, pantilt.control.xacro) instead in that case. -->
   <!-- Pan joint (revolute) -->
   <joint name="pan_joint" type="revolute">
     <parent link="pantilt_base_link"/>
     <child link="pan_link"/>
     <origin rpy="0 0 0" xyz="0.0452 0 0.0165"/>
     <axis xyz="0 0 1"/>
-    <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1e6"/>
+    <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1000000.0"/>
   </joint>
   <!-- Tilt joint (revolute) -->
   <joint name="tilt_joint" type="revolute">
@@ -463,7 +578,7 @@
     <child link="tilt_link"/>
     <origin rpy="-1.5707963267948966 1.5707963267948966 0" xyz="0.0306 0 0.1025"/>
     <axis xyz="0 0 -1"/>
-    <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1e6"/>
+    <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1000000.0"/>
   </joint>
   <!-- base_link of the sensor-->
   <link name="oak_link"/>
@@ -496,4 +611,17 @@
     <child link="oak_link_model_origin"/>
     <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
   </joint>
+  <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
+       both $(arg simulation_controllers) (base) and $(arg payload_simulation_controllers)
+       (pantilt) - gz_ros2_control's <parameters> tag can be given multiple times and
+       controller_manager merges them, same as the real robot's standalone
+       ros2_control_node merges base/control.yaml + payloads/pantilt/control.yaml.
+       Inert (ignored) outside Gazebo, so this is safe to leave in place regardless of
+       ros2_control_hardware_type. -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters></parameters>
+      <parameters></parameters>
+    </plugin>
+  </gazebo>
 </robot>

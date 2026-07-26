@@ -37,7 +37,7 @@ jobs:
       - name: Install ROS dependencies
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
-            python3-pip python3-pil git \
+            python3-pip python3-pil python3-yaml git \
             ros-kilted-ament-index-python \
             ros-kilted-controller-manager \
             ros-kilted-forward-command-controller \
@@ -59,23 +59,18 @@ jobs:
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
 
       - name: colcon build
-        # lekiwi_audio isn't built here - it isn't committed to this repo yet (still local-only,
-        # not ready to publish), so it doesn't exist in this checkout at all.
-        #
-        # lekiwi_bringup's package.xml declares pt_control and pt_bringup as dependencies.
-        # --packages-select alone isn't enough to leave them out: colcon still discovers them
-        # (they're on disk via the payloads/pantilt100 submodule) and, since lekiwi_bringup
-        # depends on them, tries to source their install/<pkg>/share/<pkg>/package.sh - which
-        # doesn't exist since they were never built, so the build fails. --packages-ignore
-        # removes them from colcon's package discovery entirely, so they're never expected in
-        # the first place - same as ldlidar_ros2/laser_filters, which aren't part of this
-        # checkout at all and were never an issue for exactly that reason.
+        # --packages-ignore is required, not optional cleanup: lekiwi_bringup/lekiwi_control's
+        # package.xml declare pt_control/pt_bringup/ldlidar_ros2/sts_hardware_interface/
+        # bno055_hardware_interface as dependencies, and colcon discovers them on disk via
+        # their submodules even with --packages-select - then fails trying to source their
+        # (never-built) install output unless explicitly ignored. Each has its own CI already.
         run: |
           . /opt/ros/kilted/setup.sh
           colcon build --packages-select \
-            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup \
+            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup lekiwi_audio \
             pt_description \
-            --packages-ignore pt_control pt_bringup
+            --packages-ignore pt_control pt_bringup \
+              sts_hardware_interface bno055_hardware_interface ldlidar_ros2
 
       - name: pytest
         # lekiwi_bringup's own test (test_launch_args.py) is excluded: it launches the full
@@ -88,4 +83,5 @@ jobs:
           pytest \
             src/lekiwi_ros2/lekiwi_control/test \
             src/lekiwi_ros2/lekiwi_navigation/test \
-            src/lekiwi_ros2/lekiwi_description/test
+            src/lekiwi_ros2/lekiwi_description/test \
+            src/lekiwi_ros2/lekiwi_audio/test

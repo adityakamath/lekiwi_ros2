@@ -1,3 +1,12 @@
-[submodule "payloads/pantilt100"]
-	path = payloads/pantilt100
-	url = https://github.com/adityakamath/pantilt100
+[submodule "payloads/pantilt_ros2"]
+	path = payloads/pantilt_ros2
+	url = https://github.com/adityakamath/pantilt_ros2
+[submodule "modules/sts_hardware_interface"]
+	path = modules/sts_hardware_interface
+	url = https://github.com/adityakamath/sts_hardware_interface.git
+[submodule "modules/bno055_hardware_interface"]
+	path = modules/bno055_hardware_interface
+	url = https://github.com/adityakamath/bno055_hardware_interface.git
+[submodule "modules/ldlidar_ros2"]
+	path = modules/ldlidar_ros2
+	url = https://github.com/adityakamath/ldlidar_ros2

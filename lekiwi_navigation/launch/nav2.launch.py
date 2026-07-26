@@ -16,11 +16,11 @@ Nodes launched (in lifecycle order):
     velocity_smoother      rate-limits MPPI output
     collision_monitor      last-resort safety stop
     collision_toggle_node               R1 deadman disable for FootprintApproach (plain node)
-    waypoint_follower                   patrol loop, see nav2_part2_plan.md Feature 2
+    waypoint_follower                   patrol loop
     waypoint_recorder_node              record/follow/reset waypoint services (plain node)
     bt_navigator                        Behavior Tree orchestrator (started last)
-    keepout/speed_filter_mask_server    no-go/speed zone masks, see nav2_part2_plan.md
-    keepout/speed_costmap_filter_info_server  Feature 3 (each has its own lifecycle manager)
+    keepout/speed_filter_mask_server    no-go/speed zone masks
+    keepout/speed_costmap_filter_info_server  (each has its own lifecycle manager)
 
 Topic wiring (no namespace):
     controller_server  cmd_vel   → cmd_vel_raw      (MPPI output)
@@ -28,9 +28,9 @@ Topic wiring (no namespace):
     velocity_smoother  cmd_vel   → cmd_vel_raw      (input remap; output is cmd_vel_smoothed)
     twist_switch_node  switched input is cmd_vel_smoothed / cmd_vel_teleop, output is
                         cmd_vel_presafety (lekiwi_control's twist_switch.yaml)
-    collision_monitor  reads cmd_vel_presafety, writes base_controller/cmd_vel - see
-                        nav2_part2_plan.md (Feature 1) for why it sits downstream of
-                        twist_switch_node instead of Nav2's stock position
+    collision_monitor  reads cmd_vel_presafety, writes base_controller/cmd_vel
+                        (positioned downstream of twist_switch_node, not Nav2's stock
+                        position)
 
 Launch arguments:
     params_file   full path to nav2.yaml
@@ -73,7 +73,7 @@ def launch_setup(context, *args, **kwargs):
     log_level    = LaunchConfiguration('log_level')
 
     # bt_navigator must be last - it depends on the other servers being active. Costmap
-    # filters get their own lifecycle managers below - see nav2_part2_plan.md, Feature 3.
+    # filters get their own lifecycle managers below.
     lifecycle_nodes = [
         'controller_server',
         'planner_server',
@@ -98,8 +98,7 @@ def launch_setup(context, *args, **kwargs):
     # points at the real maps/ directory rather than the install/build tree.
     _pkg_src = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-    # yaml_filename must be a real, existing path or '' - see nav2_part2_plan.md,
-    # Feature 3 ("Bringup safety").
+    # yaml_filename must be a real, existing path or ''.
     log_messages = []
     if map_name:
         filters_dir = os.path.join(_pkg_src, 'maps', map_name, 'filters')
@@ -111,9 +110,9 @@ def launch_setup(context, *args, **kwargs):
             log_messages.append(LogInfo(msg=(
                 f"[nav2.launch.py] map_name='{map_name}' has no filters/ (or it's "
                 'incomplete) - keepout/speed zones disabled for this map. '
-                'map_saver_node creates this automatically for maps saved after '
-                'Feature 3 - older maps were migrated once, but check '
-                f'{filters_dir} if this is unexpected.'
+                'map_saver_node creates this automatically for maps saved going forward; '
+                f'older maps may need a one-time migration - check {filters_dir} if this '
+                'is unexpected.'
             )))
     else:
         keepout_mask_path = ''
@@ -184,7 +183,6 @@ def launch_setup(context, *args, **kwargs):
             remappings=remappings,
         ),
         # ── Waypoint Follower ────────────────────────────────────────────
-        # See nav2_part2_plan.md, Feature 2.
         Node(
             package='nav2_waypoint_follower',
             executable='waypoint_follower',
@@ -217,8 +215,8 @@ def launch_setup(context, *args, **kwargs):
             remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
         ),
         # ── Collision Monitor ────────────────────────────────────────────
-        # Topic wiring set via nav2.yaml's cmd_vel_in/out_topic - see nav2_part2_plan.md
-        # (Feature 1) for why this sits downstream of twist_switch_node.
+        # Topic wiring set via nav2.yaml's cmd_vel_in/out_topic (downstream of
+        # twist_switch_node, not Nav2's stock position).
         Node(
             package='nav2_collision_monitor',
             executable='collision_monitor',
@@ -241,7 +239,6 @@ def launch_setup(context, *args, **kwargs):
             arguments=['--ros-args', '--log-level', log_level],
         ),
         # ── Costmap Filters (no-go + speed zones) ────────────────────────
-        # See nav2_part2_plan.md, Feature 3.
         Node(
             package='nav2_map_server',
             executable='map_server',

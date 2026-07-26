@@ -10,7 +10,7 @@ updates:
       - "dependencies"
       - "github-actions"
 
-  # Keep git submodules up to date (payloads/pantilt100)
+  # Keep git submodules up to date (payloads/pantilt_ros2)
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:

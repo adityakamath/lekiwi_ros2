@@ -25,7 +25,10 @@
   <exec_depend>imu_sensor_broadcaster</exec_depend>
   <exec_depend>sts_hardware_interface</exec_depend>
   <exec_depend>bno055_hardware_interface</exec_depend>
-  <!-- <exec_depend>teleop_twist_joy</exec_depend> -->
+  <!-- ros2_control_hardware_type:="mujoco" only - this package starts
+       mujoco_ros2_control's own ros2_control_node directly, which also hosts the MuJoCo
+       simulation itself and publishes /scan directly from the laser_frame lidar sensor. -->
+  <exec_depend>mujoco_ros2_control</exec_depend>
   <exec_depend>joy_teleop</exec_depend>
   <exec_depend>teleop_twist_keyboard</exec_depend>
   <exec_depend>generate_parameter_library</exec_depend>

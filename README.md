@@ -8,13 +8,33 @@
 
 ## ⚠️ Safety
 
-**This is a real, motorized robot with no hardwired physical emergency stop.** `/emergency_stop` is a software service call (toggled via joystick button or Foxglove) that tells the hardware interface to stop issuing motor commands. It is not a hardware kill switch, and it will not help if the software stack itself has hung, crashed, or lost connection to the joystick. Do not run this stack near people, pets, or fragile objects without a way to physically cut power to the base.
+**This is a real, motorized robot with no hardwired physical emergency stop.** `/emergency_stop` is a software service call (toggled via joystick button or Foxglove) that tells the hardware interface to stop issuing motor commands. It is not a hardware kill switch, and it will not help if the software stack itself has hung, crashed, or lost connection to the joystick.
 
-This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes and incomplete safety coverage. No warranty, express or implied — see [LICENSE](LICENSE).
+This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes and incomplete safety coverage. Simulation (`sim:=true`) is lightly tested and not validated against real hardware. No warranty, express or implied — see [LICENSE](LICENSE).
 
 ## Overview
 
-Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Features holonomic drive, odometry, teleoperation, and real-time motor diagnostics for controls and safety. Includes LiDAR and an OAK-D depth camera for perception.
+Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Features holonomic drive, odometry, teleoperation, real-time motor diagnostics, and spoken status announcements for controls and safety. Includes LiDAR and an OAK-D depth camera for perception.
+
+## Packages
+
+- **lekiwi_bringup** — Top-level launch files that bring up the full system (control, navigation, sensors, payload) based on `payload`/`sim`/`mission` and other arguments.
+- **lekiwi_description** — URDF and MJCF robot models, meshes, and visualization launch files.
+- **lekiwi_control** — ros2_control hardware interfaces, controller configs, and launch files (real, mock, or MuJoCo).
+- **lekiwi_navigation** — SLAM (slam_toolbox), localization (AMCL), Nav2, EKF sensor fusion, and map storage.
+- **lekiwi_audio** — Spoken status announcements for e-stop, mode switching, and waypoint actions.
+
+### Dependencies
+
+- **[ROS 2](https://docs.ros.org/en/kilted/)**: Tested with Kilted, but should work on other ROS 2 distributions
+- **[ros2_control](https://control.ros.org/)** framework with standard controllers
+- **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)** (git submodule under `modules/`): Hardware interface for Feetech STS servos
+- **[bno055_hardware_interface](https://github.com/adityakamath/bno055_hardware_interface)** (git submodule under `modules/`): Hardware interface for the BNO055 IMU
+- **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)** (git submodule under `modules/`): LD06 LiDAR driver with bug fixes
+- **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
+- **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation
+- **[mujoco_ros2_control](https://github.com/ros-controls/mujoco_ros2_control)** (`sudo apt install ros-kilted-mujoco-ros2-control`): MuJoCo simulation backend, `sim:=true` only
+- **[pantilt_ros2](https://github.com/adityakamath/pantilt_ros2)** (git submodule under `payloads/`): Pan-tilt + OAK-D camera payload — see its [README](payloads/pantilt_ros2/README.md) for its own dependencies (depthai-ros, cloudini, etc.)
 
 ## Installation and Usage
 
@@ -29,88 +49,49 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 
 ## Launch Arguments
 
-`lekiwi_bringup lekiwi.launch.py` accepts the following arguments:
+The most commonly used arguments for `lekiwi_bringup lekiwi.launch.py` (run with `--show-arguments` for the full list):
 
-| Argument              | Default   | Description                                                                                                     |
-|-----------------------|-----------|------------------------------------------------------------------------------------------------------------------|
-| `payload`             | `pantilt` | Hardware payload: `""` for base only, `pantilt` for base + pan-tilt + OAK-D                                       |
-| `pantilt_config`      | `pt100`   | Pan-tilt mesh variant when `payload:=pantilt`: `pt100` or `pt101`                                                 |
-| `diagnostics`         | `false`   | Launch motor and IMU diagnostics nodes in `lekiwi_control`                                                        |
-| `control_mock`        | `""`      | Mock mode override (`true`/`false`); empty means use `urdf_config.yaml` value                                     |
-| `fusion_mode`         | `base`    | EKF sensor fusion: `base` (wheel odom + BNO055), `imu` (BNO055 only), `odom` (wheel odom only)                    |
-| `mission`             | `""`      | Navigation mission: empty preserves current behavior (`map_name` empty -> `map`, `map_name` set -> `amcl`); `map` runs slam_toolbox mapping, `slam` runs slam_toolbox localization and requires `map_name`, `amcl` runs AMCL + nav2_map_server and requires `map_name` |
-| `map_name`            | `""`      | Map subdirectory to load (e.g. `livingroom1`). With `mission:=slam` loads slam_toolbox localization on the existing map; with `mission:=amcl` loads the static map for AMCL. Also tells `nav2.launch.py` where to load that map's no-go/speed zone masks from, if any - see [Costmap Zones](#costmap-zones) |
-| `pointcloud`          | `false`   | Use `oakd_vio_pcl.yaml` (depth aligned to RGB + point cloud) instead of `oakd_vio.yaml` (depth unaligned, no point cloud). Also gates point cloud compression. |
-| `octomap`             | `false`   | Run `octomap_server` on the OAK-D point cloud to build a persistent 3D octree (only takes effect when `pointcloud:=true`) |
-| `use_sim_time`        | `false`   | Use `/clock` from a simulator instead of system time                                                              |
-| `sim`                 | `false`   | Run against Gazebo instead of real hardware: starts `gz_sim`, uses `gz_ros2_control` for the base, forces `use_sim_time`/`control_mock`, and skips laser/audio/OAK-D (no simulated equivalent yet) |
-| `gui`                 | `true`    | [`sim` only] Launch Gazebo with the GUI client attached                                                           |
-
-Earlier iterations called `mission` `nav_mode`.
-
-**`sim:=true` (Gazebo) is highly experimental.** The configuration is grounded in real hardware where possible (LiDAR/IMU rates, noise, and frame IDs measured off the real robot), but it has not been verified running end-to-end. Base drive, LiDAR, IMU, and the pan-tilt payload are wired up; a physics-simulated camera is not. Expect rough edges.
+| Argument         | Default   | Description                                                    |
+|------------------|-----------|------------------------------------------------------------------|
+| `payload`        | `pantilt` | `""` for base only, `pantilt` for base + pan-tilt + OAK-D        |
+| `pantilt_config` | `pt101`   | Pan-tilt mesh variant: `pt100` or `pt101`                        |
+| `mission`        | `""`      | Navigation mode: `map` (SLAM mapping), `slam`/`amcl` (localization, needs `map_name`) |
+| `map_name`       | `""`      | Map to load, e.g. `livingroom1`                                  |
+| `fusion_mode`    | `base`    | EKF sensor fusion: `base`, `imu`, or `odom`                       |
+| `pointcloud`     | `false`   | Enable RGBD point cloud output from the OAK-D camera              |
+| `sim`            | `false`   | Run in MuJoCo instead of real hardware                            |
+| `gui`            | `true`    | [`sim` only] Show the MuJoCo viewer                                |
+| `diagnostics`    | `false`   | Launch motor/IMU diagnostics nodes                                |
 
 ## Joystick Configuration
 
-Teleoperation is configured for a **Steam Deck**, used as a generic joystick (via `joy_node`/`joy_teleop`) rather than through Steam Input — button and axis indices below are specific to how the Deck's controls show up over that interface, not a standard Xbox-style gamepad layout. See the `joy` launch argument above for running `joy_node` locally vs. receiving `/joy` from a remote device.
+Teleoperation is configured for a **Steam Deck** used as a generic joystick, not through Steam Input, so button/axis numbers below are specific to that interface.
 
-**Drive** (base, requires the L1 deadman held):
+**Drive** (requires the L1 deadman held):
 
-| Control            | Action                                  |
-|---------------------|------------------------------------------|
-| L1 (button 9)       | Deadman — hold to enable drive commands |
-| Left stick (axis 1) | Forward / backward                      |
-| Left stick (axis 0) | Strafe left / right                     |
-| Right stick (axis 2)| Rotate in place                         |
+| Control            | Action                  |
+|---------------------|--------------------------|
+| L1                  | Deadman                  |
+| Left stick          | Forward/back, strafe     |
+| Right stick         | Rotate in place          |
 
-**Pan-tilt** (`payload:=pantilt` only, shares the same L1 deadman):
+**Pan-tilt** (`payload:=pantilt`, shares the L1 deadman): D-pad for pan/tilt.
 
-| Control          | Action       |
-|------------------|--------------|
-| D-pad (axis 6)   | Pan          |
-| D-pad (axis 7)   | Tilt         |
+**Other controls**:
 
-**Single-button safety/mode controls**:
+| Control     | Action                                              |
+|--------------|-------------------------------------------------------|
+| B            | Toggle emergency stop                                  |
+| X            | Toggle between teleop and Nav2 control                 |
+| R1           | Hold to disable the collision monitor's predictive stop |
+| Screenshot   | Save the current SLAM map                              |
+| Y / A / Settings | Record / toggle / reset a waypoint patrol           |
 
-| Control                | Action                                                                                          |
-|-------------------------|--------------------------------------------------------------------------------------------------|
-| B (button 1)            | Toggle `/emergency_stop` (via `bool_toggle_node`)                                                |
-| X (button 2)            | Toggle base control between teleop and Nav2 (via `bool_toggle_node`, `/twist_switch`)            |
-| R1 (button 10)          | Hold to disable `collision_monitor`'s predictive stop (deadman — releasing re-enables it automatically)                          |
-| Screenshot (button 4)   | Save the current SLAM map (`/save_map`, also callable from Foxglove)                              |
-
-**Waypoint patrol controls** (`waypoint_recorder_node`):
-
-Exposed as `std_srvs/srv/SetBool` services so the same controls work identically from `joy_teleop` button bindings or Foxglove's "Call Service" panel.
-
-| Control                | Service                          | Action                                                                          |
-|-------------------------|------------------------------------|----------------------------------------------------------------------------------|
-| Y (button 3)            | `/record_waypoint`               | Record the robot's current pose as the next waypoint (adds a marker on `/waypoint_markers`). Works even while patrolling - queued waypoints join the patrol at the start of the next loop rather than immediately. |
-| A (button 0)            | `/waypoint_follow_toggle`         | Toggle (via `bool_toggle_node`): 1st press starts/resumes the patrol; 2nd press pauses it. Waypoints and markers are untouched either way — only Settings clears those. |
-| Settings (button 11)    | `/reset_waypoints`               | Cancel the active patrol and clear the recorded waypoints + their markers       |
-
-`/waypoint_follow` (the underlying SetBool the toggle drives) stays directly callable too, e.g. from Foxglove, for explicit start (`true`) / stop (`false`) without the toggle. It's pause/resume, not stop/restart: stopping mid-route and starting again continues toward the same waypoint it was already heading to (via `FollowWaypoints.Goal.goal_index`), not back to the beginning - and is a no-op if it's already patrolling.
-
-Progress is published as `diagnostic_msgs/msg/DiagnosticArray` on `/diagnostics` (status name `waypoint_recorder: patrol`) rather than a visualization - `current_loop`, `from_waypoint`/`to_waypoint`, `total_waypoints`, plus `estimated_time_to_waypoint_sec`/`distance_to_waypoint_m`/`number_of_recoveries` forwarded live from `/navigate_to_pose`'s own feedback, and a derived `estimated_loop_duration_sec`. Level is `STALE` for a deliberate stop, `WARN` while paused waiting to auto-resume (see below).
-
-**Sending the robot a separate navigation goal (RViz "2D Nav Goal", Foxglove's goal-pose panel) while patrolling is a supported detour, not an error.** It preempts the current leg immediately (`stop_on_failure: true` makes this a clean abort rather than nav2_waypoint_follower silently skipping that waypoint), and `waypoint_recorder_node` automatically resumes toward the interrupted waypoint once `/navigate_to_pose` is free again - "go there, then continue the patrol." A pause via `/waypoint_follow false` or the A button cancels this auto-resume too, not just the patrol itself, and also clears the stale plan visualization (`/plan` and a few related topics) that nav2 otherwise leaves on screen after a cancel - it reappears on its own once a new plan is computed (resuming, or a fresh detour).
+All of the above (plus navigation goal outcomes) get spoken feedback via `lekiwi_audio`.
 
 ## Costmap Zones
 
-Nav2's `KeepoutFilter` and `SpeedFilter` are wired up and active by default: no-go zones (the planner routes around them, the controller won't drive into them) and speed-limited zones (the controller slows down inside them). Each filter is backed by its own `map_server` mask instance and a dedicated lifecycle manager, so a bad mask file only disables that filter, not the rest of the nav stack.
-
-Zone masks live inside each map's own folder (`lekiwi_navigation/maps/<map_name>/filters/`), saved automatically by `map_saver_node` alongside the map itself - no separate save step. New maps start with no-op (all-clear) placeholder masks; painting real zone shapes into them is a manual step not yet covered by tooling here.
-
-## Dependencies
-
-- **[ROS 2](https://docs.ros.org/en/kilted/)**: Tested with Kilted, but should work on other ROS 2 distributions
-- **[ros2_control](https://control.ros.org/)** framework with standard controllers
-- **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)**: Hardware interface for Feetech STS servos
-- **[bno055_hardware_interface](https://github.com/adityakamath/bno055_hardware_interface)**: Hardware interface for the BNO055 IMU
-- **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)**: LD06 LiDAR driver with bug fixes
-- **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
-- **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation
-- **[pantilt100](https://github.com/adityakamath/pantilt100)** (git submodule under `payloads/`): Pan-tilt + OAK-D camera payload — see its [README](payloads/pantilt100/README.md) for its own dependencies (depthai-ros, cloudini, etc.)
+Nav2 no-go and speed-limited zones are supported. Zone masks live under `lekiwi_navigation/maps/<map_name>/filters/` and are saved automatically alongside each map.
 
 ## Structure
 
@@ -120,8 +101,13 @@ lekiwi_ros2/
 ├── lekiwi_description/  # URDF models and meshes
 ├── lekiwi_navigation/   # SLAM, localization, EKF sensor fusion, maps
 ├── lekiwi_bringup/      # System integration launch files
+├── lekiwi_audio/        # Spoken status announcements (e-stop, mode switching, waypoints)
+├── modules/
+│   ├── sts_hardware_interface/     # Feetech STS servo hardware interface (git submodule)
+│   ├── bno055_hardware_interface/  # BNO055 IMU hardware interface (git submodule)
+│   └── ldlidar_ros2/               # LD06 LiDAR driver (git submodule)
 └── payloads/
-    └── pantilt100/      # Pan-tilt + OAK-D camera payload (git submodule)
+    └── pantilt_ros2/    # Pan-tilt + OAK-D camera payload (git submodule)
 ```
 
 ## License

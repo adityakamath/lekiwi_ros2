@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 install(DIRECTORY
   urdf
   meshes
+  mjcf
   DESTINATION share/${PROJECT_NAME}/
 )
 

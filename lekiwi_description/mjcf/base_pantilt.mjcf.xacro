@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!-- LeKiwi base + PT100/PT101 pan-tilt payload MJCF entry point (mujoco_ros2_control
+     equivalent of urdf/base_pantilt/base_pantilt.urdf.xacro). Reuses base_shared.xml/
+     base_subtree.xml plus pt_description's pantilt.mjcf.xacro library unchanged. Payload
+     mounts at base_pantilt.common.xacro's pantilt_base_offset_x/z, matching
+     base_pantilt.urdf.xacro's fixed joint.
+
+     Standalone: xacro base_pantilt.mjcf.xacro pantilt_config:=pt101 > /tmp/lekiwi_pt101.xml
+     control.launch.py runs the same command at launch time when payload:=pantilt. -->
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="lekiwi_pantilt">
+  <xacro:arg name="pantilt_config" default="pt101"/>
+  <xacro:arg name="scene" default="true"/>
+  <!-- Declared here BEFORE including pantilt.mjcf.xacro (which defaults standalone to true)
+       so this default wins - xacro uses the first <xacro:arg> declaration seen. Suppresses
+       pantilt.mjcf.xacro's own worldbody/scene emission. -->
+  <xacro:arg name="standalone" default="false"/>
+
+  <!-- xacro:include, not a plain <include> - base_shared.xml needs $(arg scene) resolved. -->
+  <xacro:include filename="$(find lekiwi_description)/mjcf/base_shared.xml"/>
+  <xacro:include filename="$(find pt_description)/mjcf/pantilt.mjcf.xacro"/>
+
+  <worldbody>
+    <body name="base_link" pos="0 0 0.040640" childclass="lekiwi_base">
+      <include file="$(find lekiwi_description)/mjcf/base_subtree.xml"/>
+
+      <body name="pantilt_mount" pos="0.032725 0 0.0525">
+        <xacro:pantilt_body/>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- base_link's collision cylinder overlaps pantilt_base_link at the mount point. -->
+  <contact>
+    <exclude body1="base_link" body2="pantilt_base_link"/>
+  </contact>
+</mujoco>

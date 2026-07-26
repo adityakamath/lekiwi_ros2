@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!-- LeKiwi base-only MJCF entry point (mujoco_ros2_control equivalent of
+     urdf/base/base.urdf.xacro). One file per payload combination - see
+     base_pantilt.mjcf.xacro for base+payload, add base_<payload>.mjcf.xacro for new payloads
+     rather than an arg-driven branch here. Geometry lives in base_shared.xml/base_subtree.xml.
+
+     Standalone: xacro base.mjcf.xacro > /tmp/lekiwi_base.xml
+     control.launch.py runs the same command at launch time and passes the result as
+     mujoco_model. Uses $(find package), not relative paths - relative paths resolve against
+     the output file's location at launch time, not this file's own directory. -->
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="lekiwi">
+  <xacro:arg name="scene" default="true"/>
+
+  <!-- xacro:include, not a plain <include> - base_shared.xml needs $(arg scene) resolved. -->
+  <xacro:include filename="$(find lekiwi_description)/mjcf/base_shared.xml"/>
+
+  <worldbody>
+    <body name="base_link" pos="0 0 0.040640" childclass="lekiwi_base">
+      <include file="$(find lekiwi_description)/mjcf/base_subtree.xml"/>
+    </body>
+  </worldbody>
+</mujoco>

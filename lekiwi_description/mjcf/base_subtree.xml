@@ -1,0 +1,412 @@
+<!-- base_link's direct children as an includable fragment (freejoint, chassis collision,
+     3 wheels, laser_link, imu_link), meant to be spliced inside a <body name="base_link">
+     opened by the includer. Not a standalone model - never loaded directly. Body
+     pos/euler/quat values are ported from urdf/base/base.module.xacro + base.common.xacro. -->
+<mujoco>
+  <!-- 6-DOF floating base - rests on the 3 wheels under gravity, not fixed to anything. -->
+  <freejoint/>
+  <inertial pos="0 0 0" mass="2.0" diaginertia="0.01 0.01 0.02"/>
+  <!-- Collision cylinder approximates the chassis footprint - the real mesh (739500
+       triangles) exceeds MuJoCo's 200000-face STL loader limit. -->
+  <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" material="base_light_grey"/>
+
+  <!-- Wheel orientation is an explicit quat, not euler="0 pi/2 <yaw>" - MuJoCo's eulerseq
+       doesn't compose the same way URDF's rpy does, which previously put every wheel's
+       rotation axis on the same fixed direction regardless of yaw (confirmed empirically).
+       quat = q_z(mount_angle) ⊗ q_y(90°), mount_angle = pi/3 (matches base.control.xacro's
+       "offset" property). -->
+  <body name="left_wheel_link" pos="0.066120 0.114522 0.010360" quat="0.61237244 -0.35355339 0.61237244 0.35355339">
+    <joint name="left_wheel_joint" class="wheel"/>
+    <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
+    <geom name="left_wheel_collision" class="wheel_geom" material="base_charcoal"/>
+  </body>
+  <body name="back_wheel_link" pos="-0.132239 0.000000 0.010360" quat="0.00000000 -0.70710678 0.00000000 0.70710678">
+    <joint name="back_wheel_joint" class="wheel"/>
+    <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
+    <geom name="back_wheel_collision" class="wheel_geom" material="base_charcoal"/>
+  </body>
+  <body name="right_wheel_link" pos="0.066120 -0.114522 0.010360" quat="0.61237244 0.35355339 0.61237244 -0.35355339">
+    <joint name="right_wheel_joint" class="wheel"/>
+    <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
+    <geom name="right_wheel_collision" class="wheel_geom" material="base_charcoal"/>
+  </body>
+
+  <!-- laser_link + laser_frame (base.module.xacro), matching ldlidar_ros2_node's frame. -->
+  <body name="laser_link" pos="-0.045042 0 0.091500">
+    <geom class="marker" type="cylinder" size="0.02 0.02" material="base_charcoal"/>
+    <body name="laser_frame" pos="0 0 0.027000">
+      <!-- 360 rangefinders at 1 deg resolution (real LD19: 452/rev, ~0.797 deg - reduced
+           for a clean integer sweep count). Each site's quat sweeps local +Z CCW about
+           laser_frame's Z starting at +X, matching REP-103. Matching <rangefinder> sensor
+           entries (by name) live in base_shared.xml. -->
+    <site name="lidar-0" pos="0 0 0" quat="0.70710678 -0.00000000 0.70710678 0.00000000" group="4"/>
+    <site name="lidar-1" pos="0 0 0" quat="0.70707986 -0.00617059 0.70707986 0.00617059" group="4"/>
+    <site name="lidar-2" pos="0 0 0" quat="0.70699909 -0.01234071 0.70699909 0.01234071" group="4"/>
+    <site name="lidar-3" pos="0 0 0" quat="0.70686447 -0.01850990 0.70686447 0.01850990" group="4"/>
+    <site name="lidar-4" pos="0 0 0" quat="0.70667603 -0.02467767 0.70667603 0.02467767" group="4"/>
+    <site name="lidar-5" pos="0 0 0" quat="0.70643377 -0.03084356 0.70643377 0.03084356" group="4"/>
+    <site name="lidar-6" pos="0 0 0" quat="0.70613772 -0.03700711 0.70613772 0.03700711" group="4"/>
+    <site name="lidar-7" pos="0 0 0" quat="0.70578788 -0.04316784 0.70578788 0.04316784" group="4"/>
+    <site name="lidar-8" pos="0 0 0" quat="0.70538430 -0.04932528 0.70538430 0.04932528" group="4"/>
+    <site name="lidar-9" pos="0 0 0" quat="0.70492701 -0.05547896 0.70492701 0.05547896" group="4"/>
+    <site name="lidar-10" pos="0 0 0" quat="0.70441603 -0.06162842 0.70441603 0.06162842" group="4"/>
+    <site name="lidar-11" pos="0 0 0" quat="0.70385140 -0.06777318 0.70385140 0.06777318" group="4"/>
+    <site name="lidar-12" pos="0 0 0" quat="0.70323318 -0.07391279 0.70323318 0.07391279" group="4"/>
+    <site name="lidar-13" pos="0 0 0" quat="0.70256140 -0.08004676 0.70256140 0.08004676" group="4"/>
+    <site name="lidar-14" pos="0 0 0" quat="0.70183611 -0.08617464 0.70183611 0.08617464" group="4"/>
+    <site name="lidar-15" pos="0 0 0" quat="0.70105738 -0.09229596 0.70105738 0.09229596" group="4"/>
+    <site name="lidar-16" pos="0 0 0" quat="0.70022527 -0.09841024 0.70022527 0.09841024" group="4"/>
+    <site name="lidar-17" pos="0 0 0" quat="0.69933982 -0.10451704 0.69933982 0.10451704" group="4"/>
+    <site name="lidar-18" pos="0 0 0" quat="0.69840112 -0.11061587 0.69840112 0.11061587" group="4"/>
+    <site name="lidar-19" pos="0 0 0" quat="0.69740924 -0.11670628 0.69740924 0.11670628" group="4"/>
+    <site name="lidar-20" pos="0 0 0" quat="0.69636424 -0.12278780 0.69636424 0.12278780" group="4"/>
+    <site name="lidar-21" pos="0 0 0" quat="0.69526621 -0.12885998 0.69526621 0.12885998" group="4"/>
+    <site name="lidar-22" pos="0 0 0" quat="0.69411524 -0.13492233 0.69411524 0.13492233" group="4"/>
+    <site name="lidar-23" pos="0 0 0" quat="0.69291140 -0.14097442 0.69291140 0.14097442" group="4"/>
+    <site name="lidar-24" pos="0 0 0" quat="0.69165480 -0.14701577 0.69165480 0.14701577" group="4"/>
+    <site name="lidar-25" pos="0 0 0" quat="0.69034553 -0.15304592 0.69034553 0.15304592" group="4"/>
+    <site name="lidar-26" pos="0 0 0" quat="0.68898368 -0.15906442 0.68898368 0.15906442" group="4"/>
+    <site name="lidar-27" pos="0 0 0" quat="0.68756936 -0.16507080 0.68756936 0.16507080" group="4"/>
+    <site name="lidar-28" pos="0 0 0" quat="0.68610269 -0.17106461 0.68610269 0.17106461" group="4"/>
+    <site name="lidar-29" pos="0 0 0" quat="0.68458376 -0.17704540 0.68458376 0.17704540" group="4"/>
+    <site name="lidar-30" pos="0 0 0" quat="0.68301270 -0.18301270 0.68301270 0.18301270" group="4"/>
+    <site name="lidar-31" pos="0 0 0" quat="0.68138963 -0.18896607 0.68138963 0.18896607" group="4"/>
+    <site name="lidar-32" pos="0 0 0" quat="0.67971466 -0.19490504 0.67971466 0.19490504" group="4"/>
+    <site name="lidar-33" pos="0 0 0" quat="0.67798794 -0.20082918 0.67798794 0.20082918" group="4"/>
+    <site name="lidar-34" pos="0 0 0" quat="0.67620958 -0.20673802 0.67620958 0.20673802" group="4"/>
+    <site name="lidar-35" pos="0 0 0" quat="0.67437972 -0.21263111 0.67437972 0.21263111" group="4"/>
+    <site name="lidar-36" pos="0 0 0" quat="0.67249851 -0.21850801 0.67249851 0.21850801" group="4"/>
+    <site name="lidar-37" pos="0 0 0" quat="0.67056609 -0.22436827 0.67056609 0.22436827" group="4"/>
+    <site name="lidar-38" pos="0 0 0" quat="0.66858260 -0.23021145 0.66858260 0.23021145" group="4"/>
+    <site name="lidar-39" pos="0 0 0" quat="0.66654819 -0.23603709 0.66654819 0.23603709" group="4"/>
+    <site name="lidar-40" pos="0 0 0" quat="0.66446302 -0.24184476 0.66446302 0.24184476" group="4"/>
+    <site name="lidar-41" pos="0 0 0" quat="0.66232726 -0.24763401 0.66232726 0.24763401" group="4"/>
+    <site name="lidar-42" pos="0 0 0" quat="0.66014105 -0.25340441 0.66014105 0.25340441" group="4"/>
+    <site name="lidar-43" pos="0 0 0" quat="0.65790457 -0.25915550 0.65790457 0.25915550" group="4"/>
+    <site name="lidar-44" pos="0 0 0" quat="0.65561799 -0.26488686 0.65561799 0.26488686" group="4"/>
+    <site name="lidar-45" pos="0 0 0" quat="0.65328148 -0.27059805 0.65328148 0.27059805" group="4"/>
+    <site name="lidar-46" pos="0 0 0" quat="0.65089522 -0.27628863 0.65089522 0.27628863" group="4"/>
+    <site name="lidar-47" pos="0 0 0" quat="0.64845940 -0.28195817 0.64845940 0.28195817" group="4"/>
+    <site name="lidar-48" pos="0 0 0" quat="0.64597419 -0.28760624 0.64597419 0.28760624" group="4"/>
+    <site name="lidar-49" pos="0 0 0" quat="0.64343979 -0.29323240 0.64343979 0.29323240" group="4"/>
+    <site name="lidar-50" pos="0 0 0" quat="0.64085638 -0.29883624 0.64085638 0.29883624" group="4"/>
+    <site name="lidar-51" pos="0 0 0" quat="0.63822418 -0.30441732 0.63822418 0.30441732" group="4"/>
+    <site name="lidar-52" pos="0 0 0" quat="0.63554337 -0.30997521 0.63554337 0.30997521" group="4"/>
+    <site name="lidar-53" pos="0 0 0" quat="0.63281416 -0.31550950 0.63281416 0.31550950" group="4"/>
+    <site name="lidar-54" pos="0 0 0" quat="0.63003676 -0.32101976 0.63003676 0.32101976" group="4"/>
+    <site name="lidar-55" pos="0 0 0" quat="0.62721138 -0.32650558 0.62721138 0.32650558" group="4"/>
+    <site name="lidar-56" pos="0 0 0" quat="0.62433823 -0.33196653 0.62433823 0.33196653" group="4"/>
+    <site name="lidar-57" pos="0 0 0" quat="0.62141754 -0.33740220 0.62141754 0.33740220" group="4"/>
+    <site name="lidar-58" pos="0 0 0" quat="0.61844953 -0.34281217 0.61844953 0.34281217" group="4"/>
+    <site name="lidar-59" pos="0 0 0" quat="0.61543441 -0.34819604 0.61543441 0.34819604" group="4"/>
+    <site name="lidar-60" pos="0 0 0" quat="0.61237244 -0.35355339 0.61237244 0.35355339" group="4"/>
+    <site name="lidar-61" pos="0 0 0" quat="0.60926382 -0.35888382 0.60926382 0.35888382" group="4"/>
+    <site name="lidar-62" pos="0 0 0" quat="0.60610881 -0.36418692 0.60610881 0.36418692" group="4"/>
+    <site name="lidar-63" pos="0 0 0" quat="0.60290764 -0.36946228 0.60290764 0.36946228" group="4"/>
+    <site name="lidar-64" pos="0 0 0" quat="0.59966056 -0.37470951 0.59966056 0.37470951" group="4"/>
+    <site name="lidar-65" pos="0 0 0" quat="0.59636781 -0.37992820 0.59636781 0.37992820" group="4"/>
+    <site name="lidar-66" pos="0 0 0" quat="0.59302965 -0.38511795 0.59302965 0.38511795" group="4"/>
+    <site name="lidar-67" pos="0 0 0" quat="0.58964632 -0.39027839 0.58964632 0.39027839" group="4"/>
+    <site name="lidar-68" pos="0 0 0" quat="0.58621809 -0.39540909 0.58621809 0.39540909" group="4"/>
+    <site name="lidar-69" pos="0 0 0" quat="0.58274522 -0.40050969 0.58274522 0.40050969" group="4"/>
+    <site name="lidar-70" pos="0 0 0" quat="0.57922797 -0.40557979 0.57922797 0.40557979" group="4"/>
+    <site name="lidar-71" pos="0 0 0" quat="0.57566660 -0.41061900 0.57566660 0.41061900" group="4"/>
+    <site name="lidar-72" pos="0 0 0" quat="0.57206140 -0.41562694 0.57206140 0.41562694" group="4"/>
+    <site name="lidar-73" pos="0 0 0" quat="0.56841264 -0.42060323 0.56841264 0.42060323" group="4"/>
+    <site name="lidar-74" pos="0 0 0" quat="0.56472058 -0.42554748 0.56472058 0.42554748" group="4"/>
+    <site name="lidar-75" pos="0 0 0" quat="0.56098553 -0.43045933 0.56098553 0.43045933" group="4"/>
+    <site name="lidar-76" pos="0 0 0" quat="0.55720775 -0.43533840 0.55720775 0.43533840" group="4"/>
+    <site name="lidar-77" pos="0 0 0" quat="0.55338753 -0.44018432 0.55338753 0.44018432" group="4"/>
+    <site name="lidar-78" pos="0 0 0" quat="0.54952518 -0.44499672 0.54952518 0.44499672" group="4"/>
+    <site name="lidar-79" pos="0 0 0" quat="0.54562098 -0.44977522 0.54562098 0.44977522" group="4"/>
+    <site name="lidar-80" pos="0 0 0" quat="0.54167522 -0.45451948 0.54167522 0.45451948" group="4"/>
+    <site name="lidar-81" pos="0 0 0" quat="0.53768821 -0.45922912 0.53768821 0.45922912" group="4"/>
+    <site name="lidar-82" pos="0 0 0" quat="0.53366026 -0.46390379 0.53366026 0.46390379" group="4"/>
+    <site name="lidar-83" pos="0 0 0" quat="0.52959167 -0.46854313 0.52959167 0.46854313" group="4"/>
+    <site name="lidar-84" pos="0 0 0" quat="0.52548275 -0.47314679 0.52548275 0.47314679" group="4"/>
+    <site name="lidar-85" pos="0 0 0" quat="0.52133380 -0.47771442 0.52133380 0.47771442" group="4"/>
+    <site name="lidar-86" pos="0 0 0" quat="0.51714516 -0.48224567 0.51714516 0.48224567" group="4"/>
+    <site name="lidar-87" pos="0 0 0" quat="0.51291714 -0.48674019 0.51291714 0.48674019" group="4"/>
+    <site name="lidar-88" pos="0 0 0" quat="0.50865005 -0.49119764 0.50865005 0.49119764" group="4"/>
+    <site name="lidar-89" pos="0 0 0" quat="0.50434423 -0.49561769 0.50434423 0.49561769" group="4"/>
+    <site name="lidar-90" pos="0 0 0" quat="0.50000000 -0.50000000 0.50000000 0.50000000" group="4"/>
+    <site name="lidar-91" pos="0 0 0" quat="0.49561769 -0.50434423 0.49561769 0.50434423" group="4"/>
+    <site name="lidar-92" pos="0 0 0" quat="0.49119764 -0.50865005 0.49119764 0.50865005" group="4"/>
+    <site name="lidar-93" pos="0 0 0" quat="0.48674019 -0.51291714 0.48674019 0.51291714" group="4"/>
+    <site name="lidar-94" pos="0 0 0" quat="0.48224567 -0.51714516 0.48224567 0.51714516" group="4"/>
+    <site name="lidar-95" pos="0 0 0" quat="0.47771442 -0.52133380 0.47771442 0.52133380" group="4"/>
+    <site name="lidar-96" pos="0 0 0" quat="0.47314679 -0.52548275 0.47314679 0.52548275" group="4"/>
+    <site name="lidar-97" pos="0 0 0" quat="0.46854313 -0.52959167 0.46854313 0.52959167" group="4"/>
+    <site name="lidar-98" pos="0 0 0" quat="0.46390379 -0.53366026 0.46390379 0.53366026" group="4"/>
+    <site name="lidar-99" pos="0 0 0" quat="0.45922912 -0.53768821 0.45922912 0.53768821" group="4"/>
+    <site name="lidar-100" pos="0 0 0" quat="0.45451948 -0.54167522 0.45451948 0.54167522" group="4"/>
+    <site name="lidar-101" pos="0 0 0" quat="0.44977522 -0.54562098 0.44977522 0.54562098" group="4"/>
+    <site name="lidar-102" pos="0 0 0" quat="0.44499672 -0.54952518 0.44499672 0.54952518" group="4"/>
+    <site name="lidar-103" pos="0 0 0" quat="0.44018432 -0.55338753 0.44018432 0.55338753" group="4"/>
+    <site name="lidar-104" pos="0 0 0" quat="0.43533840 -0.55720775 0.43533840 0.55720775" group="4"/>
+    <site name="lidar-105" pos="0 0 0" quat="0.43045933 -0.56098553 0.43045933 0.56098553" group="4"/>
+    <site name="lidar-106" pos="0 0 0" quat="0.42554748 -0.56472058 0.42554748 0.56472058" group="4"/>
+    <site name="lidar-107" pos="0 0 0" quat="0.42060323 -0.56841264 0.42060323 0.56841264" group="4"/>
+    <site name="lidar-108" pos="0 0 0" quat="0.41562694 -0.57206140 0.41562694 0.57206140" group="4"/>
+    <site name="lidar-109" pos="0 0 0" quat="0.41061900 -0.57566660 0.41061900 0.57566660" group="4"/>
+    <site name="lidar-110" pos="0 0 0" quat="0.40557979 -0.57922797 0.40557979 0.57922797" group="4"/>
+    <site name="lidar-111" pos="0 0 0" quat="0.40050969 -0.58274522 0.40050969 0.58274522" group="4"/>
+    <site name="lidar-112" pos="0 0 0" quat="0.39540909 -0.58621809 0.39540909 0.58621809" group="4"/>
+    <site name="lidar-113" pos="0 0 0" quat="0.39027839 -0.58964632 0.39027839 0.58964632" group="4"/>
+    <site name="lidar-114" pos="0 0 0" quat="0.38511795 -0.59302965 0.38511795 0.59302965" group="4"/>
+    <site name="lidar-115" pos="0 0 0" quat="0.37992820 -0.59636781 0.37992820 0.59636781" group="4"/>
+    <site name="lidar-116" pos="0 0 0" quat="0.37470951 -0.59966056 0.37470951 0.59966056" group="4"/>
+    <site name="lidar-117" pos="0 0 0" quat="0.36946228 -0.60290764 0.36946228 0.60290764" group="4"/>
+    <site name="lidar-118" pos="0 0 0" quat="0.36418692 -0.60610881 0.36418692 0.60610881" group="4"/>
+    <site name="lidar-119" pos="0 0 0" quat="0.35888382 -0.60926382 0.35888382 0.60926382" group="4"/>
+    <site name="lidar-120" pos="0 0 0" quat="0.35355339 -0.61237244 0.35355339 0.61237244" group="4"/>
+    <site name="lidar-121" pos="0 0 0" quat="0.34819604 -0.61543441 0.34819604 0.61543441" group="4"/>
+    <site name="lidar-122" pos="0 0 0" quat="0.34281217 -0.61844953 0.34281217 0.61844953" group="4"/>
+    <site name="lidar-123" pos="0 0 0" quat="0.33740220 -0.62141754 0.33740220 0.62141754" group="4"/>
+    <site name="lidar-124" pos="0 0 0" quat="0.33196653 -0.62433823 0.33196653 0.62433823" group="4"/>
+    <site name="lidar-125" pos="0 0 0" quat="0.32650558 -0.62721138 0.32650558 0.62721138" group="4"/>
+    <site name="lidar-126" pos="0 0 0" quat="0.32101976 -0.63003676 0.32101976 0.63003676" group="4"/>
+    <site name="lidar-127" pos="0 0 0" quat="0.31550950 -0.63281416 0.31550950 0.63281416" group="4"/>
+    <site name="lidar-128" pos="0 0 0" quat="0.30997521 -0.63554337 0.30997521 0.63554337" group="4"/>
+    <site name="lidar-129" pos="0 0 0" quat="0.30441732 -0.63822418 0.30441732 0.63822418" group="4"/>
+    <site name="lidar-130" pos="0 0 0" quat="0.29883624 -0.64085638 0.29883624 0.64085638" group="4"/>
+    <site name="lidar-131" pos="0 0 0" quat="0.29323240 -0.64343979 0.29323240 0.64343979" group="4"/>
+    <site name="lidar-132" pos="0 0 0" quat="0.28760624 -0.64597419 0.28760624 0.64597419" group="4"/>
+    <site name="lidar-133" pos="0 0 0" quat="0.28195817 -0.64845940 0.28195817 0.64845940" group="4"/>
+    <site name="lidar-134" pos="0 0 0" quat="0.27628863 -0.65089522 0.27628863 0.65089522" group="4"/>
+    <site name="lidar-135" pos="0 0 0" quat="0.27059805 -0.65328148 0.27059805 0.65328148" group="4"/>
+    <site name="lidar-136" pos="0 0 0" quat="0.26488686 -0.65561799 0.26488686 0.65561799" group="4"/>
+    <site name="lidar-137" pos="0 0 0" quat="0.25915550 -0.65790457 0.25915550 0.65790457" group="4"/>
+    <site name="lidar-138" pos="0 0 0" quat="0.25340441 -0.66014105 0.25340441 0.66014105" group="4"/>
+    <site name="lidar-139" pos="0 0 0" quat="0.24763401 -0.66232726 0.24763401 0.66232726" group="4"/>
+    <site name="lidar-140" pos="0 0 0" quat="0.24184476 -0.66446302 0.24184476 0.66446302" group="4"/>
+    <site name="lidar-141" pos="0 0 0" quat="0.23603709 -0.66654819 0.23603709 0.66654819" group="4"/>
+    <site name="lidar-142" pos="0 0 0" quat="0.23021145 -0.66858260 0.23021145 0.66858260" group="4"/>
+    <site name="lidar-143" pos="0 0 0" quat="0.22436827 -0.67056609 0.22436827 0.67056609" group="4"/>
+    <site name="lidar-144" pos="0 0 0" quat="0.21850801 -0.67249851 0.21850801 0.67249851" group="4"/>
+    <site name="lidar-145" pos="0 0 0" quat="0.21263111 -0.67437972 0.21263111 0.67437972" group="4"/>
+    <site name="lidar-146" pos="0 0 0" quat="0.20673802 -0.67620958 0.20673802 0.67620958" group="4"/>
+    <site name="lidar-147" pos="0 0 0" quat="0.20082918 -0.67798794 0.20082918 0.67798794" group="4"/>
+    <site name="lidar-148" pos="0 0 0" quat="0.19490504 -0.67971466 0.19490504 0.67971466" group="4"/>
+    <site name="lidar-149" pos="0 0 0" quat="0.18896607 -0.68138963 0.18896607 0.68138963" group="4"/>
+    <site name="lidar-150" pos="0 0 0" quat="0.18301270 -0.68301270 0.18301270 0.68301270" group="4"/>
+    <site name="lidar-151" pos="0 0 0" quat="0.17704540 -0.68458376 0.17704540 0.68458376" group="4"/>
+    <site name="lidar-152" pos="0 0 0" quat="0.17106461 -0.68610269 0.17106461 0.68610269" group="4"/>
+    <site name="lidar-153" pos="0 0 0" quat="0.16507080 -0.68756936 0.16507080 0.68756936" group="4"/>
+    <site name="lidar-154" pos="0 0 0" quat="0.15906442 -0.68898368 0.15906442 0.68898368" group="4"/>
+    <site name="lidar-155" pos="0 0 0" quat="0.15304592 -0.69034553 0.15304592 0.69034553" group="4"/>
+    <site name="lidar-156" pos="0 0 0" quat="0.14701577 -0.69165480 0.14701577 0.69165480" group="4"/>
+    <site name="lidar-157" pos="0 0 0" quat="0.14097442 -0.69291140 0.14097442 0.69291140" group="4"/>
+    <site name="lidar-158" pos="0 0 0" quat="0.13492233 -0.69411524 0.13492233 0.69411524" group="4"/>
+    <site name="lidar-159" pos="0 0 0" quat="0.12885998 -0.69526621 0.12885998 0.69526621" group="4"/>
+    <site name="lidar-160" pos="0 0 0" quat="0.12278780 -0.69636424 0.12278780 0.69636424" group="4"/>
+    <site name="lidar-161" pos="0 0 0" quat="0.11670628 -0.69740924 0.11670628 0.69740924" group="4"/>
+    <site name="lidar-162" pos="0 0 0" quat="0.11061587 -0.69840112 0.11061587 0.69840112" group="4"/>
+    <site name="lidar-163" pos="0 0 0" quat="0.10451704 -0.69933982 0.10451704 0.69933982" group="4"/>
+    <site name="lidar-164" pos="0 0 0" quat="0.09841024 -0.70022527 0.09841024 0.70022527" group="4"/>
+    <site name="lidar-165" pos="0 0 0" quat="0.09229596 -0.70105738 0.09229596 0.70105738" group="4"/>
+    <site name="lidar-166" pos="0 0 0" quat="0.08617464 -0.70183611 0.08617464 0.70183611" group="4"/>
+    <site name="lidar-167" pos="0 0 0" quat="0.08004676 -0.70256140 0.08004676 0.70256140" group="4"/>
+    <site name="lidar-168" pos="0 0 0" quat="0.07391279 -0.70323318 0.07391279 0.70323318" group="4"/>
+    <site name="lidar-169" pos="0 0 0" quat="0.06777318 -0.70385140 0.06777318 0.70385140" group="4"/>
+    <site name="lidar-170" pos="0 0 0" quat="0.06162842 -0.70441603 0.06162842 0.70441603" group="4"/>
+    <site name="lidar-171" pos="0 0 0" quat="0.05547896 -0.70492701 0.05547896 0.70492701" group="4"/>
+    <site name="lidar-172" pos="0 0 0" quat="0.04932528 -0.70538430 0.04932528 0.70538430" group="4"/>
+    <site name="lidar-173" pos="0 0 0" quat="0.04316784 -0.70578788 0.04316784 0.70578788" group="4"/>
+    <site name="lidar-174" pos="0 0 0" quat="0.03700711 -0.70613772 0.03700711 0.70613772" group="4"/>
+    <site name="lidar-175" pos="0 0 0" quat="0.03084356 -0.70643377 0.03084356 0.70643377" group="4"/>
+    <site name="lidar-176" pos="0 0 0" quat="0.02467767 -0.70667603 0.02467767 0.70667603" group="4"/>
+    <site name="lidar-177" pos="0 0 0" quat="0.01850990 -0.70686447 0.01850990 0.70686447" group="4"/>
+    <site name="lidar-178" pos="0 0 0" quat="0.01234071 -0.70699909 0.01234071 0.70699909" group="4"/>
+    <site name="lidar-179" pos="0 0 0" quat="0.00617059 -0.70707986 0.00617059 0.70707986" group="4"/>
+    <site name="lidar-180" pos="0 0 0" quat="0.00000000 -0.70710678 0.00000000 0.70710678" group="4"/>
+    <site name="lidar-181" pos="0 0 0" quat="-0.00617059 -0.70707986 -0.00617059 0.70707986" group="4"/>
+    <site name="lidar-182" pos="0 0 0" quat="-0.01234071 -0.70699909 -0.01234071 0.70699909" group="4"/>
+    <site name="lidar-183" pos="0 0 0" quat="-0.01850990 -0.70686447 -0.01850990 0.70686447" group="4"/>
+    <site name="lidar-184" pos="0 0 0" quat="-0.02467767 -0.70667603 -0.02467767 0.70667603" group="4"/>
+    <site name="lidar-185" pos="0 0 0" quat="-0.03084356 -0.70643377 -0.03084356 0.70643377" group="4"/>
+    <site name="lidar-186" pos="0 0 0" quat="-0.03700711 -0.70613772 -0.03700711 0.70613772" group="4"/>
+    <site name="lidar-187" pos="0 0 0" quat="-0.04316784 -0.70578788 -0.04316784 0.70578788" group="4"/>
+    <site name="lidar-188" pos="0 0 0" quat="-0.04932528 -0.70538430 -0.04932528 0.70538430" group="4"/>
+    <site name="lidar-189" pos="0 0 0" quat="-0.05547896 -0.70492701 -0.05547896 0.70492701" group="4"/>
+    <site name="lidar-190" pos="0 0 0" quat="-0.06162842 -0.70441603 -0.06162842 0.70441603" group="4"/>
+    <site name="lidar-191" pos="0 0 0" quat="-0.06777318 -0.70385140 -0.06777318 0.70385140" group="4"/>
+    <site name="lidar-192" pos="0 0 0" quat="-0.07391279 -0.70323318 -0.07391279 0.70323318" group="4"/>
+    <site name="lidar-193" pos="0 0 0" quat="-0.08004676 -0.70256140 -0.08004676 0.70256140" group="4"/>
+    <site name="lidar-194" pos="0 0 0" quat="-0.08617464 -0.70183611 -0.08617464 0.70183611" group="4"/>
+    <site name="lidar-195" pos="0 0 0" quat="-0.09229596 -0.70105738 -0.09229596 0.70105738" group="4"/>
+    <site name="lidar-196" pos="0 0 0" quat="-0.09841024 -0.70022527 -0.09841024 0.70022527" group="4"/>
+    <site name="lidar-197" pos="0 0 0" quat="-0.10451704 -0.69933982 -0.10451704 0.69933982" group="4"/>
+    <site name="lidar-198" pos="0 0 0" quat="-0.11061587 -0.69840112 -0.11061587 0.69840112" group="4"/>
+    <site name="lidar-199" pos="0 0 0" quat="-0.11670628 -0.69740924 -0.11670628 0.69740924" group="4"/>
+    <site name="lidar-200" pos="0 0 0" quat="-0.12278780 -0.69636424 -0.12278780 0.69636424" group="4"/>
+    <site name="lidar-201" pos="0 0 0" quat="-0.12885998 -0.69526621 -0.12885998 0.69526621" group="4"/>
+    <site name="lidar-202" pos="0 0 0" quat="-0.13492233 -0.69411524 -0.13492233 0.69411524" group="4"/>
+    <site name="lidar-203" pos="0 0 0" quat="-0.14097442 -0.69291140 -0.14097442 0.69291140" group="4"/>
+    <site name="lidar-204" pos="0 0 0" quat="-0.14701577 -0.69165480 -0.14701577 0.69165480" group="4"/>
+    <site name="lidar-205" pos="0 0 0" quat="-0.15304592 -0.69034553 -0.15304592 0.69034553" group="4"/>
+    <site name="lidar-206" pos="0 0 0" quat="-0.15906442 -0.68898368 -0.15906442 0.68898368" group="4"/>
+    <site name="lidar-207" pos="0 0 0" quat="-0.16507080 -0.68756936 -0.16507080 0.68756936" group="4"/>
+    <site name="lidar-208" pos="0 0 0" quat="-0.17106461 -0.68610269 -0.17106461 0.68610269" group="4"/>
+    <site name="lidar-209" pos="0 0 0" quat="-0.17704540 -0.68458376 -0.17704540 0.68458376" group="4"/>
+    <site name="lidar-210" pos="0 0 0" quat="-0.18301270 -0.68301270 -0.18301270 0.68301270" group="4"/>
+    <site name="lidar-211" pos="0 0 0" quat="-0.18896607 -0.68138963 -0.18896607 0.68138963" group="4"/>
+    <site name="lidar-212" pos="0 0 0" quat="-0.19490504 -0.67971466 -0.19490504 0.67971466" group="4"/>
+    <site name="lidar-213" pos="0 0 0" quat="-0.20082918 -0.67798794 -0.20082918 0.67798794" group="4"/>
+    <site name="lidar-214" pos="0 0 0" quat="-0.20673802 -0.67620958 -0.20673802 0.67620958" group="4"/>
+    <site name="lidar-215" pos="0 0 0" quat="-0.21263111 -0.67437972 -0.21263111 0.67437972" group="4"/>
+    <site name="lidar-216" pos="0 0 0" quat="-0.21850801 -0.67249851 -0.21850801 0.67249851" group="4"/>
+    <site name="lidar-217" pos="0 0 0" quat="-0.22436827 -0.67056609 -0.22436827 0.67056609" group="4"/>
+    <site name="lidar-218" pos="0 0 0" quat="-0.23021145 -0.66858260 -0.23021145 0.66858260" group="4"/>
+    <site name="lidar-219" pos="0 0 0" quat="-0.23603709 -0.66654819 -0.23603709 0.66654819" group="4"/>
+    <site name="lidar-220" pos="0 0 0" quat="-0.24184476 -0.66446302 -0.24184476 0.66446302" group="4"/>
+    <site name="lidar-221" pos="0 0 0" quat="-0.24763401 -0.66232726 -0.24763401 0.66232726" group="4"/>
+    <site name="lidar-222" pos="0 0 0" quat="-0.25340441 -0.66014105 -0.25340441 0.66014105" group="4"/>
+    <site name="lidar-223" pos="0 0 0" quat="-0.25915550 -0.65790457 -0.25915550 0.65790457" group="4"/>
+    <site name="lidar-224" pos="0 0 0" quat="-0.26488686 -0.65561799 -0.26488686 0.65561799" group="4"/>
+    <site name="lidar-225" pos="0 0 0" quat="-0.27059805 -0.65328148 -0.27059805 0.65328148" group="4"/>
+    <site name="lidar-226" pos="0 0 0" quat="-0.27628863 -0.65089522 -0.27628863 0.65089522" group="4"/>
+    <site name="lidar-227" pos="0 0 0" quat="-0.28195817 -0.64845940 -0.28195817 0.64845940" group="4"/>
+    <site name="lidar-228" pos="0 0 0" quat="-0.28760624 -0.64597419 -0.28760624 0.64597419" group="4"/>
+    <site name="lidar-229" pos="0 0 0" quat="-0.29323240 -0.64343979 -0.29323240 0.64343979" group="4"/>
+    <site name="lidar-230" pos="0 0 0" quat="-0.29883624 -0.64085638 -0.29883624 0.64085638" group="4"/>
+    <site name="lidar-231" pos="0 0 0" quat="-0.30441732 -0.63822418 -0.30441732 0.63822418" group="4"/>
+    <site name="lidar-232" pos="0 0 0" quat="-0.30997521 -0.63554337 -0.30997521 0.63554337" group="4"/>
+    <site name="lidar-233" pos="0 0 0" quat="-0.31550950 -0.63281416 -0.31550950 0.63281416" group="4"/>
+    <site name="lidar-234" pos="0 0 0" quat="-0.32101976 -0.63003676 -0.32101976 0.63003676" group="4"/>
+    <site name="lidar-235" pos="0 0 0" quat="-0.32650558 -0.62721138 -0.32650558 0.62721138" group="4"/>
+    <site name="lidar-236" pos="0 0 0" quat="-0.33196653 -0.62433823 -0.33196653 0.62433823" group="4"/>
+    <site name="lidar-237" pos="0 0 0" quat="-0.33740220 -0.62141754 -0.33740220 0.62141754" group="4"/>
+    <site name="lidar-238" pos="0 0 0" quat="-0.34281217 -0.61844953 -0.34281217 0.61844953" group="4"/>
+    <site name="lidar-239" pos="0 0 0" quat="-0.34819604 -0.61543441 -0.34819604 0.61543441" group="4"/>
+    <site name="lidar-240" pos="0 0 0" quat="-0.35355339 -0.61237244 -0.35355339 0.61237244" group="4"/>
+    <site name="lidar-241" pos="0 0 0" quat="-0.35888382 -0.60926382 -0.35888382 0.60926382" group="4"/>
+    <site name="lidar-242" pos="0 0 0" quat="-0.36418692 -0.60610881 -0.36418692 0.60610881" group="4"/>
+    <site name="lidar-243" pos="0 0 0" quat="-0.36946228 -0.60290764 -0.36946228 0.60290764" group="4"/>
+    <site name="lidar-244" pos="0 0 0" quat="-0.37470951 -0.59966056 -0.37470951 0.59966056" group="4"/>
+    <site name="lidar-245" pos="0 0 0" quat="-0.37992820 -0.59636781 -0.37992820 0.59636781" group="4"/>
+    <site name="lidar-246" pos="0 0 0" quat="-0.38511795 -0.59302965 -0.38511795 0.59302965" group="4"/>
+    <site name="lidar-247" pos="0 0 0" quat="-0.39027839 -0.58964632 -0.39027839 0.58964632" group="4"/>
+    <site name="lidar-248" pos="0 0 0" quat="-0.39540909 -0.58621809 -0.39540909 0.58621809" group="4"/>
+    <site name="lidar-249" pos="0 0 0" quat="-0.40050969 -0.58274522 -0.40050969 0.58274522" group="4"/>
+    <site name="lidar-250" pos="0 0 0" quat="-0.40557979 -0.57922797 -0.40557979 0.57922797" group="4"/>
+    <site name="lidar-251" pos="0 0 0" quat="-0.41061900 -0.57566660 -0.41061900 0.57566660" group="4"/>
+    <site name="lidar-252" pos="0 0 0" quat="-0.41562694 -0.57206140 -0.41562694 0.57206140" group="4"/>
+    <site name="lidar-253" pos="0 0 0" quat="-0.42060323 -0.56841264 -0.42060323 0.56841264" group="4"/>
+    <site name="lidar-254" pos="0 0 0" quat="-0.42554748 -0.56472058 -0.42554748 0.56472058" group="4"/>
+    <site name="lidar-255" pos="0 0 0" quat="-0.43045933 -0.56098553 -0.43045933 0.56098553" group="4"/>
+    <site name="lidar-256" pos="0 0 0" quat="-0.43533840 -0.55720775 -0.43533840 0.55720775" group="4"/>
+    <site name="lidar-257" pos="0 0 0" quat="-0.44018432 -0.55338753 -0.44018432 0.55338753" group="4"/>
+    <site name="lidar-258" pos="0 0 0" quat="-0.44499672 -0.54952518 -0.44499672 0.54952518" group="4"/>
+    <site name="lidar-259" pos="0 0 0" quat="-0.44977522 -0.54562098 -0.44977522 0.54562098" group="4"/>
+    <site name="lidar-260" pos="0 0 0" quat="-0.45451948 -0.54167522 -0.45451948 0.54167522" group="4"/>
+    <site name="lidar-261" pos="0 0 0" quat="-0.45922912 -0.53768821 -0.45922912 0.53768821" group="4"/>
+    <site name="lidar-262" pos="0 0 0" quat="-0.46390379 -0.53366026 -0.46390379 0.53366026" group="4"/>
+    <site name="lidar-263" pos="0 0 0" quat="-0.46854313 -0.52959167 -0.46854313 0.52959167" group="4"/>
+    <site name="lidar-264" pos="0 0 0" quat="-0.47314679 -0.52548275 -0.47314679 0.52548275" group="4"/>
+    <site name="lidar-265" pos="0 0 0" quat="-0.47771442 -0.52133380 -0.47771442 0.52133380" group="4"/>
+    <site name="lidar-266" pos="0 0 0" quat="-0.48224567 -0.51714516 -0.48224567 0.51714516" group="4"/>
+    <site name="lidar-267" pos="0 0 0" quat="-0.48674019 -0.51291714 -0.48674019 0.51291714" group="4"/>
+    <site name="lidar-268" pos="0 0 0" quat="-0.49119764 -0.50865005 -0.49119764 0.50865005" group="4"/>
+    <site name="lidar-269" pos="0 0 0" quat="-0.49561769 -0.50434423 -0.49561769 0.50434423" group="4"/>
+    <site name="lidar-270" pos="0 0 0" quat="-0.50000000 -0.50000000 -0.50000000 0.50000000" group="4"/>
+    <site name="lidar-271" pos="0 0 0" quat="-0.50434423 -0.49561769 -0.50434423 0.49561769" group="4"/>
+    <site name="lidar-272" pos="0 0 0" quat="-0.50865005 -0.49119764 -0.50865005 0.49119764" group="4"/>
+    <site name="lidar-273" pos="0 0 0" quat="-0.51291714 -0.48674019 -0.51291714 0.48674019" group="4"/>
+    <site name="lidar-274" pos="0 0 0" quat="-0.51714516 -0.48224567 -0.51714516 0.48224567" group="4"/>
+    <site name="lidar-275" pos="0 0 0" quat="-0.52133380 -0.47771442 -0.52133380 0.47771442" group="4"/>
+    <site name="lidar-276" pos="0 0 0" quat="-0.52548275 -0.47314679 -0.52548275 0.47314679" group="4"/>
+    <site name="lidar-277" pos="0 0 0" quat="-0.52959167 -0.46854313 -0.52959167 0.46854313" group="4"/>
+    <site name="lidar-278" pos="0 0 0" quat="-0.53366026 -0.46390379 -0.53366026 0.46390379" group="4"/>
+    <site name="lidar-279" pos="0 0 0" quat="-0.53768821 -0.45922912 -0.53768821 0.45922912" group="4"/>
+    <site name="lidar-280" pos="0 0 0" quat="-0.54167522 -0.45451948 -0.54167522 0.45451948" group="4"/>
+    <site name="lidar-281" pos="0 0 0" quat="-0.54562098 -0.44977522 -0.54562098 0.44977522" group="4"/>
+    <site name="lidar-282" pos="0 0 0" quat="-0.54952518 -0.44499672 -0.54952518 0.44499672" group="4"/>
+    <site name="lidar-283" pos="0 0 0" quat="-0.55338753 -0.44018432 -0.55338753 0.44018432" group="4"/>
+    <site name="lidar-284" pos="0 0 0" quat="-0.55720775 -0.43533840 -0.55720775 0.43533840" group="4"/>
+    <site name="lidar-285" pos="0 0 0" quat="-0.56098553 -0.43045933 -0.56098553 0.43045933" group="4"/>
+    <site name="lidar-286" pos="0 0 0" quat="-0.56472058 -0.42554748 -0.56472058 0.42554748" group="4"/>
+    <site name="lidar-287" pos="0 0 0" quat="-0.56841264 -0.42060323 -0.56841264 0.42060323" group="4"/>
+    <site name="lidar-288" pos="0 0 0" quat="-0.57206140 -0.41562694 -0.57206140 0.41562694" group="4"/>
+    <site name="lidar-289" pos="0 0 0" quat="-0.57566660 -0.41061900 -0.57566660 0.41061900" group="4"/>
+    <site name="lidar-290" pos="0 0 0" quat="-0.57922797 -0.40557979 -0.57922797 0.40557979" group="4"/>
+    <site name="lidar-291" pos="0 0 0" quat="-0.58274522 -0.40050969 -0.58274522 0.40050969" group="4"/>
+    <site name="lidar-292" pos="0 0 0" quat="-0.58621809 -0.39540909 -0.58621809 0.39540909" group="4"/>
+    <site name="lidar-293" pos="0 0 0" quat="-0.58964632 -0.39027839 -0.58964632 0.39027839" group="4"/>
+    <site name="lidar-294" pos="0 0 0" quat="-0.59302965 -0.38511795 -0.59302965 0.38511795" group="4"/>
+    <site name="lidar-295" pos="0 0 0" quat="-0.59636781 -0.37992820 -0.59636781 0.37992820" group="4"/>
+    <site name="lidar-296" pos="0 0 0" quat="-0.59966056 -0.37470951 -0.59966056 0.37470951" group="4"/>
+    <site name="lidar-297" pos="0 0 0" quat="-0.60290764 -0.36946228 -0.60290764 0.36946228" group="4"/>
+    <site name="lidar-298" pos="0 0 0" quat="-0.60610881 -0.36418692 -0.60610881 0.36418692" group="4"/>
+    <site name="lidar-299" pos="0 0 0" quat="-0.60926382 -0.35888382 -0.60926382 0.35888382" group="4"/>
+    <site name="lidar-300" pos="0 0 0" quat="-0.61237244 -0.35355339 -0.61237244 0.35355339" group="4"/>
+    <site name="lidar-301" pos="0 0 0" quat="-0.61543441 -0.34819604 -0.61543441 0.34819604" group="4"/>
+    <site name="lidar-302" pos="0 0 0" quat="-0.61844953 -0.34281217 -0.61844953 0.34281217" group="4"/>
+    <site name="lidar-303" pos="0 0 0" quat="-0.62141754 -0.33740220 -0.62141754 0.33740220" group="4"/>
+    <site name="lidar-304" pos="0 0 0" quat="-0.62433823 -0.33196653 -0.62433823 0.33196653" group="4"/>
+    <site name="lidar-305" pos="0 0 0" quat="-0.62721138 -0.32650558 -0.62721138 0.32650558" group="4"/>
+    <site name="lidar-306" pos="0 0 0" quat="-0.63003676 -0.32101976 -0.63003676 0.32101976" group="4"/>
+    <site name="lidar-307" pos="0 0 0" quat="-0.63281416 -0.31550950 -0.63281416 0.31550950" group="4"/>
+    <site name="lidar-308" pos="0 0 0" quat="-0.63554337 -0.30997521 -0.63554337 0.30997521" group="4"/>
+    <site name="lidar-309" pos="0 0 0" quat="-0.63822418 -0.30441732 -0.63822418 0.30441732" group="4"/>
+    <site name="lidar-310" pos="0 0 0" quat="-0.64085638 -0.29883624 -0.64085638 0.29883624" group="4"/>
+    <site name="lidar-311" pos="0 0 0" quat="-0.64343979 -0.29323240 -0.64343979 0.29323240" group="4"/>
+    <site name="lidar-312" pos="0 0 0" quat="-0.64597419 -0.28760624 -0.64597419 0.28760624" group="4"/>
+    <site name="lidar-313" pos="0 0 0" quat="-0.64845940 -0.28195817 -0.64845940 0.28195817" group="4"/>
+    <site name="lidar-314" pos="0 0 0" quat="-0.65089522 -0.27628863 -0.65089522 0.27628863" group="4"/>
+    <site name="lidar-315" pos="0 0 0" quat="-0.65328148 -0.27059805 -0.65328148 0.27059805" group="4"/>
+    <site name="lidar-316" pos="0 0 0" quat="-0.65561799 -0.26488686 -0.65561799 0.26488686" group="4"/>
+    <site name="lidar-317" pos="0 0 0" quat="-0.65790457 -0.25915550 -0.65790457 0.25915550" group="4"/>
+    <site name="lidar-318" pos="0 0 0" quat="-0.66014105 -0.25340441 -0.66014105 0.25340441" group="4"/>
+    <site name="lidar-319" pos="0 0 0" quat="-0.66232726 -0.24763401 -0.66232726 0.24763401" group="4"/>
+    <site name="lidar-320" pos="0 0 0" quat="-0.66446302 -0.24184476 -0.66446302 0.24184476" group="4"/>
+    <site name="lidar-321" pos="0 0 0" quat="-0.66654819 -0.23603709 -0.66654819 0.23603709" group="4"/>
+    <site name="lidar-322" pos="0 0 0" quat="-0.66858260 -0.23021145 -0.66858260 0.23021145" group="4"/>
+    <site name="lidar-323" pos="0 0 0" quat="-0.67056609 -0.22436827 -0.67056609 0.22436827" group="4"/>
+    <site name="lidar-324" pos="0 0 0" quat="-0.67249851 -0.21850801 -0.67249851 0.21850801" group="4"/>
+    <site name="lidar-325" pos="0 0 0" quat="-0.67437972 -0.21263111 -0.67437972 0.21263111" group="4"/>
+    <site name="lidar-326" pos="0 0 0" quat="-0.67620958 -0.20673802 -0.67620958 0.20673802" group="4"/>
+    <site name="lidar-327" pos="0 0 0" quat="-0.67798794 -0.20082918 -0.67798794 0.20082918" group="4"/>
+    <site name="lidar-328" pos="0 0 0" quat="-0.67971466 -0.19490504 -0.67971466 0.19490504" group="4"/>
+    <site name="lidar-329" pos="0 0 0" quat="-0.68138963 -0.18896607 -0.68138963 0.18896607" group="4"/>
+    <site name="lidar-330" pos="0 0 0" quat="-0.68301270 -0.18301270 -0.68301270 0.18301270" group="4"/>
+    <site name="lidar-331" pos="0 0 0" quat="-0.68458376 -0.17704540 -0.68458376 0.17704540" group="4"/>
+    <site name="lidar-332" pos="0 0 0" quat="-0.68610269 -0.17106461 -0.68610269 0.17106461" group="4"/>
+    <site name="lidar-333" pos="0 0 0" quat="-0.68756936 -0.16507080 -0.68756936 0.16507080" group="4"/>
+    <site name="lidar-334" pos="0 0 0" quat="-0.68898368 -0.15906442 -0.68898368 0.15906442" group="4"/>
+    <site name="lidar-335" pos="0 0 0" quat="-0.69034553 -0.15304592 -0.69034553 0.15304592" group="4"/>
+    <site name="lidar-336" pos="0 0 0" quat="-0.69165480 -0.14701577 -0.69165480 0.14701577" group="4"/>
+    <site name="lidar-337" pos="0 0 0" quat="-0.69291140 -0.14097442 -0.69291140 0.14097442" group="4"/>
+    <site name="lidar-338" pos="0 0 0" quat="-0.69411524 -0.13492233 -0.69411524 0.13492233" group="4"/>
+    <site name="lidar-339" pos="0 0 0" quat="-0.69526621 -0.12885998 -0.69526621 0.12885998" group="4"/>
+    <site name="lidar-340" pos="0 0 0" quat="-0.69636424 -0.12278780 -0.69636424 0.12278780" group="4"/>
+    <site name="lidar-341" pos="0 0 0" quat="-0.69740924 -0.11670628 -0.69740924 0.11670628" group="4"/>
+    <site name="lidar-342" pos="0 0 0" quat="-0.69840112 -0.11061587 -0.69840112 0.11061587" group="4"/>
+    <site name="lidar-343" pos="0 0 0" quat="-0.69933982 -0.10451704 -0.69933982 0.10451704" group="4"/>
+    <site name="lidar-344" pos="0 0 0" quat="-0.70022527 -0.09841024 -0.70022527 0.09841024" group="4"/>
+    <site name="lidar-345" pos="0 0 0" quat="-0.70105738 -0.09229596 -0.70105738 0.09229596" group="4"/>
+    <site name="lidar-346" pos="0 0 0" quat="-0.70183611 -0.08617464 -0.70183611 0.08617464" group="4"/>
+    <site name="lidar-347" pos="0 0 0" quat="-0.70256140 -0.08004676 -0.70256140 0.08004676" group="4"/>
+    <site name="lidar-348" pos="0 0 0" quat="-0.70323318 -0.07391279 -0.70323318 0.07391279" group="4"/>
+    <site name="lidar-349" pos="0 0 0" quat="-0.70385140 -0.06777318 -0.70385140 0.06777318" group="4"/>
+    <site name="lidar-350" pos="0 0 0" quat="-0.70441603 -0.06162842 -0.70441603 0.06162842" group="4"/>
+    <site name="lidar-351" pos="0 0 0" quat="-0.70492701 -0.05547896 -0.70492701 0.05547896" group="4"/>
+    <site name="lidar-352" pos="0 0 0" quat="-0.70538430 -0.04932528 -0.70538430 0.04932528" group="4"/>
+    <site name="lidar-353" pos="0 0 0" quat="-0.70578788 -0.04316784 -0.70578788 0.04316784" group="4"/>
+    <site name="lidar-354" pos="0 0 0" quat="-0.70613772 -0.03700711 -0.70613772 0.03700711" group="4"/>
+    <site name="lidar-355" pos="0 0 0" quat="-0.70643377 -0.03084356 -0.70643377 0.03084356" group="4"/>
+    <site name="lidar-356" pos="0 0 0" quat="-0.70667603 -0.02467767 -0.70667603 0.02467767" group="4"/>
+    <site name="lidar-357" pos="0 0 0" quat="-0.70686447 -0.01850990 -0.70686447 0.01850990" group="4"/>
+    <site name="lidar-358" pos="0 0 0" quat="-0.70699909 -0.01234071 -0.70699909 0.01234071" group="4"/>
+    <site name="lidar-359" pos="0 0 0" quat="-0.70707986 -0.00617059 -0.70707986 0.00617059" group="4"/>
+    </body>
+  </body>
+
+  <!-- imu_link + imu_frame (base.module.xacro). -->
+  <body name="imu_link" pos="-0.044000 0 0.080000">
+    <geom class="marker" type="box" size="0.01 0.01 0.005" material="base_charcoal"/>
+    <body name="imu_frame" pos="0 0 0">
+      <site name="imu_site" pos="0 0 0" group="4"/>
+    </body>
+  </body>
+</mujoco>

@@ -10,15 +10,20 @@
   <xacro:arg name="back_motor_id" default="8"/>
   <xacro:arg name="right_motor_id" default="9"/>
 
-  <!-- Gazebo simulation -->
-  <!-- "real" (default) keeps the STS3215 serial hardware plugin below unchanged.
-       "gazebo" swaps the base's <hardware> plugin for gz_ros2_control/GazeboSimSystem,
-       which implements the same SystemInterface contract - the joints, controllers,
-       and control.yaml stay identical either way. -->
+  <!-- Simulation -->
+  <!-- "real" (default) keeps the STS3215 serial hardware plugin below unchanged. "mujoco"
+       swaps it for mujoco_ros2_control/MujocoSystemInterface, which also natively hosts the
+       IMU and lidar sensors below (mujoco_type="imu"/the laser_frame <sensor> block) - wired
+       into control.launch.py. "gazebo" swaps it for gz_ros2_control/GazeboSimSystem; the
+       joints/controllers/control.yaml stay identical, but this option exists at the
+       xacro level only, not wired into any launch file yet. -->
   <xacro:arg name="ros2_control_hardware_type" default="real"/>
   <!-- Path to the controllers YAML the embedded controller_manager should load; only
        used when the <gazebo> plugin below is actually instantiated (i.e. in sim). -->
   <xacro:arg name="simulation_controllers" default=""/>
+  <!-- MJCF scene path and headless flag; only used when ros2_control_hardware_type:="mujoco". -->
+  <xacro:arg name="mujoco_model" default=""/>
+  <xacro:arg name="mujoco_headless" default="false"/>
 
   <!-- BNO055 IMU parameters (externally settable) -->
   <xacro:arg name="imu_i2c_bus"    default="1"/>       <!-- I2C bus number (/dev/i2c-1) -->
@@ -68,7 +73,12 @@
       <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
         <plugin>gz_ros2_control/GazeboSimSystem</plugin>
       </xacro:if>
-      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'mujoco'}">
+        <plugin>mujoco_ros2_control/MujocoSystemInterface</plugin>
+        <param name="mujoco_model">$(arg mujoco_model)</param>
+        <param name="headless">$(arg mujoco_headless)</param>
+      </xacro:if>
+      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
         <!-- Serial communication parameters -->
         <param name="serial_port">$(arg serial_port)</param>
@@ -79,7 +89,7 @@
         <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
         <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
         <param name="proportional_acc_max">${proportional_acc_max}</param>
-      </xacro:unless>
+      </xacro:if>
     </hardware>
     <!-- Left wheel joint (Motor ID 7) -->
     <joint name="left_wheel_joint">
@@ -89,14 +99,15 @@
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <!-- Real-hardware-only telemetry: gz_ros2_control/GazeboSimSystem only knows
+      <!-- Real-hardware-only telemetry: neither gz_ros2_control/GazeboSimSystem nor
+           mujoco_ros2_control/MujocoSystemInterface know anything beyond
            position/velocity/effort, and simulated wheels have no real telemetry for these. -->
-      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <state_interface name="voltage"/>
         <state_interface name="temperature"/>
         <state_interface name="current"/>
         <state_interface name="is_moving"/>
-      </xacro:unless>
+      </xacro:if>
     </joint>
     <!-- Back wheel joint (Motor ID 8) -->
     <joint name="back_wheel_joint">
@@ -106,14 +117,15 @@
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <!-- Real-hardware-only telemetry: gz_ros2_control/GazeboSimSystem only knows
+      <!-- Real-hardware-only telemetry: neither gz_ros2_control/GazeboSimSystem nor
+           mujoco_ros2_control/MujocoSystemInterface know anything beyond
            position/velocity/effort, and simulated wheels have no real telemetry for these. -->
-      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <state_interface name="voltage"/>
         <state_interface name="temperature"/>
         <state_interface name="current"/>
         <state_interface name="is_moving"/>
-      </xacro:unless>
+      </xacro:if>
     </joint>
     <!-- Right wheel joint (Motor ID 9) -->
     <joint name="right_wheel_joint">
@@ -123,24 +135,73 @@
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <!-- Real-hardware-only telemetry: gz_ros2_control/GazeboSimSystem only knows
+      <!-- Real-hardware-only telemetry: neither gz_ros2_control/GazeboSimSystem nor
+           mujoco_ros2_control/MujocoSystemInterface know anything beyond
            position/velocity/effort, and simulated wheels have no real telemetry for these. -->
-      <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+      <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <state_interface name="voltage"/>
         <state_interface name="temperature"/>
         <state_interface name="current"/>
         <state_interface name="is_moving"/>
-      </xacro:unless>
+      </xacro:if>
     </joint>
+
+    <!-- mujoco_ros2_control's IMU/lidar sensors must live inside the SAME <ros2_control>
+         block as the MujocoSystemInterface <hardware><plugin> above - each ros2_control
+         block is a separate hardware-plugin instance with its own isolated HardwareInfo,
+         so a sensor declared in a different block (like lekiwi_imu below) would never be
+         seen by this one. These map to lekiwi_description/mjcf/base_subtree.xml's MJCF
+         sensors. -->
+    <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'mujoco'}">
+      <!-- BNO055 IMU - mujoco_type="imu" tells MujocoSystemInterface::register_sensors to
+           look for MJCF sensors named bno055_quat/bno055_gyro/bno055_accel (the fixed
+           _quat/_gyro/_accel suffix convention), attached to base_subtree.xml's imu_site. Same
+           state_interface list as the real-hardware lekiwi_imu block below - duplicated,
+           not shared via a macro, to keep both branches readable independently. -->
+      <sensor name="bno055">
+        <param name="mujoco_type">imu</param>
+        <state_interface name="orientation.x"/>
+        <state_interface name="orientation.y"/>
+        <state_interface name="orientation.z"/>
+        <state_interface name="orientation.w"/>
+        <state_interface name="angular_velocity.x"/>
+        <state_interface name="angular_velocity.y"/>
+        <state_interface name="angular_velocity.z"/>
+        <state_interface name="linear_acceleration.x"/>
+        <state_interface name="linear_acceleration.y"/>
+        <state_interface name="linear_acceleration.z"/>
+      </sensor>
+      <!-- LD19 lidar - matched to base_subtree.xml's 360 "lidar-<i>" MJCF rangefinder sensors by
+           this <sensor> block's own name ("lidar" - matching the part of "lidar-<i>" before
+           the last hyphen, per mujoco_lidar.cpp's parse_lidar_name - NOT the frame_name
+           param below, easy to mix up), not by a mujoco_type param (the lidar registration
+           path is separate from register_sensors).
+           angle_increment/min_angle/max_angle intentionally don't match the real LD19's
+           452-sample resolution - see base_subtree.xml's lidar comment for why. laserscan_topic
+           matches the real ldlidar_ros2_node's /scan topic (lekiwi_bringup/config/laser.yaml)
+           so downstream consumers (SLAM, Nav2) don't need to know whether they're talking to
+           real or simulated lidar. -->
+      <sensor name="lidar">
+        <param name="frame_name">laser_frame</param>
+        <param name="min_angle">0.0</param>
+        <param name="max_angle">6.274458660919615</param>
+        <param name="angle_increment">0.017453292519943295</param>
+        <param name="range_min">0.02</param>
+        <param name="range_max">12.0</param>
+        <param name="laserscan_topic">/scan</param>
+      </sensor>
+    </xacro:if>
   </ros2_control>
 
   <!-- ROS 2 CONTROL -->
-  <!-- Sensor interface (BNO055 IMU). Omitted entirely in gazebo mode: base.module.xacro's
-       native Gazebo IMU sensor + ros_gz_bridge supplies /imu_sensor_broadcaster/imu
-       directly instead (see the comment there), so there's nothing for this mock
-       hardware component to usefully do in sim - and imu_sensor_broadcaster itself isn't
-       spawned in gazebo mode either (control.launch.py), so it would go unclaimed anyway. -->
-  <xacro:unless value="${'$(arg ros2_control_hardware_type)' == 'gazebo'}">
+  <!-- Sensor interface (BNO055 IMU) for real hardware. Omitted in gazebo mode:
+       base.module.xacro's native Gazebo IMU sensor + ros_gz_bridge supplies
+       /imu_sensor_broadcaster/imu directly instead (see the comment there). Omitted in
+       mujoco mode too: the equivalent sensor lives inside the lekiwi_base system block
+       above instead (mujoco_ros2_control requires it in the same <ros2_control> block as
+       the plugin declaration). imu_sensor_broadcaster itself isn't spawned in gazebo mode
+       either (control.launch.py), so a lekiwi_imu block would go unclaimed there anyway. -->
+  <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
     <ros2_control name="lekiwi_imu" type="sensor">
       <hardware>
         <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
@@ -166,6 +227,6 @@
         <state_interface name="linear_acceleration.z"/>
       </sensor>
     </ros2_control>
-  </xacro:unless>
+  </xacro:if>
 
 </robot>

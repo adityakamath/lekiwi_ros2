@@ -9,7 +9,7 @@ One std_srvs/srv/SetBool service, usable from joy_teleop button bindings or Foxg
       true  - save the map (slam_toolbox save_map + serialize_map) into a timestamped
               directory under maps/, plus the robot's current map-frame pose for
               localization startup, plus a filters/ subdirectory containing placeholder
-              keepout/speed masks sized to match (see nav2_part2_plan.md, Feature 3).
+              keepout/speed masks sized to match the saved map.
               Rejected if a save is already in progress.
       false - no-op
 
@@ -144,7 +144,7 @@ class MapSaverNode(Node):
         except Exception as e:
             self.get_logger().error(f'save_map call failed: {e}')
 
-        # Now serialize the pose graph for use with slam_mode:=localization
+        # Now serialize the pose graph for use with mission:=slam localization
         ser_req = SerializePoseGraph.Request()
         ser_req.filename = self._map_name
 
@@ -152,11 +152,7 @@ class MapSaverNode(Node):
         future2.add_done_callback(self._on_serialize_done)
 
     def _create_placeholder_filters(self):
-        """Create filters/ with no-op keepout/speed masks sized to match the saved map.
-
-        See nav2_part2_plan.md, Feature 3 for why these are needed and why keepout/speed use
-        different mask modes.
-        """
+        """Create filters/ with no-op keepout/speed masks sized to match the saved map."""
         save_dir = os.path.dirname(self._map_name)
         filters_dir = os.path.join(save_dir, 'filters')
         try:

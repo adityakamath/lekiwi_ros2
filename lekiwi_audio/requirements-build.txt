@@ -1,0 +1,7 @@
+# Build-time only - needed only when phrases.yaml changed and sounds/ needs re-rendering.
+#   pip install -r requirements-build.txt --break-system-packages
+
+kokoro-onnx
+onnxruntime
+soundfile
+numpy

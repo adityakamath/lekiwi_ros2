@@ -39,7 +39,7 @@ class TestLekiwiBringupArgs:
     EXPECTED_ARGS = [
         'payload', 'pantilt_config', 'diagnostics', 'control_mock',
         'fusion_mode', 'pointcloud', 'octomap', 'mission', 'map_name',
-        'use_sim_time', 'joy',
+        'use_sim_time',
     ]
 
     def test_expected_args_declared(self):

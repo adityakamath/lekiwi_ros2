@@ -44,3 +44,8 @@ graphify-out/
 
 # Maps — keep the maps/ directory but ignore saved map subdirectories
 lekiwi_navigation/maps/*/
+
+# Kokoro TTS model files (116 MB) — downloaded on demand by render_phrases.py,
+# not committed. See lekiwi_audio/lekiwi_audio/render_phrases.py.
+lekiwi_audio/voices/kokoro/*.onnx
+lekiwi_audio/voices/kokoro/*.bin

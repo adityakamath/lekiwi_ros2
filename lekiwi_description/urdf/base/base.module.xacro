@@ -65,26 +65,11 @@
     <!-- Laser frame -->
     <link name="laser_frame"/>
 
-    <!-- Gazebo simulation: LD19 lidar, values measured directly off the real robot
-         (ros2 launch lekiwi_bringup laser.launch.py, then `ros2 topic hz /scan` and
-         echoing individual messages) rather than the datasheet:
-           - update_rate=10: measured /scan rate was a steady 10.00-10.01 Hz.
-           - samples=452: angle_increment measured ~0.0139 rad/point average across
-             several messages; 2*pi/0.0139 ~= 452. (The real driver actually publishes
-             partial ~129-point slices per message rather than one full 452-point sweep -
-             that's a chunking quirk of ldlidar_ros2_node's publishing, not something
-             SLAM/Nav2 depend on, so it's not replicated here; a clean full sweep at the
-             same angular resolution is the right target.)
-           - min_angle/max_angle=0..2pi and range 0.02-12m: read directly off the real
-             /scan message fields (angle_min/angle_max/range_min/range_max).
-         gz_frame_id overrides gz-sim's default scoped sensor frame_id
-         (e.g. lekiwi/laser_frame/lidar) to the plain "laser_frame" the real
-         ldlidar_ros2_node publishes (lekiwi_bringup/config/laser.yaml), so TF lookups
-         resolve the same way in sim as on hardware - unofficial SDF tag (emits a
-         "not defined in SDF" warning) but functional: gazebosim/gz-sensors#306.
-         nav2/slam_toolbox's own range caps (obstacle_max_range: 5.5, max_laser_range:
-         8.0) are intentionally below this sensor's 12m max, same as with the real LD19.
-         Inert outside Gazebo, like the <gazebo> control plugin in base.urdf.xacro. -->
+    <!-- Gazebo simulation: LD19 lidar. update_rate/samples/angle/range values measured
+         directly off the real robot's /scan topic, not the datasheet. gz_frame_id overrides
+         gz-sim's default scoped sensor frame_id to the plain "laser_frame" the real
+         ldlidar_ros2_node publishes, so TF resolves the same in sim as on hardware
+         (unofficial SDF tag - gazebosim/gz-sensors#306). Inert outside Gazebo. -->
     <gazebo reference="laser_frame">
       <sensor name="lidar" type="gpu_lidar">
         <pose>0 0 0 0 0 0</pose>
@@ -135,22 +120,13 @@
     <!-- IMU frame -->
     <link name="imu_frame"/>
 
-    <!-- Gazebo simulation: BNO055 IMU. Matches imu_sensor_broadcaster's frame_id
-         (lekiwi_control/config/base/control.yaml: frame_id=imu_frame) by attaching
-         directly to the imu_frame link, and topic is set to the exact topic name
-         imu_sensor_broadcaster would publish on (/imu_sensor_broadcaster/imu) so EKF
-         (lekiwi_navigation/config/robot_localization/ekf*.yaml: imu0) needs no
-         reconfiguration between real and sim. Because of this, imu_sensor_broadcaster
-         itself is NOT spawned in gazebo mode (control.launch.py) - it would otherwise
-         publish the mock bno055_hardware_interface's fake static data onto the same
-         topic, racing with this bridged one. update_rate=50 matches controller_manager's
-         update_rate (lekiwi_control/config/base/control.yaml) - the effective rate
-         imu_sensor_broadcaster publishes at on real hardware regardless of the BNO055's
-         own internal fusion rate. angular_velocity/linear_acceleration noise stddev
-         values are sqrt() of imu_sensor_broadcaster's static_covariance_* parameters
-         (same yaml file) - gz's IMU sensor has no equivalent independent orientation
-         noise parameter, so orientation comes out physics-consistent/noise-free instead.
-         gz_frame_id and inertness outside Gazebo: see the lidar sensor above. -->
+    <!-- Gazebo simulation: BNO055 IMU. Attached to imu_frame and published on
+         /imu_sensor_broadcaster/imu (imu_sensor_broadcaster's own topic/frame_id) so EKF
+         needs no reconfiguration between real and sim; imu_sensor_broadcaster itself isn't
+         spawned in gazebo mode to avoid racing with this bridged topic. update_rate=50
+         matches controller_manager's rate. Noise stddevs are sqrt() of
+         imu_sensor_broadcaster's static_covariance_* params (gz has no separate orientation
+         noise, so orientation comes out noise-free). gz_frame_id/inertness: see lidar above. -->
     <gazebo reference="imu_frame">
       <sensor name="imu" type="imu">
         <pose>0 0 0 0 0 0</pose>

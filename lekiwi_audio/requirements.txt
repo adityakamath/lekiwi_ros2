@@ -1,0 +1,5 @@
+# Runtime-only deps (rclpy/std_srvs/etc. come from the ROS 2 distro). See
+# requirements-build.txt for build-time-only deps.
+#   pip install -r requirements.txt --break-system-packages
+
+pyyaml
