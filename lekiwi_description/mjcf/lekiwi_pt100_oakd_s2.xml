@@ -454,16 +454,15 @@
   </asset>
   <default>
     <default class="pantilt">
-      <!-- STS3215 servo, matches so_arm100 (same motor) -->
+      <!-- STS3215 servo (12V variant - see pantilt.control.xacro's matching comment) -->
       <joint armature="0.1" frictionloss="0.1"/>
-      <!-- forcerange = +-max_torque_nm (1.9123 N*m, 19.5 kgf*cm stall @ 7.4V per Feetech's
-           STS3215-C001 datasheet - see pantilt.control.xacro's matching comment).
-           dampratio=1.75, not the nominally-"critical" 1: at this forcerange, a full-range
-           step saturates the actuator during the initial acceleration phase, and recovering
-           from that saturation needs extra damping margin to still land without overshoot -
-           verified empirically (0.0% overshoot at dampratio=1.75 vs 13% at dampratio=1,
-           stepping both joints through their full ±90° range). -->
-      <position dampratio="1.75" forcerange="-1.9123 1.9123" kp="50"/>
+      <!-- forcerange = +-max_torque_nm (2.942 N*m, 30 kgf*cm stall @ 12V).
+           dampratio=1.5, not the nominally-"critical" 1: at this forcerange, a full-range
+           step still saturates the actuator during the initial acceleration phase, and
+           recovering from that saturation needs extra damping margin to land without
+           overshoot - verified empirically (0.0% overshoot at dampratio=1.5 vs ~1.6-1.75%
+           at dampratio=1, stepping both joints through their full ±90° range). -->
+      <position dampratio="1.5" forcerange="-2.942 2.942" kp="50"/>
       <default class="pan">
         <joint axis="0 0 1" range="-1.5708 1.5708"/>
       </default>
