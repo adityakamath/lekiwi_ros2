@@ -8,8 +8,11 @@
   <inertial pos="0 0 0" mass="2.0" diaginertia="0.01 0.01 0.02"/>
   <!-- Collision cylinder approximates the chassis footprint - the real mesh (739500
        triangles) exceeds MuJoCo's 200000-face STL loader limit, so collision keeps using
-       this primitive; the decimated copy below is visual-only. -->
-  <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" material="base_light_grey"/>
+       this primitive; the decimated copy below is visual-only. group="3" + the transparent
+       material keep it from visually competing with that mesh - same convention as the
+       wheels (wheel_geom class) and pt_description/mjcf/pantilt_shared.xml's "collision"
+       class. -->
+  <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" group="3" material="base_transparent"/>
   <!-- quat = Rz(base_offset_rz), base_offset_rz = 3*pi/2 (base.common.xacro) - given as an
        explicit quat, not euler, per the mesh-geom euler-composition bug (see ld06_lidar's
        fix). Z-span checked against the collision cylinder above: matches within ~1mm. -->
@@ -23,7 +26,7 @@
   <body name="left_wheel_link" pos="0.066120 0.114522 0.010360" quat="0.61237244 -0.35355339 0.61237244 0.35355339">
     <joint name="left_wheel_joint" class="wheel"/>
     <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-    <geom name="left_wheel_collision" class="wheel_geom" material="base_charcoal"/>
+    <geom name="left_wheel_collision" class="wheel_geom"/>
     <!-- omni_wheel.stl's own URDF origin is identity (base.module.xacro) - no quat needed,
          the body's own quat above already carries the real mount orientation. -->
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
@@ -31,13 +34,13 @@
   <body name="back_wheel_link" pos="-0.132239 0.000000 0.010360" quat="0.00000000 -0.70710678 0.00000000 0.70710678">
     <joint name="back_wheel_joint" class="wheel"/>
     <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-    <geom name="back_wheel_collision" class="wheel_geom" material="base_charcoal"/>
+    <geom name="back_wheel_collision" class="wheel_geom"/>
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
   <body name="right_wheel_link" pos="0.066120 -0.114522 0.010360" quat="0.61237244 0.35355339 0.61237244 -0.35355339">
     <joint name="right_wheel_joint" class="wheel"/>
     <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-    <geom name="right_wheel_collision" class="wheel_geom" material="base_charcoal"/>
+    <geom name="right_wheel_collision" class="wheel_geom"/>
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
 

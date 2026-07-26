@@ -17,8 +17,12 @@
       <default class="wheel_geom">
         <!-- Omni-wheel roller slip isn't modeled per-axis in MuJoCo; uses low isotropic
              friction instead and lets the controller's omni-kinematics dominate motion.
-             See README Simulation section for validated behavior/error bounds. -->
-        <geom type="cylinder" size="0.051 0.02125" friction="0.4 0.005 0.0001"/>
+             See README Simulation section for validated behavior/error bounds. group="3" +
+             the transparent material keep this collision primitive from visually competing
+             with the real omni_wheel_visual mesh sitting in the same place (base_visual
+             class, group="2") - same convention as pt_description/mjcf/pantilt_shared.xml's
+             "collision" class. -->
+        <geom type="cylinder" size="0.051 0.02125" friction="0.4 0.005 0.0001" group="3" material="base_transparent"/>
       </default>
       <default class="marker">
         <!-- Non-colliding visual meshes for laser_link/imu_link - real sensor behavior comes
@@ -41,6 +45,10 @@
   <asset>
     <material name="base_light_grey" rgba="0.8 0.8 0.8 1.0"/>
     <material name="base_charcoal" rgba="0.15 0.15 0.15 1.0"/>
+    <!-- Matches pt_description/mjcf/pantilt_shared.xml's "transparent" material - same
+         purpose, kept as a separate asset since MuJoCo assets are namespaced per-model and
+         this file's own "transparent" needs to exist independently of pantilt's. -->
+    <material name="base_transparent" rgba="1 0 0 0.3"/>
     <!-- Well under MuJoCo's 200000-face STL limit (ld06_lidar: ~12428, bno055_imu: ~34048). -->
     <mesh name="ld06_lidar" file="$(find lekiwi_description)/meshes/ld06_lidar.stl"/>
     <mesh name="bno055_imu" file="$(find lekiwi_description)/meshes/bno055_imu.stl"/>
