@@ -523,13 +523,13 @@
       <body name="pantilt_mount" pos="0.032725 0 0.0525">
         <body name="pantilt_base_link">
           <inertial diaginertia="0.01 0.01 0.01" mass="1.0" pos="0 0 0"/>
-          <geom class="visual" material="light_grey" mesh="pantilt_base_link_mesh" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
+          <geom class="visual" material="light_grey" mesh="pantilt_base_link_mesh" pos="0 0 0" quat="0.70710678 0 0 0.70710678"/>
           <!-- quat, not euler: MuJoCo auto-aligns every mesh geom to its own principal-inertia
            frame at compile time and composes that correction differently (and wrongly) with
            an explicit euler= than with an explicit quat= - verified empirically per-mesh,
            same class of bug as lekiwi_description's ld06_lidar fix. -->
           <geom class="visual" material="charcoal" mesh="pan_motor" pos="0 0 0" quat="0.70710678 0 0 0.70710678"/>
-          <geom class="collision" mesh="pantilt_base_link_mesh" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
+          <geom class="collision" mesh="pantilt_base_link_mesh" pos="0 0 0" quat="0.70710678 0 0 0.70710678"/>
           <body name="pan_link" pos="0.0452 0 0.0165">
             <inertial diaginertia="5.94278e-05 5.89975e-05 3.13712e-05" mass="0.119226" pos="-9.07886e-05 0.0590972 0.031089"/>
             <joint class="pan" name="pan_joint"/>
