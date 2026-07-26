@@ -488,15 +488,15 @@
       <body name="pantilt_mount" pos="0.032725 0 0.0525">
         <body name="pantilt_base_link">
           <inertial diaginertia="0.01 0.01 0.01" mass="1.0" pos="0 0 0"/>
-          <geom class="visual" euler="0 0 1.5707963267948966" material="light_grey" mesh="pantilt_base_link_mesh" pos="0 0 0"/>
+          <geom class="visual" material="light_grey" mesh="pantilt_base_link_mesh" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
           <geom class="visual" euler="0 0 1.5707963267948966" material="charcoal" mesh="pan_motor" pos="0 0 0"/>
-          <geom class="collision" euler="0 0 1.5707963267948966" mesh="pantilt_base_link_mesh" pos="0 0 0"/>
+          <geom class="collision" mesh="pantilt_base_link_mesh" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
           <body name="pan_link" pos="0.0452 0 0.0165">
             <inertial diaginertia="5.94278e-05 5.89975e-05 3.13712e-05" mass="0.119226" pos="-9.07886e-05 0.0590972 0.031089"/>
             <joint class="pan" name="pan_joint"/>
-            <geom class="visual" euler="1.5707963267948966 0 1.5707963267948966" material="light_grey" mesh="pan_link_mesh" pos="0 0 0"/>
-            <geom class="visual" euler="1.5707963267948966 0 1.5707963267948966" material="charcoal" mesh="tilt_motor" pos="0 0 0"/>
-            <geom class="collision" euler="1.5707963267948966 0 1.5707963267948966" mesh="pan_link_mesh" pos="0 0 0"/>
+            <geom class="visual" material="light_grey" mesh="pan_link_mesh" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
+            <geom class="visual" material="charcoal" mesh="tilt_motor" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
+            <geom class="collision" mesh="pan_link_mesh" pos="0 0 0" quat="0.5 0.5 0.5 0.5"/>
             <include file="../../payloads/pantilt_ros2/pt_description/mjcf/oakd_s2_subtree.xml"/>
           </body>
         </body>
