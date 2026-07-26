@@ -437,6 +437,10 @@
     <geom friction="0.4 0.005 0.0001" material="groundplane" name="floor" size="0 0 0.05" type="plane"/>
   </worldbody>
   <compiler angle="radian"/>
+  <!-- implicitfast solves actuator damping implicitly - MuJoCo's own docs call it "a strict
+       improvement" over the default Euler for actuator-driven models like this one, at
+       equivalent cost. -->
+  <option integrator="implicitfast"/>
   <asset>
     <material name="light_grey" rgba="0.8 0.8 0.8 1.0"/>
     <material name="charcoal" rgba="0.15 0.15 0.15 1.0"/>
@@ -452,8 +456,14 @@
     <default class="pantilt">
       <!-- STS3215 servo, matches so_arm100 (same motor) -->
       <joint armature="0.1" frictionloss="0.1"/>
-      <!-- forcerange = +-max_torque_nm (2.942 N*m, 30 kgf*cm) -->
-      <position dampratio="1" forcerange="-2.942 2.942" kp="50"/>
+      <!-- forcerange = +-max_torque_nm (1.9123 N*m, 19.5 kgf*cm stall @ 7.4V per Feetech's
+           STS3215-C001 datasheet - see pantilt.control.xacro's matching comment).
+           dampratio=1.75, not the nominally-"critical" 1: at this forcerange, a full-range
+           step saturates the actuator during the initial acceleration phase, and recovering
+           from that saturation needs extra damping margin to still land without overshoot -
+           verified empirically (0.0% overshoot at dampratio=1.75 vs 13% at dampratio=1,
+           stepping both joints through their full ±90° range). -->
+      <position dampratio="1.75" forcerange="-1.9123 1.9123" kp="50"/>
       <default class="pan">
         <joint axis="0 0 1" range="-1.5708 1.5708"/>
       </default>
