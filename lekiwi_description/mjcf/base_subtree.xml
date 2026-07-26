@@ -46,14 +46,20 @@
 
   <!-- laser_link + laser_frame (base.module.xacro), matching ldlidar_ros2_node's frame. -->
   <body name="laser_link" pos="-0.045042 0 0.091500">
-    <!-- quat, not euler: MuJoCo auto-aligns every mesh geom to its own principal-inertia
-         frame at compile time, and composes that correction with an explicit euler=
-         differently (and wrongly here) than with an explicit quat= - verified empirically
-         by comparing this mesh's world-frame bounding box against the two paths (euler
-         produced a sideways lidar; quat produces the correct upright one, matching
-         base.module.xacro's laser_offset_rx = pi/2 about X). -->
-    <geom class="marker" mesh="ld06_lidar" material="base_charcoal" quat="0.70710678 0.70710678 0 0"/>
     <body name="laser_frame" pos="0 0 0.027000">
+      <!-- quat, not euler: MuJoCo auto-aligns every mesh geom to its own principal-inertia
+           frame at compile time, and composes that correction with an explicit euler=
+           differently (and wrongly here) than with an explicit quat= - verified empirically
+           by comparing this mesh's world-frame bounding box against the two paths (euler
+           produced a sideways lidar; quat produces the correct upright one, matching
+           base.module.xacro's laser_offset_rx = pi/2 about X). pos="0 0 -0.027" compensates
+           for this body being laser_frame (offset +0.027 from laser_link), not laser_link
+           itself - moved here, not left on laser_link, because MuJoCo's rangefinder
+           self-exclusion only skips geoms on the SITE'S OWN body, not ancestor bodies:
+           with the mesh on laser_link and the sites one body down on laser_frame, every
+           rangefinder was hitting this mesh at ~17mm instead of the actual environment
+           (confirmed by reading sensordata directly, and reproduced/fixed in isolation). -->
+      <geom class="marker" mesh="ld06_lidar" material="base_charcoal" pos="0 0 -0.027" quat="0.70710678 0.70710678 0 0"/>
       <!-- 360 rangefinders at 1 deg resolution (real LD19: 452/rev, ~0.797 deg - reduced
            for a clean integer sweep count). Each site's quat sweeps local +Z CCW about
            laser_frame's Z starting at +X, matching REP-103. Matching <rangefinder> sensor
