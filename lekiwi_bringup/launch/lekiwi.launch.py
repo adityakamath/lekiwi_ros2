@@ -11,6 +11,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 _VALID_PAYLOADS = {'', 'pantilt'}
@@ -78,9 +79,25 @@ def launch_setup(context):
         'mission':      mission,
         'map_name':     map_name,
         'use_sim_time': use_sim_time,
+        'diagnostics':  diagnostics,
     })
 
     actions = [control, nav]
+
+    if diagnostics.strip().lower() in ('true', '1'):
+        pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
+        # name='analyzers' is required, not cosmetic - diagnostic_aggregator.yaml's own
+        # top-level key is 'analyzers', and ROS 2 associates a YAML params file with a node
+        # by matching that key to the node's name.
+        actions.append(Node(
+            package='diagnostic_aggregator',
+            executable='aggregator_node',
+            name='analyzers',
+            parameters=[
+                f'{pkg_bringup}/config/diagnostic_aggregator.yaml',
+                {'use_sim_time': use_sim_time.lower() in ('true', '1')},
+            ],
+        ))
 
     if sim:
         # laser/audio/oakd are real-sensor drivers with no simulated equivalent (oakd) or
@@ -123,7 +140,14 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'diagnostics',
             default_value='false',
-            description='Launch motor and IMU diagnostics nodes in lekiwi_control.',
+            description=(
+                'Single flag for every /diagnostics publisher and consumer: launches motor '
+                'and IMU diagnostics nodes in lekiwi_control, enables patrol status publishing '
+                'in waypoint_recorder_node (lekiwi_navigation), and launches a '
+                'diagnostic_aggregator node (see lekiwi_bringup/config/diagnostic_aggregator.yaml) '
+                'that rolls all three up into one top-level status on /diagnostics_agg. '
+                'false disables publishing from all of them, not just the aggregator.'
+            ),
         ),
         DeclareLaunchArgument(
             'control_mock',

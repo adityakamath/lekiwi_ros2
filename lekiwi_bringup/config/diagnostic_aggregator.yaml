@@ -1,0 +1,30 @@
+# diagnostic_aggregator config for the top-level "is the whole stack alive" view.
+#
+# Every current /diagnostics source and how it's matched here (GenericAnalyzer matches only
+# against DiagnosticStatus.name - never hardware_id - so each source's name must actually
+# start with/contain the string below):
+#   motor_diagnostics_node (sts_hardware_interface)  -> "Motor: <joint_name>"
+#   bno055_diagnostics (bno055_hardware_interface)   -> "BNO055 IMU"
+#   waypoint_recorder_node patrol status              -> "waypoint_recorder: patrol"
+#
+# Loaded by aggregator_node, run under the node name "analyzers" (see lekiwi.launch.py) -
+# the top-level "analyzers" key here must match that node name for ROS 2's YAML-params
+# loading to associate this file with it.
+analyzers:
+  ros__parameters:
+    path: LeKiwi
+    motors:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Motors
+      startswith: ['Motor:']
+      timeout: 5.0
+    imu:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: IMU
+      contains: ['BNO055']
+      timeout: 5.0
+    patrol:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Patrol
+      startswith: ['waypoint_recorder:']
+      timeout: 5.0

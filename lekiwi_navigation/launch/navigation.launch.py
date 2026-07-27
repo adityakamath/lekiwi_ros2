@@ -18,6 +18,8 @@ Launch arguments:
                    see slam.launch.py for full semantics)
     map_name     subdirectory under maps/
     use_sim_time true | false  (default: false)
+    diagnostics  true | false  (default: false) - forwarded to nav2.launch.py for
+                   waypoint_recorder_node's patrol status publishing
 """
 
 from launch import LaunchDescription
@@ -59,6 +61,7 @@ def generate_launch_description():
         launch_arguments={
             'map_name':     LaunchConfiguration('map_name'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'diagnostics':  LaunchConfiguration('diagnostics'),
         }.items(),
     )
 
@@ -95,6 +98,14 @@ def generate_launch_description():
             'use_sim_time',
             default_value='false',
             description='Use /clock from a simulator instead of system time.',
+        ),
+        DeclareLaunchArgument(
+            'diagnostics',
+            default_value='false',
+            description=(
+                'Forwarded to nav2.launch.py: publish waypoint_recorder_node patrol status '
+                'to /diagnostics. Same flag lekiwi_control uses for motor/IMU diagnostics.'
+            ),
         ),
         ekf,
         slam,

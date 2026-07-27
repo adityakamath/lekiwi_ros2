@@ -3,4 +3,5 @@ waypoint_recorder_node:
     number_of_loops: 0  # total passes per start; 0 = loop forever, N>0 = exactly N passes
     frame_id: map
     marker_topic: /waypoint_markers
+    diagnostics_topic: /diagnostics  # shares the topic with motor_diagnostics/bno055_diagnostics
     max_retries: 5  # consecutive failures at the same waypoint before dropping it

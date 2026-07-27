@@ -1,0 +1,25 @@
+# Stable device names for LeKiwi's USB peripherals.
+#
+# Install once per robot:
+#   sudo cp 99-lekiwi.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+# Then reconnect the devices (or reboot).
+#
+# Without this, the kernel assigns /dev/ttyUSB*/ttyACM* names in whatever
+# order the devices happen to enumerate on that boot, which is not
+# guaranteed to match lekiwi_ros2's config defaults below.
+
+# LD06 LiDAR (CP210x USB-UART bridge)
+# Consumed by lekiwi_bringup/config/laser.yaml -> port_name
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="ttyLIDAR"
+
+# Feetech STS servo bus (CH340-family USB-serial adapter)
+# Consumed by lekiwi_control/config/base/urdf_config.yaml -> serial_port
+KERNEL=="ttyACM*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d3", SYMLINK+="ttySERVO"
+
+# reSpeaker Flex (XVF3800 USB audio)
+# lekiwi_audio selects the device by ALSA card name (see indicator_node.py's
+# speaker_device parameter), not by a udev symlink - this rule only grants
+# non-root read/write access to the capture/playback/control nodes.
+SUBSYSTEM=="usb", ATTR{idVendor}=="2886", ATTR{idProduct}=="001e", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="sound", ATTRS{idVendor}=="2886", ATTRS{idProduct}=="001e", GROUP="audio", MODE="0660"

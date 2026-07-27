@@ -71,6 +71,7 @@ def launch_setup(context, *args, **kwargs):
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart    = LaunchConfiguration('autostart')
     log_level    = LaunchConfiguration('log_level')
+    diagnostics  = LaunchConfiguration('diagnostics')
 
     # bt_navigator must be last - it depends on the other servers being active. Costmap
     # filters get their own lifecycle managers below.
@@ -201,6 +202,7 @@ def launch_setup(context, *args, **kwargs):
             output='log',
             parameters=[
                 PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'waypoint_recorder.yaml']),
+                {'publish_diagnostics': diagnostics},
             ],
             arguments=['--ros-args', '--log-level', log_level],
         ),
@@ -347,6 +349,16 @@ def generate_launch_description():
             'autostart',
             default_value='true',
             description='Automatically activate the Nav2 lifecycle nodes on startup.',
+        ),
+        DeclareLaunchArgument(
+            'diagnostics',
+            default_value='false',
+            description=(
+                "Publish waypoint_recorder_node's patrol status to /diagnostics - the same "
+                'top-level flag that gates motor_diagnostics/bno055_diagnostics in '
+                'control.launch.py, forwarded here so one argument covers every diagnostics '
+                'publisher.'
+            ),
         ),
         DeclareLaunchArgument(
             'log_level',

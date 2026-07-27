@@ -47,6 +47,25 @@ source install/setup.bash
 ros2 launch lekiwi_bringup lekiwi.launch.py
 ```
 
+## Stable Device Names (udev)
+
+Real hardware (not `sim:=true`) depends on three USB devices showing up at fixed paths rather than whatever `/dev/ttyUSB0`-style name the kernel happens to assign on that boot:
+
+| Symlink              | Device                             | Consumed by                                                       |
+|-----------------------|-------------------------------------|----------------------------------------------------------------------|
+| `/dev/ttyLIDAR`       | LD06 LiDAR (CP210x USB-UART)        | `lekiwi_bringup/config/laser.yaml` → `port_name`                     |
+| `/dev/ttySERVO`       | Feetech STS servo bus               | `lekiwi_control/config/base/urdf_config.yaml` → `serial_port`        |
+| reSpeaker Flex ALSA nodes | XVF3800 USB audio               | `lekiwi_audio` selects it by ALSA card name; the rule only grants non-root permission, it doesn't rename the card |
+
+Install once per robot:
+
+```bash
+sudo cp lekiwi_bringup/udev/99-lekiwi.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+Reconnect the devices (or reboot) afterward. Without this, `/dev/ttyLIDAR` and `/dev/ttySERVO` won't exist and the launch defaults above will fail to open their serial ports.
+
 ## Launch Arguments
 
 The most commonly used arguments for `lekiwi_bringup lekiwi.launch.py` (run with `--show-arguments` for the full list):

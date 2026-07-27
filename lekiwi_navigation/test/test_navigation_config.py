@@ -280,11 +280,17 @@ class TestWaypointRecorderYaml:
 
     def test_required_keys_present(self):
         params = self.cfg['waypoint_recorder_node']['ros__parameters']
-        for key in ('number_of_loops', 'frame_id', 'marker_topic', 'max_retries'):
+        for key in ('number_of_loops', 'frame_id', 'marker_topic', 'diagnostics_topic', 'max_retries'):
             assert key in params, f"Missing key '{key}' in waypoint_recorder.yaml"
 
     def test_frame_id_is_map(self):
         assert self.cfg['waypoint_recorder_node']['ros__parameters']['frame_id'] == 'map'
+
+    def test_diagnostics_shares_the_common_topic(self):
+        # Folded in from a dedicated /patrol_diagnostics topic so patrol status composes
+        # with motor_diagnostics/bno055_diagnostics under one diagnostic_aggregator config.
+        topic = self.cfg['waypoint_recorder_node']['ros__parameters']['diagnostics_topic']
+        assert topic == '/diagnostics'
 
     def test_max_retries_positive(self):
         retries = self.cfg['waypoint_recorder_node']['ros__parameters']['max_retries']
@@ -294,7 +300,9 @@ class TestWaypointRecorderYaml:
 # ── nav2.launch.py argument surface ──────────────────────────────────────────
 
 class TestNav2LaunchArgs:
-    EXPECTED_ARGS = ['params_file', 'map_name', 'use_sim_time', 'autostart', 'log_level']
+    EXPECTED_ARGS = [
+        'params_file', 'map_name', 'use_sim_time', 'autostart', 'log_level', 'diagnostics',
+    ]
 
     def test_expected_args_declared(self):
         output = _show_arguments('lekiwi_navigation', 'nav2.launch.py')
@@ -305,7 +313,7 @@ class TestNav2LaunchArgs:
 # ── navigation.launch.py and slam.launch.py argument surface ─────────────────
 
 class TestNavigationLaunchArgs:
-    EXPECTED_ARGS = ['fusion_mode', 'mission', 'map_name', 'use_sim_time']
+    EXPECTED_ARGS = ['fusion_mode', 'mission', 'map_name', 'use_sim_time', 'diagnostics']
 
     def test_expected_args_declared(self):
         output = _show_arguments('lekiwi_navigation', 'navigation.launch.py')

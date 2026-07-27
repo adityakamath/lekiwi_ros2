@@ -40,6 +40,7 @@ jobs:
             python3-pip python3-pil python3-yaml git \
             ros-kilted-ament-index-python \
             ros-kilted-controller-manager \
+            ros-kilted-diagnostic-aggregator \
             ros-kilted-forward-command-controller \
             ros-kilted-generate-parameter-library \
             ros-kilted-imu-sensor-broadcaster \

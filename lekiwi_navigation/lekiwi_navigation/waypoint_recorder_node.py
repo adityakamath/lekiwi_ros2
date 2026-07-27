@@ -35,10 +35,12 @@ the patrol automatically resumes toward the interrupted waypoint. If the same wa
 max_retries times in a row instead (no detour resolving it - genuinely unreachable), it's
 removed from the list and the patrol continues to the next one; later loops never target it.
 
-Progress (current loop, from/to waypoint, ETA, distance, recovery count) is published as
-diagnostic_msgs/msg/DiagnosticArray on /patrol_diagnostics rather than a visualization - WARN while
-paused waiting to auto-resume, STALE when stopped deliberately, OK/WARN(recoveries>0) while
-actively patrolling.
+Progress (current loop, from/to waypoint, ETA, distance, recovery count) is published as a
+diagnostic_msgs/msg/DiagnosticArray entry on /diagnostics rather than a visualization - WARN
+while paused waiting to auto-resume, STALE when stopped deliberately, OK/WARN(recoveries>0)
+while actively patrolling. Shares the topic with motor_diagnostics/bno055_diagnostics so a
+single diagnostic_aggregator config (or rqt_robot_monitor/Foxglove's diagnostics panel) can
+show the whole stack's health in one place, rather than patrol status living on its own topic.
 
 Cancelling or resetting also clears nav2's own plan-visualization topics (/plan and friends),
 which otherwise keep showing the last path received even after the goal that produced it is
@@ -49,6 +51,10 @@ Parameters:
                           (default: 0, i.e. loop forever; N>0 = exactly N passes)
     frame_id         str  TF frame waypoints are recorded in (default: map)
     marker_topic     str  Topic for the waypoint MarkerArray (default: /waypoint_markers)
+    diagnostics_topic str Topic for the patrol DiagnosticArray (default: /diagnostics)
+    publish_diagnostics bool Publish patrol status at all (default: true) - the top-level
+                          lekiwi.launch.py 'diagnostics' argument controls this the same way
+                          it gates motor_diagnostics/bno055_diagnostics.
     max_retries      int  Consecutive failures at the same waypoint before giving up on it
                           and removing it from the list (default: 3)
 """
@@ -116,11 +122,15 @@ class WaypointRecorderNode(Node):
         self.declare_parameter('number_of_loops', 0)
         self.declare_parameter('frame_id', 'map')
         self.declare_parameter('marker_topic', '/waypoint_markers')
+        self.declare_parameter('diagnostics_topic', '/diagnostics')
+        self.declare_parameter('publish_diagnostics', True)
         self.declare_parameter('max_retries', 3)
 
         self._number_of_loops = self.get_parameter('number_of_loops').value
         self._frame_id = self.get_parameter('frame_id').value
         marker_topic = self.get_parameter('marker_topic').value
+        diagnostics_topic = self.get_parameter('diagnostics_topic').value
+        self._publish_diagnostics_enabled = self.get_parameter('publish_diagnostics').value
         self._max_retries = self.get_parameter('max_retries').value
 
         self._waypoints = []
@@ -143,7 +153,7 @@ class WaypointRecorderNode(Node):
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
         self._marker_pub = self.create_publisher(MarkerArray, marker_topic, 10)
-        self._diagnostics_pub = self.create_publisher(DiagnosticArray, '/patrol_diagnostics', 10)
+        self._diagnostics_pub = self.create_publisher(DiagnosticArray, diagnostics_topic, 10)
         self._plan_pubs = [self.create_publisher(Path, topic, 10) for topic in _PLAN_TOPICS]
         self._action_client = ActionClient(self, FollowWaypoints, '/follow_waypoints')
         self.create_subscription(
@@ -597,7 +607,10 @@ class WaypointRecorderNode(Node):
             pub.publish(empty_path)
 
     def _publish_diagnostics(self, active: bool = True, waiting: bool = False):
-        """Publish the current patrol status to /patrol_diagnostics."""
+        """Publish the current patrol status as a DiagnosticArray entry on /diagnostics."""
+        if not self._publish_diagnostics_enabled:
+            return
+
         status = DiagnosticStatus()
         status.name = 'waypoint_recorder: patrol'
         status.hardware_id = ''
