@@ -9,6 +9,8 @@
 
   <buildtool_depend>ament_python</buildtool_depend>
 
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
   <exec_depend>rclpy</exec_depend>
 
   <exec_depend>robot_localization</exec_depend>
@@ -24,6 +26,8 @@
   <exec_depend>action_msgs</exec_depend>
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>python3-pil</exec_depend>
 
   <test_depend>ament_copyright</test_depend>

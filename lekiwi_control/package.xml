@@ -14,6 +14,8 @@
   <exec_depend>ros2_controllers</exec_depend>
 
   <!-- Runtime dependencies for launch files -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
   <exec_depend>lekiwi_description</exec_depend>
   <exec_depend>pt_description</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
@@ -29,13 +31,13 @@
        mujoco_ros2_control's own ros2_control_node directly, which also hosts the MuJoCo
        simulation itself and publishes /scan directly from the laser_frame lidar sensor. -->
   <exec_depend>mujoco_ros2_control</exec_depend>
+  <exec_depend>joy</exec_depend>
   <exec_depend>joy_teleop</exec_depend>
-  <exec_depend>teleop_twist_keyboard</exec_depend>
-  <exec_depend>generate_parameter_library</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>service_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
