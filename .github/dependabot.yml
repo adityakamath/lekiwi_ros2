@@ -29,3 +29,13 @@ updates:
     labels:
       - "dependencies"
       - "python"
+
+  # Keep lekiwi_audio/requirements.txt and requirements-build.txt up to date
+  - package-ecosystem: "pip"
+    directory: "/lekiwi_audio"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"

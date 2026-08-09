@@ -22,11 +22,15 @@ jobs:
         run: ruff check .
 
   test:
-    name: pytest (ros:kilted)
+    name: pytest (ros:${{ matrix.ros_distro }})
     # rclpy and the ROS message packages the test suite needs aren't on PyPI, so this
     # runs inside a ROS image instead of alongside the pip-only lint job above.
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro: [kilted, jazzy]
     runs-on: ubuntu-latest
-    container: ros:kilted
+    container: ros:${{ matrix.ros_distro }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -38,25 +42,25 @@ jobs:
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
             python3-pip python3-pil python3-yaml git \
-            ros-kilted-ament-index-python \
-            ros-kilted-controller-manager \
-            ros-kilted-diagnostic-aggregator \
-            ros-kilted-forward-command-controller \
-            ros-kilted-generate-parameter-library \
-            ros-kilted-imu-sensor-broadcaster \
-            ros-kilted-joint-state-broadcaster \
-            ros-kilted-joy-teleop \
-            ros-kilted-nav2-bringup \
-            ros-kilted-navigation2 \
-            ros-kilted-omni-wheel-drive-controller \
-            ros-kilted-robot-localization \
-            ros-kilted-robot-state-publisher \
-            ros-kilted-ros2-control \
-            ros-kilted-ros2-controllers \
-            ros-kilted-slam-toolbox \
-            ros-kilted-teleop-twist-joy \
-            ros-kilted-teleop-twist-keyboard \
-            ros-kilted-xacro
+            ros-${{ matrix.ros_distro }}-ament-index-python \
+            ros-${{ matrix.ros_distro }}-controller-manager \
+            ros-${{ matrix.ros_distro }}-diagnostic-aggregator \
+            ros-${{ matrix.ros_distro }}-forward-command-controller \
+            ros-${{ matrix.ros_distro }}-generate-parameter-library \
+            ros-${{ matrix.ros_distro }}-imu-sensor-broadcaster \
+            ros-${{ matrix.ros_distro }}-joint-state-broadcaster \
+            ros-${{ matrix.ros_distro }}-joy-teleop \
+            ros-${{ matrix.ros_distro }}-nav2-bringup \
+            ros-${{ matrix.ros_distro }}-navigation2 \
+            ros-${{ matrix.ros_distro }}-omni-wheel-drive-controller \
+            ros-${{ matrix.ros_distro }}-robot-localization \
+            ros-${{ matrix.ros_distro }}-robot-state-publisher \
+            ros-${{ matrix.ros_distro }}-ros2-control \
+            ros-${{ matrix.ros_distro }}-ros2-controllers \
+            ros-${{ matrix.ros_distro }}-slam-toolbox \
+            ros-${{ matrix.ros_distro }}-teleop-twist-joy \
+            ros-${{ matrix.ros_distro }}-teleop-twist-keyboard \
+            ros-${{ matrix.ros_distro }}-xacro
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
 
       - name: colcon build
@@ -66,7 +70,7 @@ jobs:
         # their submodules even with --packages-select - then fails trying to source their
         # (never-built) install output unless explicitly ignored. Each has its own CI already.
         run: |
-          . /opt/ros/kilted/setup.sh
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           colcon build --packages-select \
             lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup lekiwi_audio \
             pt_description \
@@ -79,7 +83,7 @@ jobs:
         # cloudini, point_cloud_interfaces, and depthai-ros, none of which are plain apt
         # packages here. Everything else is self-contained and needs only the packages above.
         run: |
-          . /opt/ros/kilted/setup.sh
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           . install/setup.sh
           pytest \
             src/lekiwi_ros2/lekiwi_control/test \

@@ -13,3 +13,9 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: double-quote-string-fixer
+      - id: detect-private-key
+      - id: check-added-large-files
+  - repo: https://github.com/s-weigand/pre-commit_mirrors-actionlint
+    rev: v1.6.24
+    hooks:
+      - id: actionlint
