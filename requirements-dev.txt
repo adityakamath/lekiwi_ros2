@@ -2,5 +2,5 @@ ruff
 # <8: pytest 8 dropped the legacy path-based pytest_pycollect_makemodule hook signature that
 # ROS 2's launch_testing pytest plugin (apt python3-pytest is 7.4.4, same constraint) still
 # uses - a newer pytest here breaks plugin loading for every test, not just launch tests.
-pytest<10
+pytest<8
 pyyaml
