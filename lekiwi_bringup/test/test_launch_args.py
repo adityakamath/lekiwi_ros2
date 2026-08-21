@@ -39,8 +39,8 @@ class TestLekiwiBringupArgs:
     EXPECTED_ARGS = [
         'payload', 'pantilt_config', 'diagnostics', 'use_mock', 'joy',
         'sts_serial_port', 'mujoco_model',
-        'fusion_mode', 'imu', 'audio', 'battery_monitor', 'pointcloud', 'octomap',
-        'mission', 'map_name', 'use_sim_time',
+        'fusion_mode', 'imu', 'laser', 'audio', 'battery_monitor', 'pointcloud',
+        'octomap', 'mission', 'map_name', 'use_sim_time',
     ]
 
     def test_expected_args_declared(self):
@@ -81,6 +81,10 @@ class TestLekiwiBringupValidation:
     def test_battery_monitor_invalid_value_rejected(self):
         output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py', ['battery_monitor:=yes'])
         assert 'battery_monitor' in output.lower()
+
+    def test_laser_invalid_value_rejected(self):
+        output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py', ['laser:=yes'])
+        assert 'laser' in output.lower()
 
 
 # ── slam.launch.py argument surface ──────────────────────────────────────────

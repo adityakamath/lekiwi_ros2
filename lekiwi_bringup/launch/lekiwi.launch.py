@@ -10,6 +10,9 @@ The 'imu' argument (default true) selects whether a physical BNO055 IMU is prese
 on the base (real hardware and sim:=true/MuJoCo both honor it). imu:=false requires
 fusion_mode:=odom, since base/imu fusion modes need the IMU.
 
+The 'laser' argument (default true) selects whether a physical LD06 LiDAR is present on
+the base. laser:=false skips laser.launch.py's include entirely.
+
 The 'audio' argument (default true) selects whether a physical reSpeaker mic array is
 present on the base. audio:=false skips lekiwi_audio's launch include entirely.
 
@@ -49,6 +52,7 @@ def launch_setup(context):
     use_mock            = LaunchConfiguration('use_mock').perform(context)
     fusion_mode         = LaunchConfiguration('fusion_mode').perform(context)
     imu                 = _launch_arg_as_bool(context, 'imu')
+    laser               = _launch_arg_as_bool(context, 'laser')
     audio               = _launch_arg_as_bool(context, 'audio')
     battery_monitor     = _launch_arg_as_bool(context, 'battery_monitor')
     map_name            = LaunchConfiguration('map_name').perform(context)
@@ -148,8 +152,9 @@ def launch_setup(context):
         return actions
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
-    laser = include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload})
-    actions.append(laser)
+
+    if laser:
+        actions.append(include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload}))
 
     if audio:
         pkg_audio = FindPackageShare('lekiwi_audio').perform(context)
@@ -238,6 +243,12 @@ def generate_launch_description():
                         'imu_sensor_broadcaster controller, and bno055_diagnostics.',
         ),
         DeclareLaunchArgument(
+            'laser',
+            default_value='true',
+            description='Whether a physical LD06 LiDAR is present on the base. '
+                        'false skips laser.launch.py\'s include entirely.',
+        ),
+        DeclareLaunchArgument(
             'audio',
             default_value='true',
             description='Whether a physical reSpeaker mic array and speaker is present on the base. '
@@ -289,9 +300,9 @@ def generate_launch_description():
             'sim',
             default_value='false',
             description='Run against MuJoCo instead of real hardware: forces use_sim_time and '
-                        'use_mock, and skips laser/audio/oakd (laser is hosted by the mujoco '
-                        'control node itself; oakd has no simulated equivalent yet - audio has no '
-                        'simulated equivalent at all). Base and pantilt payload both supported.',
+                        'use_mock, and skips laser/audio/battery_monitor/oakd (laser is hosted '
+                        'by the mujoco control node itself; the other three have no simulated '
+                        'equivalent at all). Base and pantilt payload both supported.',
         ),
         DeclareLaunchArgument(
             'gui',
