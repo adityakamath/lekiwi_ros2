@@ -1,16 +1,10 @@
-# Deployed copy of ina260_ros2's config/battery.yaml, tuned for LeKiwi's actual
-# battery: Seeed Studio's stock E326S pack (3S1P Li-ion, 2550 mAh, 4.2V/cell max), wired
-# with the INA260 between the battery and the Y-split to the charge port + robot load
-# (see ina260_ros2's README "Wiring" section). current_polarity_inverted:true was
-# determined by running `ros2 run ina260_ros2 ina260_calibrate` against this robot's
-# actual wiring - re-run that if the INA260 or its wiring changes.
 battery_monitor_node:
   ros__parameters:
     i2c_bus: 1
     i2c_address: 0x40          # Adafruit INA260 default address (0x40-0x4F via ADDR pins)
     publish_rate_hz: 2.0
     frame_id: base_link
-    current_polarity_inverted: true  # flip if wiring reads charging as negative current
+    current_polarity_inverted: true  # true if wiring reads charging as negative current
 
     chemistry: LION              # LIPO or LION - selects the OCV table in ocv_tables.py
     cell_count: 3
@@ -27,3 +21,16 @@ battery_monitor_node:
 
     serial_number: ""
     location: ""
+
+battery_events_node:
+  ros__parameters:
+    battery_state_topic: /battery_state
+
+    low_battery_threshold: 0.25      # /battery_low fires once, falling edge
+    low_battery_hysteresis: 0.05     # must climb back above threshold + this before re-arming
+
+    critical_battery_threshold: 0.1  # /battery_critical fires once, falling edge
+    critical_battery_hysteresis: 0.03
+
+    full_battery_threshold: 0.98     # /battery_full fires once, rising edge
+    full_battery_hysteresis: 0.02    # must drop back below threshold - this before re-arming
