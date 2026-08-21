@@ -31,7 +31,7 @@ services:
   /waypoint_follow:
     "true":
       success: "Waypoint following enabled"
-      failure: "Error. No waypoints found"
+      failure: "No waypoints found"
     "false":
       success: "Waypoint following disabled"
 
@@ -39,6 +39,30 @@ services:
     "true":
       success: "Saving map"
       failure: "Error"
+
+  # Published by ina260_ros2's battery_events_node, which fires each of these once per
+  # hysteresis-debounced edge - see that node's module docstring. /battery_low, /battery_critical
+  # and /battery_full are each genuinely two-sided SetBool services (they also fire "false" once
+  # recovered/reset), but no "false" phrase is configured here - a missing entry means "don't
+  # announce anything" (see the top of this file), which is exactly the once-per-falling/rising-
+  # edge behavior wanted; a recovery phrase can be added later without any code changes.
+  /battery_charging:
+    "true":
+      success: "Charging"
+    "false":
+      success: "Discharging"
+
+  /battery_low:
+    "true":
+      success: "Battery low"
+
+  /battery_critical:
+    "true":
+      success: "Battery critical"
+
+  /battery_full:
+    "true":
+      success: "Battery full"
 
 nav_goal:
   success: "Goal reached"

@@ -17,9 +17,11 @@ The 'audio' argument (default true) selects whether a physical reSpeaker mic arr
 present on the base. audio:=false skips lekiwi_audio's launch include entirely.
 
 The 'battery_monitor' argument (default true) selects whether a physical INA260 current/
-voltage sensor is present on the base. battery_monitor:=false skips ina260_ros2's launch
-include entirely; if left true on a robot with no INA260 fitted, battery_monitor_node
-itself warns and shuts down cleanly rather than crashing (see its module docstring).
+voltage sensor is present on the base. battery_monitor:=false skips both of ina260_ros2's
+launch includes entirely (battery_monitor_node and battery_events_node, the latter being
+what lekiwi_audio's indicator_node narrates); if left true on a robot with no INA260
+fitted, battery_monitor_node itself warns and shuts down cleanly rather than crashing (see
+its module docstring).
 """
 
 from launch import LaunchDescription
@@ -165,6 +167,13 @@ def launch_setup(context):
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
             'params_file': f'{pkg_bringup}/config/battery.yaml',
         }))
+        # battery_events_node turns /battery_state into the SetBool services lekiwi_audio's
+        # indicator_node narrates (/battery_charging, /battery_low, /battery_critical,
+        # /battery_full) - meaningless without battery_monitor_node's /battery_state, so it
+        # rides the same flag rather than getting its own. Default thresholds need no
+        # per-robot tuning, unlike battery.yaml's pack-specific values, so no params_file
+        # override here.
+        actions.append(include(pkg_ina260, 'launch/battery_events.launch.py'))
 
     if payload == 'pantilt':
         pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
@@ -258,9 +267,9 @@ def generate_launch_description():
             'battery_monitor',
             default_value='true',
             description='Whether a physical INA260 current/voltage sensor is present on the base. '
-                        'false skips ina260_ros2\'s launch include entirely; if left true with no '
-                        'INA260 fitted, battery_monitor_node warns and shuts down cleanly instead '
-                        'of crashing.',
+                        'false skips both of ina260_ros2\'s launch includes (battery_monitor_node '
+                        'and battery_events_node); if left true with no INA260 fitted, '
+                        'battery_monitor_node warns and shuts down cleanly instead of crashing.',
         ),
         DeclareLaunchArgument(
             'pointcloud',

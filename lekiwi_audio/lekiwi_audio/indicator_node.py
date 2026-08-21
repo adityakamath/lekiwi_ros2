@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Spoken status announcements for e-stop, mode switching, waypoint/map services, and Nav2 goals.
+"""Spoken status announcements for e-stop, mode switching, waypoint/map services, Nav2 goals,
+and battery charging/threshold events.
 
 Watches ROS 2 service introspection and /navigate_to_pose status, not button presses or the
 services' own effects, so announcements fire identically regardless of caller.
@@ -43,17 +44,25 @@ DEFAULT_SERVICES = [
     '/reset_waypoints',
     '/waypoint_follow',
     '/save_map',
+    '/battery_charging',
+    '/battery_low',
+    '/battery_critical',
+    '/battery_full',
 ]
 
 # Services whose owning node publishes _service_event with transient-local durability (see
-# STATE_SERVICE_QOS in sts_hardware_interface, twist_switch_node, waypoint_recorder_node) -
-# these represent ongoing state, so subscribing with matching durability replays the last
-# request+response pair on startup, and this node announces current state instead of staying
-# silent until the next transition. Durability is a compatibility requirement, not just a
-# preference: a VOLATILE subscription would never receive the replay even if it connects fine.
-# The other three services (record/reset/save) are one-shot actions - replaying a stale call
-# there would announce something that didn't just happen, so they stay on the plain default.
-STATE_SERVICES = {'/emergency_stop', '/twist_switch', '/waypoint_follow'}
+# STATE_SERVICE_QOS in sts_hardware_interface, twist_switch_node, waypoint_recorder_node,
+# ina260_ros2's battery_events_node) - these represent ongoing state, so subscribing with
+# matching durability replays the last request+response pair on startup, and this node
+# announces current state instead of staying silent until the next transition. Durability is
+# a compatibility requirement, not just a preference: a VOLATILE subscription would never
+# receive the replay even if it connects fine. The other three services (record/reset/save)
+# are one-shot actions - replaying a stale call there would announce something that didn't
+# just happen, so they stay on the plain default.
+STATE_SERVICES = {
+    '/emergency_stop', '/twist_switch', '/waypoint_follow',
+    '/battery_charging', '/battery_low', '/battery_critical', '/battery_full',
+}
 STATE_SERVICE_QOS = QoSProfile(
     depth=2,
     reliability=ReliabilityPolicy.RELIABLE,
