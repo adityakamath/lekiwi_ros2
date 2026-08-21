@@ -46,12 +46,9 @@ services:
   # recovered/reset), but no "false" phrase is configured here - a missing entry means "don't
   # announce anything" (see the top of this file), which is exactly the once-per-falling/rising-
   # edge behavior wanted; a recovery phrase can be added later without any code changes.
-  /battery_charging:
-    "true":
-      success: "Charging"
-    "false":
-      success: "Discharging"
-
+  # No /battery_charging - can't be reliably detected from net current alone when the robot's
+  # own load is running (see battery_events_node's module docstring); removed rather than ship
+  # something that silently fails to fire under normal operating load.
   /battery_low:
     "true":
       success: "Battery low"
