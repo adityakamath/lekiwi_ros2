@@ -37,9 +37,10 @@ class TestLekiwiBringupArgs:
     """Checks that the top-level launch declares all expected arguments."""
 
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'diagnostics', 'control_mock',
-        'fusion_mode', 'pointcloud', 'octomap', 'mission', 'map_name',
-        'use_sim_time',
+        'payload', 'pantilt_config', 'diagnostics', 'use_mock', 'joy',
+        'sts_serial_port', 'mujoco_model',
+        'fusion_mode', 'imu', 'audio', 'battery_monitor', 'pointcloud', 'octomap',
+        'mission', 'map_name', 'use_sim_time',
     ]
 
     def test_expected_args_declared(self):
@@ -68,6 +69,18 @@ class TestLekiwiBringupValidation:
         output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py',
                               ['payload:=pantilt', 'octomap:=true', 'pointcloud:=false'])
         assert 'octomap' in output.lower() or 'pointcloud' in output.lower()
+
+    def test_imu_false_with_default_fusion_mode_rejected(self):
+        output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py', ['imu:=false'])
+        assert 'fusion_mode' in output.lower()
+
+    def test_diagnostics_invalid_value_rejected(self):
+        output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py', ['diagnostics:=yes'])
+        assert 'diagnostics' in output.lower()
+
+    def test_battery_monitor_invalid_value_rejected(self):
+        output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py', ['battery_monitor:=yes'])
+        assert 'battery_monitor' in output.lower()
 
 
 # ── slam.launch.py argument surface ──────────────────────────────────────────
@@ -103,6 +116,32 @@ class TestSlamLaunchValidation:
                               ['mission:=amcl'])
         assert 'map_name' in output.lower() or 'requires' in output.lower()
 
+    def test_use_sim_time_invalid_value_rejected(self):
+        output, _ = _dry_run('lekiwi_navigation', 'slam.launch.py',
+                              ['use_sim_time:=notabool'])
+        assert 'use_sim_time' in output.lower()
+
+
+# ── nav2.launch.py validation rules ──────────────────────────────────────────
+
+class TestNav2LaunchValidation:
+    """Checks that nav2.launch.py rejects invalid argument values."""
+
+    def test_invalid_log_level_rejected(self):
+        output, _ = _dry_run('lekiwi_navigation', 'nav2.launch.py',
+                              ['log_level:=verbose'])
+        assert 'log_level' in output.lower()
+
+    def test_diagnostics_invalid_value_rejected(self):
+        output, _ = _dry_run('lekiwi_navigation', 'nav2.launch.py',
+                              ['diagnostics:=yes'])
+        assert 'diagnostics' in output.lower()
+
+    def test_autostart_invalid_value_rejected(self):
+        output, _ = _dry_run('lekiwi_navigation', 'nav2.launch.py',
+                              ['autostart:=yes'])
+        assert 'autostart' in output.lower()
+
 
 # ── laser.launch.py argument surface ─────────────────────────────────────────
 
@@ -122,7 +161,7 @@ class TestControlLaunchArgs:
 
     EXPECTED_ARGS = [
         'payload', 'pantilt_config', 'sts_serial_port', 'use_mock',
-        'diagnostics', 'use_sim_time', 'joy',
+        'diagnostics', 'imu', 'use_sim_time', 'joy',
     ]
 
     def test_expected_args_declared(self):

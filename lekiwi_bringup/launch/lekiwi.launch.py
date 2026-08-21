@@ -3,8 +3,20 @@
 Launch the LeKiwi robot system.
 
 The 'payload' argument selects which hardware payload is present:
-  ""        — base drive + IMU + navigation + laser [no pan-tilt, no OAK-D]
+  ""        — base drive + navigation + laser [no pan-tilt, no OAK-D]
   "pantilt" — base + pan-tilt + OAK-D + navigation + laser [default]
+
+The 'imu' argument (default true) selects whether a physical BNO055 IMU is present
+on the base (real hardware and sim:=true/MuJoCo both honor it). imu:=false requires
+fusion_mode:=odom, since base/imu fusion modes need the IMU.
+
+The 'audio' argument (default true) selects whether a physical reSpeaker mic array is
+present on the base. audio:=false skips lekiwi_audio's launch include entirely.
+
+The 'battery_monitor' argument (default true) selects whether a physical INA260 current/
+voltage sensor is present on the base. battery_monitor:=false skips ina260_ros2's launch
+include entirely; if left true on a robot with no INA260 fitted, battery_monitor_node
+itself warns and shuts down cleanly rather than crashing (see its module docstring).
 """
 
 from launch import LaunchDescription
@@ -17,40 +29,63 @@ from launch_ros.substitutions import FindPackageShare
 _VALID_PAYLOADS = {'', 'pantilt'}
 
 
+def _launch_arg_as_bool(context, name: str) -> bool:
+    """Resolve a launch argument as a strict boolean."""
+    value = LaunchConfiguration(name).perform(context).strip().lower()
+    if value in ('true', '1'):
+        return True
+    if value in ('false', '0'):
+        return False
+    raise RuntimeError(
+        f"[lekiwi.launch.py] Launch argument '{name}' must be true/false or 1/0, got {value!r}."
+    )
+
+
 def launch_setup(context):
     """Validate arguments and include control/navigation/laser (+ oakd for pantilt)."""
     payload             = LaunchConfiguration('payload').perform(context)
     pantilt_config      = LaunchConfiguration('pantilt_config').perform(context)
-    diagnostics         = LaunchConfiguration('diagnostics').perform(context)
-    control_mock        = LaunchConfiguration('control_mock').perform(context)
+    diagnostics         = _launch_arg_as_bool(context, 'diagnostics')
+    use_mock            = LaunchConfiguration('use_mock').perform(context)
     fusion_mode         = LaunchConfiguration('fusion_mode').perform(context)
+    imu                 = _launch_arg_as_bool(context, 'imu')
+    audio               = _launch_arg_as_bool(context, 'audio')
+    battery_monitor     = _launch_arg_as_bool(context, 'battery_monitor')
     map_name            = LaunchConfiguration('map_name').perform(context)
-    pointcloud          = LaunchConfiguration('pointcloud').perform(context)
-    octomap             = LaunchConfiguration('octomap').perform(context)
+    pointcloud          = _launch_arg_as_bool(context, 'pointcloud')
+    octomap             = _launch_arg_as_bool(context, 'octomap')
     mission             = LaunchConfiguration('mission').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
-    sim                 = LaunchConfiguration('sim').perform(context).strip().lower() in ('true', '1')
+    sim                 = _launch_arg_as_bool(context, 'sim')
     gui                 = LaunchConfiguration('gui').perform(context)
+    joy                 = LaunchConfiguration('joy').perform(context)
+    sts_serial_port     = LaunchConfiguration('sts_serial_port').perform(context)
+    mujoco_model        = LaunchConfiguration('mujoco_model').perform(context)
 
     if sim:
-        # Running in MuJoCo implies sim time; keep any explicit control_mock override,
+        # Running in MuJoCo implies sim time; keep any explicit use_mock override,
         # otherwise force it (control.launch.py's mujoco branch never opens the real serial
         # port, but this stays defensive/explicit rather than relying on that alone).
         use_sim_time = 'true'
-        control_mock = control_mock or 'true'
+        use_mock = use_mock or 'true'
 
     if payload not in _VALID_PAYLOADS:
         raise RuntimeError(
             f"[lekiwi.launch.py] Unknown payload '{payload}'. "
             f"Valid values: {sorted(_VALID_PAYLOADS)}"
         )
-    if pointcloud.lower() in ('true', '1') and payload != 'pantilt':
+    if pointcloud and payload != 'pantilt':
         raise RuntimeError(
             "[lekiwi.launch.py] pointcloud:=true requires payload:=pantilt."
         )
-    if octomap.lower() in ('true', '1') and pointcloud.lower() not in ('true', '1'):
+    if octomap and not pointcloud:
         raise RuntimeError(
             "[lekiwi.launch.py] octomap:=true requires pointcloud:=true."
+        )
+    if not imu and fusion_mode in ('base', 'imu'):
+        raise RuntimeError(
+            f"[lekiwi.launch.py] imu:=false requires fusion_mode:=odom "
+            f"(fusion_mode:={fusion_mode!r} needs the BNO055)."
         )
 
     pkg_control = FindPackageShare('lekiwi_control').perform(context)
@@ -63,11 +98,15 @@ def launch_setup(context):
         )
 
     control_args = {
-        'payload':        payload,
-        'pantilt_config': pantilt_config,
-        'diagnostics':  diagnostics,
-        'use_mock':     control_mock,
-        'use_sim_time': use_sim_time,
+        'payload':          payload,
+        'pantilt_config':   pantilt_config,
+        'diagnostics':      str(diagnostics).lower(),
+        'use_mock':         use_mock,
+        'use_sim_time':     use_sim_time,
+        'imu':              str(imu).lower(),
+        'joy':              joy,
+        'sts_serial_port':  sts_serial_port,
+        'mujoco_model':     mujoco_model,
     }
     if sim:
         control_args['ros2_control_hardware_type'] = 'mujoco'
@@ -79,12 +118,12 @@ def launch_setup(context):
         'mission':      mission,
         'map_name':     map_name,
         'use_sim_time': use_sim_time,
-        'diagnostics':  diagnostics,
+        'diagnostics':  str(diagnostics).lower(),
     })
 
     actions = [control, nav]
 
-    if diagnostics.strip().lower() in ('true', '1'):
+    if diagnostics:
         pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
         # name='analyzers' is required, not cosmetic - diagnostic_aggregator.yaml's own
         # top-level key is 'analyzers', and ROS 2 associates a YAML params file with a node
@@ -93,6 +132,7 @@ def launch_setup(context):
             package='diagnostic_aggregator',
             executable='aggregator_node',
             name='analyzers',
+            output='log',
             parameters=[
                 f'{pkg_bringup}/config/diagnostic_aggregator.yaml',
                 {'use_sim_time': use_sim_time.lower() in ('true', '1')},
@@ -100,24 +140,32 @@ def launch_setup(context):
         ))
 
     if sim:
-        # laser/audio/oakd are real-sensor drivers with no simulated equivalent (oakd) or
-        # already-simulated equivalent hosted directly by control.launch.py's mujoco
-        # control node (laser - see base.control.xacro's laser_frame <sensor>, which
-        # publishes /scan itself), so none of them are needed here.
+        # laser/audio/battery_monitor/oakd are real-sensor drivers with no simulated
+        # equivalent (oakd, battery_monitor) or already-simulated equivalent hosted
+        # directly by control.launch.py's mujoco control node (laser - see
+        # base.control.xacro's laser_frame <sensor>, which publishes /scan itself), so
+        # none of them are needed here.
         return actions
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
     laser = include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload})
     actions.append(laser)
 
-    pkg_audio = FindPackageShare('lekiwi_audio').perform(context)
-    actions.append(include(pkg_audio, 'launch/audio.launch.py'))
+    if audio:
+        pkg_audio = FindPackageShare('lekiwi_audio').perform(context)
+        actions.append(include(pkg_audio, 'launch/audio.launch.py'))
+
+    if battery_monitor:
+        pkg_ina260 = FindPackageShare('ina260_ros2').perform(context)
+        actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
+            'params_file': f'{pkg_bringup}/config/battery.yaml',
+        }))
 
     if payload == 'pantilt':
         pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
         oakd = include(pkg_pantilt, 'launch/oakd.launch.py', {
-            'pointcloud': pointcloud,
-            'octomap':    octomap,
+            'pointcloud': str(pointcloud).lower(),
+            'octomap':    str(octomap).lower(),
         })
         actions.append(oakd)
 
@@ -150,9 +198,26 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
-            'control_mock',
+            'use_mock',
             default_value='',
             description='[advanced/debug] Mock mode override (true/false); empty means use urdf_config.yaml value.',
+        ),
+        DeclareLaunchArgument(
+            'joy',
+            default_value='false',
+            description='Launch joy_node on this device. Set true when the joystick is connected locally; '
+                        'leave false when /joy is published from a remote device.',
+        ),
+        DeclareLaunchArgument(
+            'sts_serial_port',
+            default_value='',
+            description='[advanced/debug] Serial port override; empty string means use urdf_config.yaml value.',
+        ),
+        DeclareLaunchArgument(
+            'mujoco_model',
+            default_value='',
+            description='[advanced, sim only] Path to a pre-built MJCF file to load; empty means '
+                        'xacro-process it at launch time instead (picked by payload/pantilt_config).',
         ),
         DeclareLaunchArgument(
             'fusion_mode',
@@ -161,8 +226,30 @@ def generate_launch_description():
                 '[advanced] EKF sensor fusion mode: '
                 'base = wheel odom + BNO055 (default); '
                 'imu = BNO055 only (test platform); '
-                'odom = wheel odom only (debug).'
+                'odom = wheel odom only (debug, required when imu:=false).'
             ),
+        ),
+        DeclareLaunchArgument(
+            'imu',
+            default_value='true',
+            description='Whether a physical BNO055 IMU is present on the base (honored on '
+                        'real hardware and sim:=true/MuJoCo). false requires '
+                        'fusion_mode:=odom; omits the IMU from the URDF, the '
+                        'imu_sensor_broadcaster controller, and bno055_diagnostics.',
+        ),
+        DeclareLaunchArgument(
+            'audio',
+            default_value='true',
+            description='Whether a physical reSpeaker mic array and speaker is present on the base. '
+                        'false skips lekiwi_audio\'s launch include entirely.',
+        ),
+        DeclareLaunchArgument(
+            'battery_monitor',
+            default_value='true',
+            description='Whether a physical INA260 current/voltage sensor is present on the base. '
+                        'false skips ina260_ros2\'s launch include entirely; if left true with no '
+                        'INA260 fitted, battery_monitor_node warns and shuts down cleanly instead '
+                        'of crashing.',
         ),
         DeclareLaunchArgument(
             'pointcloud',
@@ -202,7 +289,7 @@ def generate_launch_description():
             'sim',
             default_value='false',
             description='Run against MuJoCo instead of real hardware: forces use_sim_time and '
-                        'control_mock, and skips laser/audio/oakd (laser is hosted by the mujoco '
+                        'use_mock, and skips laser/audio/oakd (laser is hosted by the mujoco '
                         'control node itself; oakd has no simulated equivalent yet - audio has no '
                         'simulated equivalent at all). Base and pantilt payload both supported.',
         ),
