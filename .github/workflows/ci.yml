@@ -62,6 +62,10 @@ jobs:
             ros-${{ matrix.ros_distro }}-teleop-twist-keyboard \
             ros-${{ matrix.ros_distro }}-xacro
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
+          # test_render_phrases.py imports lekiwi_audio.tts to monkeypatch Synthesizer, which
+          # imports onnxruntime/kokoro_onnx/soundfile at module level even though the tests
+          # themselves stub out the actual model - so these still need to be installed here.
+          pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/lekiwi_audio/requirements-build.txt
 
       - name: colcon build
         # --packages-ignore is required, not optional cleanup: lekiwi_bringup/lekiwi_control's
