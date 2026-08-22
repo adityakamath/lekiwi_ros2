@@ -40,15 +40,8 @@ services:
       success: "Saving map"
       failure: "Error"
 
-  # Published by ina260_ros2's battery_events_node, which fires each of these once per
-  # hysteresis-debounced edge - see that node's module docstring. /battery_low, /battery_critical
-  # and /battery_full are each genuinely two-sided SetBool services (they also fire "false" once
-  # recovered/reset), but no "false" phrase is configured here - a missing entry means "don't
-  # announce anything" (see the top of this file), which is exactly the once-per-falling/rising-
-  # edge behavior wanted; a recovery phrase can be added later without any code changes.
-  # No /battery_charging - can't be reliably detected from net current alone when the robot's
-  # own load is running (see battery_events_node's module docstring); removed rather than ship
-  # something that silently fails to fire under normal operating load.
+  # ina260_ros2's battery_events_node - no "false" phrase configured (missing entry = silent),
+  # giving once-per-edge announcements. No /battery_charging - net current alone can't detect it.
   /battery_low:
     "true":
       success: "Battery low"

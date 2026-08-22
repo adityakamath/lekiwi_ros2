@@ -23,6 +23,7 @@ analyzers:
       path: IMU
       contains: ['BNO055']
       timeout: 5.0
+      discard_stale: true
     patrol:
       type: diagnostic_aggregator/GenericAnalyzer
       path: Patrol

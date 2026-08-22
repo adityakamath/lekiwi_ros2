@@ -49,15 +49,8 @@ DEFAULT_SERVICES = [
     '/battery_full',
 ]
 
-# Services whose owning node publishes _service_event with transient-local durability (see
-# STATE_SERVICE_QOS in sts_hardware_interface, twist_switch_node, waypoint_recorder_node,
-# ina260_ros2's battery_events_node) - these represent ongoing state, so subscribing with
-# matching durability replays the last request+response pair on startup, and this node
-# announces current state instead of staying silent until the next transition. Durability is
-# a compatibility requirement, not just a preference: a VOLATILE subscription would never
-# receive the replay even if it connects fine. The other three services (record/reset/save)
-# are one-shot actions - replaying a stale call there would announce something that didn't
-# just happen, so they stay on the plain default.
+# Ongoing-state services (transient-local durability): a late-joining subscriber replays
+# the last call instead of staying silent. record/reset/save stay one-shot on the plain default.
 STATE_SERVICES = {
     '/emergency_stop', '/twist_switch', '/waypoint_follow',
     '/battery_low', '/battery_critical', '/battery_full',
@@ -89,21 +82,15 @@ def _phrase_filename(phrase: str) -> str:
 
 
 class SpeechQueue:
-    """Play announcements one at a time from pre-rendered audio files.
+    """Play announcements one at a time from pre-rendered audio files (see render_phrases.py).
 
-    Every distinct phrase was already rendered to sounds/*.wav at build time
-    (see render_phrases.py), so this is just an aplay of an existing file,
-    never live synthesis. Queue depth capped with drop-oldest: if events ever
-    outpace speech, the most recent state is what should be announced, not a
-    backlog of stale ones.
+    Queue depth capped with drop-oldest - the most recent state matters, not a stale backlog.
     """
 
     def __init__(self, sounds_dir: Path, speaker_device: str, logger, max_depth: int = 4) -> None:
         """Set the mixer volume and start the worker thread that plays queued phrases."""
-        # Not assumed to be handled elsewhere (e.g. by voice_pipeline.py, if
-        # that's even running) - this node sets its own audible volume. Missing
-        # amixer (no ALSA utilities - e.g. CI, or a machine with no audio hardware)
-        # shouldn't prevent the node from starting; playback would no-op the same way.
+        # Sets its own volume rather than assuming voice_pipeline.py already did; missing
+        # amixer (CI, no audio hardware) shouldn't prevent startup - playback just no-ops.
         try:
             subprocess.run(['amixer', '-c', '0', 'sset', 'PCM', '100%'], capture_output=True)
         except FileNotFoundError:
@@ -193,9 +180,8 @@ class IndicatorNode(Node):
                 qos,
             )
 
-        # goal_id (bytes) -> None, oldest-first; tracks which /navigate_to_pose goals have
-        # already been announced, since the status topic republishes every tracked goal's
-        # current state on every message, not just deltas.
+        # goal_id (bytes) -> None, oldest-first; tracks announced goals since the status
+        # topic republishes every tracked goal's state on every message, not just deltas.
         self._announced_nav_goals: dict[bytes, None] = {}
         if nav_goal_status_topic:
             self.create_subscription(
@@ -216,9 +202,8 @@ class IndicatorNode(Node):
         """Look up the configured phrase for a service call's request value and outcome."""
         state_phrases = self._phrases.get(service, {}).get('true' if request_value else 'false')
         if state_phrases is None:
-            # No entry at all for this request value - e.g. the false/no-op calls on
-            # /record_waypoint, /reset_waypoints, /save_map (confirmed in each handler:
-            # false changes nothing, it's not a real state). Deliberately silent.
+            # No entry for this request value - e.g. the false/no-op calls on /record_waypoint,
+            # /reset_waypoints, /save_map (confirmed: false changes nothing there). Deliberately silent.
             return None
         if success:
             return state_phrases.get('success')

@@ -3,8 +3,11 @@
 Launch the LeKiwi robot control stack.
 
 The 'payload' argument selects which hardware is present alongside the base:
-  ""        — base drive + IMU only  [default: no payload]
-  "pantilt" — base drive + IMU + pan-tilt servos
+  ""        — base drive (+ IMU unless imu:=false)  [default: no payload]
+  "pantilt" — base drive + pan-tilt servos (+ IMU unless imu:=false)
+
+payload:="pantilt" merges pan-tilt onto this shared bus instead of including
+pt_control/launch/pantilt.launch.py - see pantilt_ros2 README's "Launch-time bring-up".
 """
 
 import subprocess
@@ -46,6 +49,7 @@ def launch_setup(context):
     serial_port  = LaunchConfiguration('sts_serial_port').perform(context)
     use_mock     = LaunchConfiguration('use_mock').perform(context)
     diagnostics  = _launch_arg_as_bool(context, 'diagnostics')
+    imu          = _launch_arg_as_bool(context, 'imu')
     launch_joy   = _launch_arg_as_bool(context, 'joy')
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
@@ -58,9 +62,8 @@ def launch_setup(context):
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
 
-    # Unlike the urdf var above, MJCF must be xacro-processed here and land on disk (not
-    # stay an in-memory string), since MJCF's own <include> is filesystem-path-based. One
-    # file per payload, mirroring the urdf var above.
+    # MJCF must land on disk (not stay in-memory) since its <include> is filesystem-path-based -
+    # one file per payload, unlike the urdf var above.
     if mujoco_model:
         final_mujoco_model = mujoco_model
     elif hw_type == 'mujoco':
@@ -93,8 +96,9 @@ def launch_setup(context):
         f' left_motor_id:={_cfg["left_motor_id"]}'
         f' back_motor_id:={_cfg["back_motor_id"]}'
         f' right_motor_id:={_cfg["right_motor_id"]}'
-        f' sts_max_velocity_steps:={_cfg["sts_max_velocity_steps"]}'
+        f' sts3215_max_vel_steps:={_cfg["sts3215_max_vel_steps"]}'
         f' proportional_acc_max:={_cfg["proportional_acc_max"]}'
+        f' imu:={str(imu).lower()}'
     )
     if payload == 'pantilt':
         xacro_cmd += (
@@ -144,9 +148,8 @@ def launch_setup(context):
         arguments=['--ros-args', '--log-level', 'rclcpp:=ERROR'],
     )
 
-    # mujoco_ros2_control ships its own ros2_control_node, hosting the MuJoCo simulation
-    # itself (and publishing /scan from the laser_frame lidar sensor - see
-    # base.control.xacro) - use_sim_time:true is required regardless of the launch arg.
+    # mujoco_ros2_control hosts its own simulation + /scan publishing (base.control.xacro) -
+    # use_sim_time:true is required regardless of the launch arg.
     mujoco_control_node = Node(
         package='mujoco_ros2_control',
         executable='ros2_control_node',
@@ -157,28 +160,18 @@ def launch_setup(context):
             {'use_sim_time': True},
         ],
         output='both',
+        emulate_tty=True,
     )
 
     control_node = mujoco_control_node if hw_type == 'mujoco' else controller_manager
 
-    teleop_node = Node(
-        package='joy_teleop',
-        executable='joy_teleop',
-        name='joy_teleop',
-        parameters=[
-            f'{pkg_ctrl}/config/base/teleop.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/teleop.yaml']),
-            {'use_sim_time': use_sim_time},
-        ],
-        output='screen',
-    )
-
-    joy_node = Node(
-        package='joy',
-        executable='joy_node',
-        name='joy_node',
-        output='log',
-        parameters=[{'use_sim_time': use_sim_time}],
+    teleop_include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([f'{pkg_ctrl}/launch/teleop.launch.py']),
+        launch_arguments={
+            'payload': payload,
+            'use_sim_time': str(use_sim_time).lower(),
+            'joy': str(launch_joy).lower(),
+        }.items(),
     )
 
     twist_switch_node = Node(
@@ -207,10 +200,14 @@ def launch_setup(context):
         Node(package='controller_manager', executable='spawner',
              arguments=['base_controller', '-c', '/controller_manager',
                         '--controller-manager-timeout', '30'], output='both'),
-        Node(package='controller_manager', executable='spawner',
-             arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
-                        '--controller-manager-timeout', '30'], output='both'),
     ]
+    if imu:
+        # Only spawn when the URDF declares the lekiwi_imu interface (imu:=true branch).
+        extra_spawner_nodes.append(
+            Node(package='controller_manager', executable='spawner',
+                 arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
+                            '--controller-manager-timeout', '30'], output='both'),
+        )
     if payload == 'pantilt':
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
@@ -226,11 +223,8 @@ def launch_setup(context):
         output='both',
     )
 
-    # Start spawners as soon as the control node process starts (controller_manager for
-    # real/gazebo, mujoco_control_node for mujoco - either way it's whichever one is
-    # actually being launched, see control_node above).
-    # joint_state_broadcaster first; other controllers follow after a brief stagger
-    # so they do not all race to activate simultaneously.
+    # Start spawners as soon as control_node (whichever variant) starts. joint_state_broadcaster
+    # first; others follow after a brief stagger so they don't all race to activate at once.
     controller_spawner_actions = [
         RegisterEventHandler(
             OnProcessStart(
@@ -253,29 +247,27 @@ def launch_setup(context):
         robot_state_publisher,
         control_node,
         *controller_spawner_actions,
-        teleop_node,
+        teleop_include,
         twist_switch_node,
         bool_toggle_node,
     ]
 
-    if launch_joy:
-        actions.append(joy_node)
-
     if diagnostics:
         actions.append(TimerAction(period=3.0, actions=[motor_diagnostics]))
-        actions.append(TimerAction(
-            period=3.0,
-            actions=[Node(
-                package='bno055_hardware_interface',
-                executable='bno055_diagnostics',
-                name='bno055_diagnostics',
-                output='log',
-                parameters=[
-                    f'{pkg_ctrl}/config/base/bno055_diagnostics.yaml',
-                    {'enable_mock_mode': final_use_mock},
-                ],
-            )],
-        ))
+        if imu:
+            actions.append(TimerAction(
+                period=3.0,
+                actions=[Node(
+                    package='bno055_hardware_interface',
+                    executable='bno055_diagnostics',
+                    name='bno055_diagnostics',
+                    output='log',
+                    parameters=[
+                        f'{pkg_ctrl}/config/base/bno055_diagnostics.yaml',
+                        {'enable_mock_mode': final_use_mock},
+                    ],
+                )],
+            ))
 
     return actions
 
@@ -305,8 +297,19 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'diagnostics',
+            default_value='false',
+            description='Launch motor and IMU diagnostics nodes. Defaults to false everywhere '
+                        'in the stack (lekiwi.launch.py included) so this default takes effect '
+                        'identically whether control.launch.py is run standalone or included.',
+        ),
+        DeclareLaunchArgument(
+            'imu',
             default_value='true',
-            description='Launch motor and IMU diagnostics nodes',
+            description='Whether a physical BNO055 IMU is present (honored on real and '
+                        'mujoco hardware; gazebo is xacro-level only, not wired into this '
+                        'launch file). false omits the IMU sensor block, skips spawning '
+                        'imu_sensor_broadcaster, and skips bno055_diagnostics even when '
+                        'diagnostics:=true.',
         ),
         DeclareLaunchArgument(
             'use_sim_time',

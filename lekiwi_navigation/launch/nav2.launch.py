@@ -61,17 +61,36 @@ from launch_ros.actions import Node, SetParameter
 from launch_ros.descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 
+_VALID_LOG_LEVELS = {'info', 'debug', 'warn', 'error'}
+
+
+def _launch_arg_as_bool(context, name: str) -> bool:
+    """Resolve a launch argument as a strict boolean."""
+    value = LaunchConfiguration(name).perform(context).strip().lower()
+    if value in ('true', '1'):
+        return True
+    if value in ('false', '0'):
+        return False
+    raise RuntimeError(
+        f"[nav2.launch.py] Launch argument '{name}' must be true/false or 1/0, got {value!r}."
+    )
+
 
 def launch_setup(context, *args, **kwargs):
     """Build and return the Nav2 nodes, resolving map_name to filter mask paths."""
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
     map_name = LaunchConfiguration('map_name').perform(context)
+    log_level = LaunchConfiguration('log_level').perform(context)
+    if log_level not in _VALID_LOG_LEVELS:
+        raise RuntimeError(
+            f"[nav2.launch.py] Unknown log_level {log_level!r}. "
+            f"Valid values: {sorted(_VALID_LOG_LEVELS)}"
+        )
 
-    params_file = LaunchConfiguration('params_file')
-    use_sim_time = LaunchConfiguration('use_sim_time')
-    autostart    = LaunchConfiguration('autostart')
-    log_level    = LaunchConfiguration('log_level')
-    diagnostics  = LaunchConfiguration('diagnostics')
+    params_file  = LaunchConfiguration('params_file')
+    use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
+    autostart    = _launch_arg_as_bool(context, 'autostart')
+    diagnostics  = _launch_arg_as_bool(context, 'diagnostics')
 
     # bt_navigator must be last - it depends on the other servers being active. Costmap
     # filters get their own lifecycle managers below.
@@ -90,9 +109,8 @@ def launch_setup(context, *args, **kwargs):
     # Standard Nav2 TF remappings — required when running without a namespace.
     remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
 
-    # ParameterFile makes the yaml available to every node without duplicating
-    # it.  allow_substs=True enables $(find ...) style substitutions inside the
-    # yaml if ever needed.
+    # ParameterFile shares the yaml across every node without duplicating it;
+    # allow_substs=True enables $(find ...) substitutions inside it if ever needed.
     configured_params = ParameterFile(params_file, allow_substs=True)
 
     # realpath resolves the --symlink-install symlink to the source tree, so this always
@@ -119,9 +137,8 @@ def launch_setup(context, *args, **kwargs):
         keepout_mask_path = ''
         speed_mask_path = ''
 
-    # When filter masks are available, enable the filter plugins via an ephemeral param
-    # overlay. The plugins default to enabled: false in nav2.yaml so no override is
-    # needed (and no separate file is needed) when running without a map.
+    # Enables the filter plugins via an ephemeral param overlay when masks are available;
+    # they default to enabled: false in nav2.yaml, so no override/file is needed otherwise.
     filter_enable_params = []
     if keepout_mask_path:
         _filter_dict = {

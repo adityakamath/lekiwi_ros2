@@ -84,12 +84,8 @@ from std_srvs.srv import SetBool
 from visualization_msgs.msg import Marker, MarkerArray
 import tf2_ros
 
-# /waypoint_follow reflects ongoing patrol state (running vs. stopped), not a one-shot action
-# like /record_waypoint and /reset_waypoints - a late-joining subscriber (e.g. the audio
-# indicator node, or bool_toggle_node syncing its own belief about current state) should learn
-# whether a patrol is active on connect rather than waiting for the next start/stop. Depth 2 is
-# enough to cache the last request+response pair. The liveliness lease lets a subscriber notice
-# if this node dies without a clean exit.
+# /waypoint_follow reflects ongoing patrol state, not a one-shot action - late-joining
+# subscribers (audio indicator, bool_toggle_node) should learn current state on connect.
 STATE_SERVICE_QOS = QoSProfile(
     depth=2,
     reliability=ReliabilityPolicy.RELIABLE,
@@ -177,9 +173,8 @@ class WaypointRecorderNode(Node):
         for srv in (record_srv, reset_srv):
             srv.configure_introspection(
                 self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
-        # /waypoint_follow gets the transient-local state QoS (see STATE_SERVICE_QOS above) -
-        # record/reset are one-shot actions where replaying a stale call on a late-joining
-        # subscriber would announce something that didn't just happen.
+        # /waypoint_follow gets transient-local state QoS (STATE_SERVICE_QOS above); record/reset
+        # stay one-shot - replaying a stale call there would announce something that didn't just happen.
         follow_srv.configure_introspection(
             self.get_clock(), STATE_SERVICE_QOS, ServiceIntrospectionState.CONTENTS)
 
@@ -214,9 +209,8 @@ class WaypointRecorderNode(Node):
         response.success = True
 
         if self._goal_handle is not None:
-            # Queued, not spliced in immediately - an immediate splice would preempt the
-            # in-flight goal, and nav2_waypoint_follower resets goal_index to 0 on any
-            # preemption, jumping the patrol to the wrong waypoint.
+            # Queued, not spliced in immediately - an immediate splice would preempt the in-flight
+            # goal, and nav2_waypoint_follower resets goal_index to 0 on any preemption.
             self._pending_waypoints.append(pose)
             index = len(self._waypoints) + len(self._pending_waypoints) - 1
             response.message = (
@@ -238,10 +232,8 @@ class WaypointRecorderNode(Node):
     def _publish_markers(self):
         """Publish an arrow + index label for every recorded waypoint, including queued ones.
 
-        Leading DELETEALL ensures stale markers (e.g. orange ghosts left over when pending
-        waypoints are merged into the active patrol) are cleared atomically before the fresh
-        state is added.  RViz2 and Foxglove both process MarkerArrays sequentially within a
-        single message, so this produces no visible flicker.
+        Leading DELETEALL clears stale markers atomically before the fresh state is added -
+        RViz2/Foxglove process MarkerArrays sequentially, so this produces no visible flicker.
         """
         markers = MarkerArray()
         delete_all = Marker()
@@ -346,10 +338,8 @@ class WaypointRecorderNode(Node):
     def _send_patrol_goal(self):
         """Send a FollowWaypoints goal, resuming from self._to_waypoint if applicable.
 
-        Shared by _start_patrol (the /waypoint_follow service handler), the automatic
-        resume-after-external-detour path in _on_nav_status, and the loop-boundary merge in
-        _on_feedback - all need the same resume-aware goal construction. Returns
-        (resuming, start_index).
+        Shared by _start_patrol, the resume-after-detour path in _on_nav_status, and the
+        loop-boundary merge in _on_feedback. Returns (resuming, start_index).
         """
         total = len(self._waypoints)
         resuming = self._last_feedback_waypoint is not None
@@ -447,6 +437,8 @@ class WaypointRecorderNode(Node):
         """Cache the latest /navigate_to_pose feedback for the diagnostics ETA fields."""
         if self._goal_handle is None:
             return  # not patrolling - this /navigate_to_pose goal isn't ours
+        if self._resume_timer is not None:
+            return  # paused for a detour handoff - this feedback isn't our patrol leg
         self._latest_nav_feedback = msg.feedback
         self._publish_diagnostics()
 
@@ -479,9 +471,8 @@ class WaypointRecorderNode(Node):
             self.get_logger().info('Patrol finished.')
             return
 
-        # Not a deliberate stop - wait until /navigate_to_pose is free, then resume. Track
-        # consecutive failures at the same waypoint index so a genuinely unreachable waypoint
-        # eventually gets dropped instead of retried forever (see _remove_unreachable_waypoint).
+        # Not a deliberate stop - wait until /navigate_to_pose is free, then resume; tracks
+        # consecutive failures per waypoint so an unreachable one eventually gets dropped.
         if self._to_waypoint == self._failed_waypoint:
             self._consecutive_failures += 1
         else:
@@ -578,9 +569,8 @@ class WaypointRecorderNode(Node):
             self.get_logger().info(response.message)
             return response
 
-        # _goal_handle is cleared by _on_result once cancellation is confirmed, not here - a
-        # second stop request just re-requests it (harmless), and a start request cleanly
-        # preempts it.
+        # _goal_handle is cleared by _on_result once cancellation confirms, not here - a second
+        # stop just re-requests it, a start cleanly preempts it.
         self._clear_plan_visualizations()
         self._goal_handle.cancel_goal_async()
         response.success = True

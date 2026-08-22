@@ -1,28 +1,12 @@
 #!/usr/bin/env python3
-"""
-Launch the LeKiwi robot system.
+"""Launch the LeKiwi robot system.
 
 The 'payload' argument selects which hardware payload is present:
   ""        — base drive + navigation + laser [no pan-tilt, no OAK-D]
   "pantilt" — base + pan-tilt + OAK-D + navigation + laser [default]
 
-The 'imu' argument (default true) selects whether a physical BNO055 IMU is present
-on the base (real hardware and sim:=true/MuJoCo both honor it). imu:=false requires
-fusion_mode:=odom, since base/imu fusion modes need the IMU.
-
-The 'laser' argument (default true) selects whether a physical LD06 LiDAR is present on
-the base. laser:=false skips laser.launch.py's include entirely.
-
-The 'audio' argument (default true) selects whether a physical reSpeaker mic array is
-present on the base. audio:=false skips lekiwi_audio's launch include entirely.
-
-The 'battery_monitor' argument (default true) selects whether a physical INA260 current/
-voltage sensor is present on the base. battery_monitor:=false skips ina260_ros2's launch
-include entirely (battery_monitor_node and battery_events_node together, the latter being
-what lekiwi_audio's indicator_node narrates); if left true on a robot with no INA260
-fitted, battery_monitor_node itself warns and shuts down cleanly rather than crashing (see
-its module docstring).
-"""
+'imu'/'laser'/'audio'/'battery_monitor' (all default true) each gate one optional physical
+sensor's launch include - see their own DeclareLaunchArgument descriptions below."""
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
@@ -69,9 +53,8 @@ def launch_setup(context):
     mujoco_model        = LaunchConfiguration('mujoco_model').perform(context)
 
     if sim:
-        # Running in MuJoCo implies sim time; keep any explicit use_mock override,
-        # otherwise force it (control.launch.py's mujoco branch never opens the real serial
-        # port, but this stays defensive/explicit rather than relying on that alone).
+        # Running in MuJoCo implies sim time and mock hardware - forced here defensively
+        # rather than relying solely on control.launch.py's mujoco branch never opening the real port.
         use_sim_time = 'true'
         use_mock = use_mock or 'true'
 
@@ -131,9 +114,8 @@ def launch_setup(context):
 
     if diagnostics:
         pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
-        # name='analyzers' is required, not cosmetic - diagnostic_aggregator.yaml's own
-        # top-level key is 'analyzers', and ROS 2 associates a YAML params file with a node
-        # by matching that key to the node's name.
+        # name='analyzers' is required, not cosmetic - matches diagnostic_aggregator.yaml's
+        # own top-level key, which ROS 2 uses to associate the params file with this node.
         actions.append(Node(
             package='diagnostic_aggregator',
             executable='aggregator_node',
@@ -146,11 +128,8 @@ def launch_setup(context):
         ))
 
     if sim:
-        # laser/audio/battery_monitor/oakd are real-sensor drivers with no simulated
-        # equivalent (oakd, battery_monitor) or already-simulated equivalent hosted
-        # directly by control.launch.py's mujoco control node (laser - see
-        # base.control.xacro's laser_frame <sensor>, which publishes /scan itself), so
-        # none of them are needed here.
+        # laser/audio/battery_monitor/oakd have no simulated equivalent, or are
+        # already hosted directly by control.launch.py's mujoco control node instead.
         return actions
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
@@ -163,12 +142,8 @@ def launch_setup(context):
         actions.append(include(pkg_audio, 'launch/audio.launch.py'))
 
     if battery_monitor:
-        # battery_monitor.launch.py starts both battery_monitor_node and battery_events_node
-        # (the latter turns /battery_state into the SetBool services lekiwi_audio's
-        # indicator_node narrates: /battery_charging, /battery_low, /battery_critical,
-        # /battery_full) - they share one flag since battery_events_node is meaningless
-        # without battery_monitor_node's /battery_state. Both nodes read their own top-level
-        # key out of the same params_file.
+        # Starts both battery_monitor_node and battery_events_node (the latter exposes
+        # /battery_low, /battery_critical, /battery_full as SetBool services for indicator_node).
         pkg_ina260 = FindPackageShare('ina260_ros2').perform(context)
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
             'params_file': f'{pkg_bringup}/config/battery.yaml',

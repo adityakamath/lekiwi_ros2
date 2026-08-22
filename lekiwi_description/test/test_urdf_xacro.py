@@ -25,7 +25,7 @@ _BASE_ARGS = [
     'left_motor_id:=7',
     'back_motor_id:=8',
     'right_motor_id:=9',
-    'sts_max_velocity_steps:=3400',
+    'sts3215_max_vel_steps:=3400',
     'proportional_acc_max:=25',
 ]
 
@@ -175,6 +175,55 @@ class TestBaseUrdfInterfaces:
         ifaces = [i.get('name') for i in sensor.findall('state_interface')]
         for expected in ('orientation.x', 'orientation.y', 'orientation.z', 'orientation.w'):
             assert expected in ifaces, f"IMU sensor missing state interface '{expected}'"
+
+    def test_gazebo_imu_sensor_present(self):
+        assert self.root.find('.//gazebo[@reference="imu_frame"]/sensor[@name="imu"]') is not None, \
+            "Gazebo imu_frame sensor should be present when imu:=true"
+
+
+class TestBaseUrdfNoImu:
+    """imu:=false must omit all IMU sensor blocks but keep lekiwi_base intact."""
+
+    def setup_method(self):
+        stdout, _, _ = _xacro(_URDF_BASE, _BASE_ARGS + ['imu:=false'])
+        self.root = ET.fromstring(stdout)
+
+    def test_imu_sensor_block_absent(self):
+        assert self.root.find('ros2_control[@name="lekiwi_imu"]') is None, \
+            "ros2_control block 'lekiwi_imu' should be absent when imu:=false"
+
+    def test_base_sensor_block_still_present(self):
+        assert self.root.find('ros2_control[@name="lekiwi_base"]') is not None, \
+            "ros2_control block 'lekiwi_base' should still be present when imu:=false"
+
+    def test_gazebo_imu_sensor_absent(self):
+        assert self.root.find('.//gazebo[@reference="imu_frame"]/sensor[@name="imu"]') is None, \
+            "Gazebo imu_frame sensor should be absent when imu:=false"
+
+
+class TestBaseUrdfMujocoImu:
+    """mujoco hardware type must gate its own bno055 sensor block on imu, like real hardware."""
+
+    def _render(self, imu):
+        stdout, stderr, rc = _xacro(
+            _URDF_BASE, _BASE_ARGS + ['ros2_control_hardware_type:=mujoco', f'imu:={imu}'])
+        assert rc == 0, f"xacro failed:\n{stderr}"
+        return ET.fromstring(stdout)
+
+    def test_mujoco_bno055_sensor_present_when_imu_true(self):
+        root = self._render('true')
+        rc = root.find('ros2_control[@name="lekiwi_base"]')
+        assert rc.find('.//sensor[@name="bno055"]') is not None, \
+            "mujoco lekiwi_base block should contain a bno055 sensor when imu:=true"
+        assert rc.find('.//sensor[@name="lidar"]') is not None, "lidar sensor should still be present"
+
+    def test_mujoco_bno055_sensor_absent_when_imu_false(self):
+        root = self._render('false')
+        rc = root.find('ros2_control[@name="lekiwi_base"]')
+        assert rc.find('.//sensor[@name="bno055"]') is None, \
+            "mujoco lekiwi_base block should omit the bno055 sensor when imu:=false"
+        assert rc.find('.//sensor[@name="lidar"]') is not None, \
+            "lidar sensor should still be present when imu:=false"
 
 
 class TestBasePantiltUrdfInterfaces:

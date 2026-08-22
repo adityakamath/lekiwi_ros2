@@ -39,7 +39,7 @@ class TestUrdfConfig:
     def test_required_keys_present(self):
         for key in ('serial_port', 'baud_rate', 'use_mock', 'use_sync_write',
                     'left_motor_id', 'back_motor_id', 'right_motor_id',
-                    'sts_max_velocity_steps', 'proportional_acc_max'):
+                    'sts3215_max_vel_steps', 'proportional_acc_max'):
             assert key in self.cfg, f"Missing key '{key}' in urdf_config.yaml"
 
     def test_baud_rate_is_positive_int(self):
@@ -241,3 +241,14 @@ class TestControlLaunchArgs:
         output = _show_arguments('lekiwi_control', 'control.launch.py')
         for arg in self.EXPECTED_ARGS:
             assert arg in output, f"Expected argument '{arg}' not in control.launch.py"
+
+
+# ── teleop.launch.py argument surface ────────────────────────────────────────
+
+class TestTeleopLaunchArgs:
+    EXPECTED_ARGS = ['payload', 'use_sim_time', 'joy']
+
+    def test_expected_args_declared(self):
+        output = _show_arguments('lekiwi_control', 'teleop.launch.py')
+        for arg in self.EXPECTED_ARGS:
+            assert arg in output, f"Expected argument '{arg}' not in teleop.launch.py"

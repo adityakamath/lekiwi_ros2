@@ -3,8 +3,7 @@ pan_motor_id: 1
 tilt_motor_id: 2
 
 pan_center_steps: 2048
-tilt_center_steps: 2646
-
+tilt_center_steps: 2048
 proportional_vel_max: 0
 
 pan_joint_lower: -1.5708

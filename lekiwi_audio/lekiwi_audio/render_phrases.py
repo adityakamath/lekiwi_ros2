@@ -54,13 +54,28 @@ def collect_phrases(phrases_path: Path) -> set[str]:
     return phrases
 
 
+def _stale_colcon_sounds_dirs(sounds_dir: Path) -> tuple[Path, ...]:
+    """Find build/install sounds dirs under the enclosing 'src'-rooted workspace, if any."""
+    ws_root = next((p.parent for p in sounds_dir.parents if p.name == 'src'), None)
+    if ws_root is None:
+        return ()
+    package_name = sounds_dir.parent.name
+    return (
+        ws_root / 'build' / package_name / 'sounds',
+        ws_root / 'install' / package_name / 'share' / package_name / 'sounds',
+    )
+
+
 def _prune_orphans(phrases: set[str], sounds_dir: Path) -> None:
-    """Delete any sounds/*.wav that no longer matches a phrase still in phrases.yaml."""
+    """Delete any *.wav with no matching phrase, in sounds_dir and colcon's cached copies."""
     wanted = {phrase_filename(p) for p in phrases}
-    for wav_path in sounds_dir.glob('*.wav'):
-        if wav_path.name not in wanted:
-            wav_path.unlink()
-            print(f'  removed orphaned {wav_path.name}', file=sys.stderr)
+    for candidate_dir in (sounds_dir, *_stale_colcon_sounds_dirs(sounds_dir)):
+        if not candidate_dir.is_dir():
+            continue
+        for wav_path in candidate_dir.glob('*.wav'):
+            if wav_path.name not in wanted:
+                wav_path.unlink()
+                print(f'  removed orphaned {wav_path}', file=sys.stderr)
 
 
 def render_missing(phrases_path: Path | None = None, sounds_dir: Path | None = None) -> None:
@@ -97,8 +112,9 @@ def render_missing(phrases_path: Path | None = None, sounds_dir: Path | None = N
             voices_path=str(voices_dir / 'voices-v1.0.bin'),
         )
         for phrase, filename in sorted(missing.items()):
-            wav_path = synth.synthesize(phrase)
-            (sounds_dir / filename).write_bytes(Path(wav_path).read_bytes())
+            wav_path = Path(synth.synthesize(phrase))
+            (sounds_dir / filename).write_bytes(wav_path.read_bytes())
+            wav_path.unlink()  # synthesize() returns a tempfile - don't leak it
             print(f'  {filename}  <-  {phrase!r}', file=sys.stderr)
 
         print('lekiwi_audio: done rendering phrases.', file=sys.stderr)

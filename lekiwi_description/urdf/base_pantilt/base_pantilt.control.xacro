@@ -15,13 +15,14 @@
   <xacro:arg name="tilt_center_steps" default="2048"/>
 
   <!-- BNO055 IMU parameters (externally settable) -->
+  <xacro:arg name="imu"             default="true"/>    <!-- false = no physical IMU; omits the lekiwi_imu sensor block below (real hardware only) -->
   <xacro:arg name="imu_i2c_bus"     default="1"/>       <!-- I2C bus number (/dev/i2c-1) -->
   <xacro:arg name="imu_i2c_addr"    default="28"/>      <!-- I2C address: 28 = 0x28 (ADR pin low) -->
   <xacro:arg name="imu_axis_remap"  default="P1"/>      <!-- Mounting orientation P0-P7, see BNO055 datasheet Table 3-4 -->
   <xacro:arg name="imu_sensor_mode" default="NDOF"/>    <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
 
   <!-- Configurable hardware parameters (STS3215 defaults) -->
-  <xacro:arg name="sts_max_velocity_steps" default="3400"/>  <!-- STS3215=3400, STS3032=2900, STS3235=3400 -->
+  <xacro:arg name="sts3215_max_vel_steps" default="3400"/>  <!-- STS3215=3400, STS3032=2900, STS3235=3400 -->
   <xacro:arg name="proportional_acc_max"   default="25"/>    <!-- [0-254]; 0 = disable proportional ACC -->
   <xacro:arg name="proportional_vel_max"   default="0"/>     <!-- [0-max_velocity_steps]; 0 = each joint uses commanded velocity -->
   <!-- Pan and Tilt joint limits (configurable, symmetric ±π/2 defaults) -->
@@ -31,19 +32,11 @@
   <xacro:arg name="tilt_joint_upper"       default="1.5708"/>   <!-- rad, default +π/2 -->
 
   <!-- Simulation -->
-  <!-- "real" (default) keeps the STS3215 serial hardware plugin below unchanged. "mujoco"
-       swaps it for mujoco_ros2_control/MujocoSystemInterface, driving the wheels AND
-       pan/tilt joints (both live in the same lekiwi_base system interface, sharing one
-       serial bus on real hardware) and hosting the IMU/lidar sensors below - wired into
-       control.launch.py. "gazebo" swaps it for gz_ros2_control/GazeboSimSystem; the
-       joints/controllers stay identical, but this option exists at the xacro level only,
-       not wired into any launch file yet. -->
+  <!-- "real" (default): STS3215 serial plugin. "mujoco": MujocoSystemInterface, driving
+       wheels+pan/tilt and hosting IMU/lidar below, wired into control.launch.py. "gazebo": GazeboSimSystem, xacro-only. -->
   <xacro:arg name="ros2_control_hardware_type" default="real"/>
-  <!-- Controllers YAML paths for the embedded controller_manager; only used when the
-       <gazebo> plugin below is actually instantiated (i.e. in sim). Two separate files
-       (not one merged file) because gz_ros2_control's <parameters> tag can be given
-       multiple times and controller_manager merges them - same base + payload split
-       control.launch.py already uses for the real, standalone ros2_control_node. -->
+  <!-- Two separate controllers-YAML args (sim only): gz_ros2_control merges multiple
+       <parameters> tags, matching control.launch.py's real base+payload split. -->
   <xacro:arg name="simulation_controllers" default=""/>
   <xacro:arg name="payload_simulation_controllers" default=""/>
   <!-- MJCF scene path and headless flag; only used when ros2_control_hardware_type:="mujoco". -->
@@ -54,7 +47,7 @@
   <xacro:property name="base_operating_mode" value="1"/>  <!-- Velocity mode -->
 
   <!-- Motor-specific parameter — sourced from arg, STS3215 default -->
-  <xacro:property name="sts_max_velocity_steps" value="$(arg sts_max_velocity_steps)"/>  <!-- Max hardware velocity in steps/s -->
+  <xacro:property name="sts3215_max_vel_steps" value="$(arg sts3215_max_vel_steps)"/>  <!-- Max hardware velocity in steps/s -->
 
   <!-- Proportional ACC parameters (SyncWriteSpe velocity path only) -->
   <!-- ACC given to the wheel with the largest |target - current| velocity delta. -->
@@ -68,7 +61,7 @@
   <xacro:property name="theta" value="${2*pi/3}"/>  <!-- 120° between wheels -->
 
   <!-- Maximum allowable speed/acceleration/torque for each motor -->
-  <xacro:property name="max_velocity_steps" value="${int(sts_max_velocity_steps * 0.85)}"/> <!-- steps/second (85% of hardware max, 15% safety margin) -->
+  <xacro:property name="max_velocity_steps" value="${int(sts3215_max_vel_steps * 0.85)}"/> <!-- steps/second (85% of hardware max, 15% safety margin) -->
   <xacro:property name="max_velocity_rads" value="${max_velocity_steps*2*pi/4096}"/> <!-- rad/s -->
   <xacro:property name="max_torque_nm" value="2.942"/> <!-- N⋅m (30 kgf⋅cm for STS3215) -->
 
@@ -86,11 +79,9 @@
   <xacro:property name="tilt_joint_lower" value="$(arg tilt_joint_lower)"/>
   <xacro:property name="tilt_joint_upper" value="$(arg tilt_joint_upper)"/>
 
-  <!-- Pan/tilt velocity ceiling for pantilt.module.xacro's gazebo-mode <limit velocity> -
-       duplicates pt_description/urdf/pantilt.control.xacro's own promoted property (that
-       file isn't included here; base_pantilt uses its own copy of the pantilt control
-       block instead, sharing this file's sts_max_velocity_steps arg). -->
-  <xacro:property name="pantilt_max_velocity_steps" value="${int(sts_max_velocity_steps * 0.85)}"/>
+  <!-- Duplicates pt_description's own promoted property (not included here - base_pantilt
+       uses its own copy of the pantilt control block) for pantilt.module.xacro's gazebo limit. -->
+  <xacro:property name="pantilt_max_velocity_steps" value="${int(sts3215_max_vel_steps * 0.85)}"/>
   <xacro:property name="pantilt_max_velocity_rads"  value="${pantilt_max_velocity_steps * 2 * pi / 4096}"/>
 
   <xacro:include filename="$(find pt_description)/urdf/pantilt.joints.xacro"/>
@@ -114,8 +105,6 @@
         <param name="baud_rate">$(arg baud_rate)</param>
         <param name="use_sync_write">$(arg use_sync_write)</param>
         <param name="enable_mock_mode">$(arg use_mock)</param>
-        <!-- Motor-specific parameter (adjust for different STS motor models) -->
-        <param name="max_velocity_steps">${sts_max_velocity_steps}</param>
         <!-- Proportional ACC: scale per-wheel acceleration so all wheels finish ramping in equal time -->
         <param name="proportional_acc_max">${proportional_acc_max}</param>
         <!-- Proportional VEL: scale per-joint speed so all position joints arrive simultaneously -->
@@ -126,13 +115,13 @@
     <joint name="left_wheel_joint">
       <param name="motor_id">$(arg left_motor_id)</param>
       <param name="operating_mode">${base_operating_mode}</param>
+      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
+      <param name="max_velocity_steps">${sts3215_max_vel_steps}</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <!-- Real-hardware-only telemetry: neither gz_ros2_control/GazeboSimSystem nor
-           mujoco_ros2_control/MujocoSystemInterface know anything beyond
-           position/velocity/effort, and simulated wheels have no real telemetry for these. -->
+      <!-- Real-hardware-only telemetry - sim plugins have nothing beyond position/velocity/effort. -->
       <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <state_interface name="voltage"/>
         <state_interface name="temperature"/>
@@ -144,13 +133,13 @@
     <joint name="back_wheel_joint">
       <param name="motor_id">$(arg back_motor_id)</param>
       <param name="operating_mode">${base_operating_mode}</param>
+      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
+      <param name="max_velocity_steps">${sts3215_max_vel_steps}</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <!-- Real-hardware-only telemetry: neither gz_ros2_control/GazeboSimSystem nor
-           mujoco_ros2_control/MujocoSystemInterface know anything beyond
-           position/velocity/effort, and simulated wheels have no real telemetry for these. -->
+      <!-- Real-hardware-only telemetry - sim plugins have nothing beyond position/velocity/effort. -->
       <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <state_interface name="voltage"/>
         <state_interface name="temperature"/>
@@ -162,13 +151,13 @@
     <joint name="right_wheel_joint">
       <param name="motor_id">$(arg right_motor_id)</param>
       <param name="operating_mode">${base_operating_mode}</param>
+      <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
+      <param name="max_velocity_steps">${sts3215_max_vel_steps}</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
-      <!-- Real-hardware-only telemetry: neither gz_ros2_control/GazeboSimSystem nor
-           mujoco_ros2_control/MujocoSystemInterface know anything beyond
-           position/velocity/effort, and simulated wheels have no real telemetry for these. -->
+      <!-- Real-hardware-only telemetry - sim plugins have nothing beyond position/velocity/effort. -->
       <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
         <state_interface name="voltage"/>
         <state_interface name="temperature"/>
@@ -181,37 +170,34 @@
         tilt_motor_id="$(arg tilt_motor_id)"
         pan_center_steps="$(arg pan_center_steps)"
         tilt_center_steps="$(arg tilt_center_steps)"
-        sts_max_velocity_steps="${sts_max_velocity_steps}"
+        sts3215_max_vel_steps="${sts3215_max_vel_steps}"
         pan_joint_lower="${pan_joint_lower}"
         pan_joint_upper="${pan_joint_upper}"
         tilt_joint_lower="${tilt_joint_lower}"
         tilt_joint_upper="${tilt_joint_upper}"
         ros2_control_hardware_type="$(arg ros2_control_hardware_type)"/>
 
-    <!-- mujoco_ros2_control's IMU/lidar sensors must live inside the SAME <ros2_control>
-         block as the MujocoSystemInterface <hardware><plugin> above - see
-         base.control.xacro (base-only) for why. -->
+    <!-- IMU/lidar sensors must live in this SAME <ros2_control> block as the plugin above -
+         see base.control.xacro (base-only) for why. -->
     <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'mujoco'}">
-      <!-- BNO055 IMU - mujoco_type="imu" tells MujocoSystemInterface::register_sensors to
-           look for MJCF sensors named bno055_quat/bno055_gyro/bno055_accel, attached to
-           base_subtree.xml's imu_site. Same state_interface list as the real-hardware
-           lekiwi_imu block below. -->
-      <sensor name="bno055">
-        <param name="mujoco_type">imu</param>
-        <state_interface name="orientation.x"/>
-        <state_interface name="orientation.y"/>
-        <state_interface name="orientation.z"/>
-        <state_interface name="orientation.w"/>
-        <state_interface name="angular_velocity.x"/>
-        <state_interface name="angular_velocity.y"/>
-        <state_interface name="angular_velocity.z"/>
-        <state_interface name="linear_acceleration.x"/>
-        <state_interface name="linear_acceleration.y"/>
-        <state_interface name="linear_acceleration.z"/>
-      </sensor>
-      <!-- LD19 lidar - matched to base_subtree.xml's 360 "lidar-<i>" MJCF rangefinder
-           sensors by this <sensor> block's own name ("lidar"), not by a mujoco_type param -
-           see base.control.xacro's equivalent block for the full explanation. -->
+      <!-- mujoco_type=imu maps to base_subtree.xml's bno055_quat/gyro/accel MJCF sensors -
+           same state_interfaces as the real block below, gated on imu:=true. -->
+      <xacro:if value="${'$(arg imu)' == 'true'}">
+        <sensor name="bno055">
+          <param name="mujoco_type">imu</param>
+          <state_interface name="orientation.x"/>
+          <state_interface name="orientation.y"/>
+          <state_interface name="orientation.z"/>
+          <state_interface name="orientation.w"/>
+          <state_interface name="angular_velocity.x"/>
+          <state_interface name="angular_velocity.y"/>
+          <state_interface name="angular_velocity.z"/>
+          <state_interface name="linear_acceleration.x"/>
+          <state_interface name="linear_acceleration.y"/>
+          <state_interface name="linear_acceleration.z"/>
+        </sensor>
+      </xacro:if>
+      <!-- Matched to base_subtree.xml's MJCF sensors by name ("lidar") - see base.control.xacro. -->
       <sensor name="lidar">
         <param name="frame_name">laser_frame</param>
         <param name="min_angle">0.0</param>
@@ -225,13 +211,9 @@
   </ros2_control>
 
   <!-- ROS 2 CONTROL -->
-  <!-- Sensor interface (BNO055 IMU) for real hardware. Omitted in gazebo mode:
-       base.module.xacro's native Gazebo IMU sensor + ros_gz_bridge supplies
-       /imu_sensor_broadcaster/imu directly instead (see the comment there). Omitted in
-       mujoco mode too: the equivalent sensor lives inside the lekiwi_base system block
-       above instead. imu_sensor_broadcaster itself isn't spawned in gazebo mode either
-       (control.launch.py), so a lekiwi_imu block would go unclaimed there anyway. -->
-  <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
+  <!-- Real hardware only - gazebo bridges its own IMU sensor instead (base.module.xacro),
+       mujoco hosts its sensor inside lekiwi_base above; also omitted when imu:=false. -->
+  <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real' and '$(arg imu)' == 'true'}">
     <ros2_control name="lekiwi_imu" type="sensor">
       <hardware>
         <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>

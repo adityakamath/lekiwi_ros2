@@ -27,9 +27,21 @@ from launch_ros.actions import LifecycleNode, Node
 from launch_ros.substitutions import FindPackageShare
 
 
+def _launch_arg_as_bool(context, name: str) -> bool:
+    """Resolve a launch argument as a strict boolean."""
+    value = LaunchConfiguration(name).perform(context).strip().lower()
+    if value in ('true', '1'):
+        return True
+    if value in ('false', '0'):
+        return False
+    raise RuntimeError(
+        f"[slam.launch.py] Launch argument '{name}' must be true/false or 1/0, got {value!r}."
+    )
+
+
 def launch_setup(context, *args, **kwargs):
     """Build the slam_toolbox or map_server+AMCL nodes for the selected mission."""
-    use_sim_time = LaunchConfiguration('use_sim_time')
+    use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     mission      = LaunchConfiguration('mission').perform(context)
     map_name     = LaunchConfiguration('map_name').perform(context)
 

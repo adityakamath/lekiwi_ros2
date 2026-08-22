@@ -65,11 +65,8 @@
     <!-- Laser frame -->
     <link name="laser_frame"/>
 
-    <!-- Gazebo simulation: LD19 lidar. update_rate/samples/angle/range values measured
-         directly off the real robot's /scan topic, not the datasheet. gz_frame_id overrides
-         gz-sim's default scoped sensor frame_id to the plain "laser_frame" the real
-         ldlidar_ros2_node publishes, so TF resolves the same in sim as on hardware
-         (unofficial SDF tag - gazebosim/gz-sensors#306). Inert outside Gazebo. -->
+    <!-- Values measured off the real /scan topic, not the datasheet. gz_frame_id matches
+         ldlidar_ros2_node's real "laser_frame" so TF resolves the same in sim (gz-sensors#306). -->
     <gazebo reference="laser_frame">
       <sensor name="lidar" type="gpu_lidar">
         <pose>0 0 0 0 0 0</pose>
@@ -120,35 +117,32 @@
     <!-- IMU frame -->
     <link name="imu_frame"/>
 
-    <!-- Gazebo simulation: BNO055 IMU. Attached to imu_frame and published on
-         /imu_sensor_broadcaster/imu (imu_sensor_broadcaster's own topic/frame_id) so EKF
-         needs no reconfiguration between real and sim; imu_sensor_broadcaster itself isn't
-         spawned in gazebo mode to avoid racing with this bridged topic. update_rate=50
-         matches controller_manager's rate. Noise stddevs are sqrt() of
-         imu_sensor_broadcaster's static_covariance_* params (gz has no separate orientation
-         noise, so orientation comes out noise-free). gz_frame_id/inertness: see lidar above. -->
-    <gazebo reference="imu_frame">
-      <sensor name="imu" type="imu">
-        <pose>0 0 0 0 0 0</pose>
-        <topic>imu_sensor_broadcaster/imu</topic>
-        <gz_frame_id>imu_frame</gz_frame_id>
-        <update_rate>50</update_rate>
-        <always_on>true</always_on>
-        <visualize>false</visualize>
-        <imu>
-          <angular_velocity>
-            <x><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></x>
-            <y><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></y>
-            <z><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></z>
-          </angular_velocity>
-          <linear_acceleration>
-            <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></x>
-            <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></y>
-            <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></z>
-          </linear_acceleration>
-        </imu>
-      </sensor>
-    </gazebo>
+    <!-- Bridges to imu_sensor_broadcaster's own topic so EKF needs no sim/real reconfig;
+         imu_sensor_broadcaster itself isn't spawned in gazebo mode, to avoid racing this. -->
+    <xacro:if value="${'$(arg imu)' == 'true'}">
+      <gazebo reference="imu_frame">
+        <sensor name="imu" type="imu">
+          <pose>0 0 0 0 0 0</pose>
+          <topic>imu_sensor_broadcaster/imu</topic>
+          <gz_frame_id>imu_frame</gz_frame_id>
+          <update_rate>50</update_rate>
+          <always_on>true</always_on>
+          <visualize>false</visualize>
+          <imu>
+            <angular_velocity>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></x>
+              <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></y>
+              <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></z>
+            </linear_acceleration>
+          </imu>
+        </sensor>
+      </gazebo>
+    </xacro:if>
 
     <!-- Respeaker flex mic link -->
     <link name="mic_link">

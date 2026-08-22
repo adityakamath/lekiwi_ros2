@@ -60,6 +60,7 @@ class MapSaverNode(Node):
 
         self._saving = False
         self._save_watchdog = None
+        self._save_generation = 0  # bumped per save; lets late callbacks detect they're stale
 
         # Introspection lets a listener (e.g. the audio indicator node) observe every
         # call's request+response on /save_map/_service_event, regardless of caller.
@@ -92,6 +93,8 @@ class MapSaverNode(Node):
     def _trigger_save(self):
         """Create the timestamped output directory and call /slam_toolbox/save_map."""
         self._saving = True
+        self._save_generation += 1
+        gen = self._save_generation
         timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         save_dir = os.path.join(self._maps_dir, timestamp)
         os.makedirs(save_dir, exist_ok=True)
@@ -107,17 +110,20 @@ class MapSaverNode(Node):
             self._saving = False
             return
 
-        self._save_watchdog = self.create_timer(self._save_timeout, self._on_save_watchdog)
+        self._save_watchdog = self.create_timer(
+            self._save_timeout, lambda: self._on_save_watchdog(gen))
 
         save_req = SaveMap.Request()
         save_req.name.data = self._map_name
 
         future = self._save_client.call_async(save_req)
-        future.add_done_callback(self._on_save_done)
+        future.add_done_callback(lambda f: self._on_save_done(f, gen))
 
-    def _on_save_watchdog(self):
+    def _on_save_watchdog(self, gen: int):
         """Force-clear a save/serialize chain that never finished (e.g. a slam_toolbox
         lifecycle hiccup dropping the response), so /save_map isn't stuck refusing forever."""
+        if gen != self._save_generation:
+            return  # stale watchdog for a save already superseded by a newer one - ignore
         self._clear_saving()
         self.get_logger().error(
             f'Save watchdog fired after {self._save_timeout:.0f}s - the chain never '
@@ -132,8 +138,16 @@ class MapSaverNode(Node):
             self._save_watchdog = None
         self._saving = False
 
-    def _on_save_done(self, future):
-        """Log the save_map result, create placeholder filter masks, then serialize."""
+    def _on_save_done(self, future, gen: int):
+        """Log the save_map result, create placeholder filter masks, then serialize.
+
+        gen guards against racing a save superseded by a newer one.
+        """
+        if gen != self._save_generation:
+            self.get_logger().warning(
+                'Ignoring a save_map result from a save that was superseded by a newer one.')
+            return
+
         try:
             result = future.result()
             if result.result == 0:
@@ -149,7 +163,7 @@ class MapSaverNode(Node):
         ser_req.filename = self._map_name
 
         future2 = self._serialize_client.call_async(ser_req)
-        future2.add_done_callback(self._on_serialize_done)
+        future2.add_done_callback(lambda f: self._on_serialize_done(f, gen))
 
     def _create_placeholder_filters(self):
         """Create filters/ with no-op keepout/speed masks sized to match the saved map."""
@@ -178,13 +192,21 @@ class MapSaverNode(Node):
                     }, f)
             self.get_logger().info(f'Placeholder filter masks created: {filters_dir}')
         except Exception as e:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f'Could not create placeholder filter masks - no-go/speed zones will be '
                 f'unavailable for this map until masks exist: {e}'
             )
 
-    def _on_serialize_done(self, future):
-        """Log the serialize_map result, then save the starting pose."""
+    def _on_serialize_done(self, future, gen: int):
+        """Log the serialize_map result, then save the starting pose.
+
+        gen is checked first for the same reason as in _on_save_done.
+        """
+        if gen != self._save_generation:
+            self.get_logger().warning(
+                'Ignoring a serialize_map result from a save that was superseded by a newer one.')
+            return
+
         try:
             result = future.result()
             if result.result == 0:
@@ -217,7 +239,7 @@ class MapSaverNode(Node):
                 f'Starting pose saved: x={t.x:.3f} y={t.y:.3f} theta={theta:.3f}'
             )
         except Exception as e:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 f'Could not save starting pose (localization will start at map origin): {e}'
             )
 

@@ -6,6 +6,7 @@ Voice model files are bundled under this package's own share directory (voices/k
 
 from __future__ import annotations
 
+import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -30,11 +31,8 @@ def default_voice_paths() -> tuple[str, str]:
 def _capped_onnx_threads(n: int):
     """Cap onnxruntime's thread pool for the duration of the block.
 
-    kokoro-onnx constructs its InferenceSession with no sess_options to intercept
-    (`rt.InferenceSession(model_path, providers=providers)`), so this patches
-    InferenceSession.__init__ itself, injecting a capped sess_options whenever the caller
-    didn't supply one. Only matters for the build-time synthesis burst (nothing imports
-    Kokoro at runtime), keeping build-time CPU usage from fighting a concurrent colcon build.
+    kokoro-onnx builds InferenceSession with no sess_options to intercept, so this patches
+    __init__ itself - keeps build-time synthesis from fighting a concurrent colcon build.
     """
     orig_init = ort.InferenceSession.__init__
 
@@ -89,6 +87,7 @@ class Synthesizer:
             gain = 10 ** (self._boost_db / 20)
             samples = np.clip(samples.astype(np.float32) * gain, -1.0, 1.0)
 
-        out_path = tempfile.mktemp(suffix='.wav')
+        fd, out_path = tempfile.mkstemp(suffix='.wav')
+        os.close(fd)  # sf.write reopens by path; mkstemp's fd is only needed for atomic creation
         sf.write(out_path, samples, sample_rate, subtype='PCM_16')
         return out_path
