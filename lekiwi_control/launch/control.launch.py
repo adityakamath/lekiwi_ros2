@@ -174,24 +174,17 @@ def launch_setup(context):
         }.items(),
     )
 
-    twist_switch_node = Node(
+    # bool_toggle_node + twist_switch_node: one process, one MultiThreadedExecutor - both are
+    # lightweight and always launch together. No name= here: each node keeps its own hardcoded
+    # name in code (matching its own config section below), and launch_ros's name= would emit
+    # a bare -r __node:=<name> remap that renames every rclpy.Node in the process to it.
+    control_support_node = Node(
         package='lekiwi_control',
-        executable='twist_switch_node',
-        name='twist_switch',
-        output='log',
-        parameters=[
-            f'{pkg_ctrl}/config/base/twist_switch.yaml',
-            {'use_sim_time': use_sim_time},
-        ],
-    )
-
-    bool_toggle_node = Node(
-        package='lekiwi_control',
-        executable='bool_toggle_node',
-        name='bool_toggle_node',
+        executable='control_support_node',
         output='log',
         parameters=[
             f'{pkg_ctrl}/config/base/toggles.yaml',
+            f'{pkg_ctrl}/config/base/twist_switch.yaml',
             {'use_sim_time': use_sim_time},
         ],
     )
@@ -248,8 +241,7 @@ def launch_setup(context):
         control_node,
         *controller_spawner_actions,
         teleop_include,
-        twist_switch_node,
-        bool_toggle_node,
+        control_support_node,
     ]
 
     if diagnostics:

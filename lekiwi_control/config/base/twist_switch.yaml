@@ -1,4 +1,4 @@
-twist_switch:
+twist_switch_node:
   ros__parameters:
     # Default input: joy_teleop publishes TwistStamped on /cmd_vel_teleop
     input_topic_default: /cmd_vel_teleop

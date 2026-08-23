@@ -27,6 +27,7 @@ setup(
         'console_scripts': [
             'twist_switch_node = lekiwi_control.twist_switch_node:main',
             'bool_toggle_node = lekiwi_control.bool_toggle_node:main',
+            'control_support_node = lekiwi_control.control_support_node:main',
         ],
     },
 )

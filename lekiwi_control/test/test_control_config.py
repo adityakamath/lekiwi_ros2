@@ -148,11 +148,13 @@ class TestTwistSwitchYaml:
     def setup_method(self):
         self.cfg = _load(os.path.join(_CFG_BASE, 'twist_switch.yaml'))
 
-    def test_twist_switch_present(self):
-        assert 'twist_switch' in self.cfg
+    def test_twist_switch_node_present(self):
+        """Key must match TeleopSwitchNode's own hardcoded node name ('twist_switch_node') -
+        see control.launch.py's control_support_node, which no longer remaps it."""
+        assert 'twist_switch_node' in self.cfg
 
     def test_required_topic_params(self):
-        params = self.cfg['twist_switch']['ros__parameters']
+        params = self.cfg['twist_switch_node']['ros__parameters']
         for key in ('input_topic_default', 'input_topic_switched', 'output_topic'):
             assert key in params, f"Missing key '{key}' in twist_switch.yaml"
 
