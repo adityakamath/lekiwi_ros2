@@ -15,7 +15,7 @@ battery_monitor_node:
     idle_current_threshold_a: 0.05   # |current| below this -> NOT_CHARGING / FULL status
     rest_current_threshold_a: 0.05   # |current| below this counts as "at rest" for OCV recal
     rest_settle_s: 60.0              # must be at rest this long before recalibrating from OCV
-    state_file_path: "~/.ros/ina260_ros2/state.yaml"
+    state_file_path: "~/.ros/ina260_battery_monitor/state.yaml"
     state_save_interval_s: 30.0
     state_max_stale_s: 3600.0        # discard saved state older than this, reseed from OCV instead
 

@@ -144,7 +144,7 @@ def launch_setup(context):
     if battery_monitor:
         # Starts both battery_monitor_node and battery_events_node (the latter exposes
         # /battery_low, /battery_critical, /battery_full as SetBool services for indicator_node).
-        pkg_ina260 = FindPackageShare('ina260_ros2').perform(context)
+        pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
             'params_file': f'{pkg_bringup}/config/battery.yaml',
         }))
@@ -241,7 +241,7 @@ def generate_launch_description():
             'battery_monitor',
             default_value='true',
             description='Whether a physical INA260 current/voltage sensor is present on the base. '
-                        'false skips ina260_ros2\'s launch include entirely (battery_monitor_node '
+                        'false skips ina260_battery_monitor\'s launch include entirely (battery_monitor_node '
                         'and battery_events_node together); if left true with no INA260 fitted, '
                         'battery_monitor_node warns and shuts down cleanly instead of crashing.',
         ),

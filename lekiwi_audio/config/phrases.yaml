@@ -40,7 +40,7 @@ services:
       success: "Saving map"
       failure: "Error"
 
-  # ina260_ros2's battery_events_node - no "false" phrase configured (missing entry = silent),
+  # ina260_battery_monitor's battery_events_node - no "false" phrase configured (missing entry = silent),
   # giving once-per-edge announcements. No /battery_charging - net current alone can't detect it.
   /battery_low:
     "true":

@@ -31,7 +31,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 - **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)** (git submodule under `modules/`): Hardware interface for Feetech STS servos
 - **[bno055_hardware_interface](https://github.com/adityakamath/bno055_hardware_interface)** (git submodule under `modules/`): Hardware interface for the BNO055 IMU
 - **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)** (git submodule under `modules/`): LD06 LiDAR driver with bug fixes
-- **[ina260_ros2](https://github.com/adityakamath/ina260_ros2)** (git submodule under `modules/`): INA260 battery current/voltage/power monitoring, with threshold-based SetBool event services
+- **[ina260_battery_monitor](https://github.com/adityakamath/ina260_battery_monitor)** (git submodule under `modules/`): INA260 battery current/voltage/power monitoring, with threshold-based SetBool event services
 - **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
 - **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation
 - **[mujoco_ros2_control](https://github.com/ros-controls/mujoco_ros2_control)** (`sudo apt install ros-kilted-mujoco-ros2-control`): MuJoCo simulation backend, `sim:=true` only
@@ -81,7 +81,7 @@ The most commonly used arguments for `lekiwi_bringup lekiwi.launch.py` (run with
 | `imu`            | `true`    | Physical BNO055 present on the base (honored on real hardware and `sim:=true`/MuJoCo). `false` needs `fusion_mode:=odom` |
 | `laser`          | `true`    | Physical LD06 LiDAR present on the base. `false` skips `laser.launch.py`'s include entirely |
 | `audio`          | `true`    | Physical reSpeaker mic array present on the base. `false` skips the `lekiwi_audio` launch include entirely |
-| `battery_monitor` | `true`   | Physical INA260 current/voltage sensor present on the base. `false` skips `ina260_ros2`'s launch include entirely |
+| `battery_monitor` | `true`   | Physical INA260 current/voltage sensor present on the base. `false` skips `ina260_battery_monitor`'s launch include entirely |
 | `pointcloud`     | `false`   | Enable RGBD point cloud output from the OAK-D camera              |
 | `sim`            | `false`   | Run in MuJoCo instead of real hardware                            |
 | `gui`            | `true`    | [`sim` only] Show the MuJoCo viewer                                |
@@ -137,7 +137,7 @@ lekiwi_ros2/
 │   ├── sts_hardware_interface/     # Feetech STS servo hardware interface (git submodule)
 │   ├── bno055_hardware_interface/  # BNO055 IMU hardware interface (git submodule)
 │   ├── ldlidar_ros2/               # LD06 LiDAR driver (git submodule)
-│   └── ina260_ros2/                # INA260 battery monitoring (git submodule)
+│   └── ina260_battery_monitor/                # INA260 battery monitoring (git submodule)
 └── payloads/
     └── pantilt_ros2/    # Pan-tilt + OAK-D camera payload (git submodule)
 ```

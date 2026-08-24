@@ -10,6 +10,6 @@
 [submodule "modules/ldlidar_ros2"]
 	path = modules/ldlidar_ros2
 	url = https://github.com/adityakamath/ldlidar_ros2
-[submodule "modules/ina260_ros2"]
-	path = modules/ina260_ros2
-	url = https://github.com/adityakamath/ina260_ros2.git
+[submodule "modules/ina260_battery_monitor"]
+	path = modules/ina260_battery_monitor
+	url = https://github.com/adityakamath/ina260_battery_monitor.git

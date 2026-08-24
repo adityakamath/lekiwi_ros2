@@ -70,7 +70,7 @@ jobs:
       - name: colcon build
         # --packages-ignore is required, not optional cleanup: lekiwi_bringup/lekiwi_control's
         # package.xml declare pt_control/pt_bringup/ldlidar_ros2/sts_hardware_interface/
-        # bno055_hardware_interface/ina260_ros2 as dependencies, and colcon discovers them on
+        # bno055_hardware_interface/ina260_battery_monitor as dependencies, and colcon discovers them on
         # disk via their submodules even with --packages-select - then fails trying to source
         # their (never-built) install output unless explicitly ignored. Each has its own CI already.
         run: |
@@ -79,7 +79,7 @@ jobs:
             lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup lekiwi_audio \
             pt_description \
             --packages-ignore pt_control pt_bringup \
-              sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_ros2
+              sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor
 
       - name: pytest
         # lekiwi_bringup's own test (test_launch_args.py) is excluded: it launches the full
