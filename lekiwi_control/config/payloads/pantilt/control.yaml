@@ -5,7 +5,7 @@ controller_manager:
       type: forward_command_controller/ForwardCommandController
 
     joint_limits:
-      pan_joint:
+      shoulder_pan_joint:
         has_position_limits: true
         min_position: -1.5708    # rad (-π/2)
         max_position: 1.5708     # rad (+π/2)
@@ -19,6 +19,6 @@ controller_manager:
 pantilt_controller:
   ros__parameters:
     joints:
-      - pan_joint
+      - shoulder_pan_joint
       - tilt_joint
     interface_name: position

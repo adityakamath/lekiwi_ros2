@@ -103,15 +103,7 @@ def launch_setup(context):
     if payload == 'pantilt':
         xacro_cmd += (
             f' pantilt_config:={pantilt_config}'
-            f' pan_motor_id:={_cfg["pan_motor_id"]}'
-            f' tilt_motor_id:={_cfg["tilt_motor_id"]}'
-            f' pan_center_steps:={_cfg["pan_center_steps"]}'
-            f' tilt_center_steps:={_cfg["tilt_center_steps"]}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
-            f' pan_joint_lower:={_cfg["pan_joint_lower"]}'
-            f' pan_joint_upper:={_cfg["pan_joint_upper"]}'
-            f' tilt_joint_lower:={_cfg["tilt_joint_lower"]}'
-            f' tilt_joint_upper:={_cfg["tilt_joint_upper"]}'
         )
     if hw_type == 'mujoco':
         xacro_cmd += (

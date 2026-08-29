@@ -31,16 +31,11 @@ _BASE_ARGS = [
 
 _PANTILT_ARGS = _BASE_ARGS + [
     'pantilt_config:=pt101',
-    'pan_motor_id:=1',
-    'tilt_motor_id:=2',
-    'pan_center_steps:=2048',
-    'tilt_center_steps:=2646',
     'proportional_vel_max:=0',
-    'pan_joint_lower:=-1.5708',
-    'pan_joint_upper:=1.5708',
-    'tilt_joint_lower:=-1.5708',
-    'tilt_joint_upper:=1.5708',
 ]
+# Motor IDs, step-centering, and joint limits are not passed here - they're
+# pt_description's own physical-calibration constants, baked into
+# pantilt.joints.xacro's macro defaults (single source of truth).
 
 
 def _xacro(xacro_file, args):
@@ -117,7 +112,7 @@ class TestBasePantiltUrdf:
     def test_pantilt_joints_present(self):
         root = ET.fromstring(self.stdout)
         joint_names = [j.get('name') for j in root.findall('joint')]
-        for joint in ('pan_joint', 'tilt_joint'):
+        for joint in ('shoulder_pan_joint', 'tilt_joint'):
             assert joint in joint_names, f"Missing pantilt joint '{joint}' in base_pantilt URDF"
 
     def test_wheel_joints_still_present(self):
@@ -234,16 +229,16 @@ class TestBasePantiltUrdfInterfaces:
         self.root = ET.fromstring(stdout)
 
     def test_pantilt_command_interfaces_are_position(self):
-        # pan_joint and tilt_joint live in a separate ros2_control block from wheels.
+        # shoulder_pan_joint and tilt_joint live in a separate ros2_control block from wheels.
         all_rc = self.root.findall('ros2_control')
         pantilt_joints = {}
         for rc in all_rc:
             for j in rc.findall('.//joint'):
                 name = j.get('name')
-                if name in ('pan_joint', 'tilt_joint'):
+                if name in ('shoulder_pan_joint', 'tilt_joint'):
                     pantilt_joints[name] = j
         assert len(pantilt_joints) == 2, \
-            f"Expected pan_joint and tilt_joint in ros2_control, found: {list(pantilt_joints)}"
+            f"Expected shoulder_pan_joint and tilt_joint in ros2_control, found: {list(pantilt_joints)}"
         for name, j in pantilt_joints.items():
             cmd_ifaces = [i.get('name') for i in j.findall('command_interface')]
             assert 'position' in cmd_ifaces, \

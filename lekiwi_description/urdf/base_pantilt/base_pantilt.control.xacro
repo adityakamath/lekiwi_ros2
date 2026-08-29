@@ -9,10 +9,12 @@
   <xacro:arg name="left_motor_id" default="7"/>
   <xacro:arg name="back_motor_id" default="8"/>
   <xacro:arg name="right_motor_id" default="9"/>
-  <xacro:arg name="pan_motor_id"      default="1"/>
-  <xacro:arg name="tilt_motor_id"     default="2"/>
-  <xacro:arg name="pan_center_steps"  default="2048"/>
-  <xacro:arg name="tilt_center_steps" default="2048"/>
+  <!-- Pan/tilt motor IDs, step-centering, and joint limits are NOT args here - they're
+       pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
+       macro defaults (single source of truth - see that file and pantilt.control.xacro's
+       matching comment). Override them explicitly on the <xacro:pantilt_joints> call below
+       only if this specific unit is ever calibrated differently from pt_description's
+       defaults. -->
 
   <!-- BNO055 IMU parameters (externally settable) -->
   <xacro:arg name="imu"             default="true"/>    <!-- false = no physical IMU; omits the lekiwi_imu sensor block below (real hardware only) -->
@@ -25,11 +27,6 @@
   <xacro:arg name="sts3215_max_vel_steps" default="3400"/>  <!-- STS3215=3400, STS3032=2900, STS3235=3400 -->
   <xacro:arg name="proportional_acc_max"   default="25"/>    <!-- [0-254]; 0 = disable proportional ACC -->
   <xacro:arg name="proportional_vel_max"   default="0"/>     <!-- [0-max_velocity_steps]; 0 = each joint uses commanded velocity -->
-  <!-- Pan and Tilt joint limits (configurable, symmetric ±π/2 defaults) -->
-  <xacro:arg name="pan_joint_lower"        default="-1.5708"/>  <!-- rad, default -π/2 -->
-  <xacro:arg name="pan_joint_upper"        default="1.5708"/>   <!-- rad, default +π/2 -->
-  <xacro:arg name="tilt_joint_lower"       default="-1.5708"/>  <!-- rad, default -π/2 -->
-  <xacro:arg name="tilt_joint_upper"       default="1.5708"/>   <!-- rad, default +π/2 -->
 
   <!-- Simulation -->
   <!-- "real" (default): STS3215 serial plugin. "mujoco": MujocoSystemInterface, driving
@@ -72,12 +69,6 @@
   <xacro:property name="max_linear_velocity_x" value="${wheel_radius * max_velocity_rads / (sqrt(3)/2)}"/>
   <xacro:property name="max_linear_velocity_y" value="${wheel_radius * max_velocity_rads / 1.0}"/>
   <xacro:property name="max_angular_velocity_z" value="${wheel_radius * max_velocity_rads / wheel_base_radius}"/>
-
-  <!-- Pan and tilt joint limits — properties sourced from args for use in pantilt.module.xacro -->
-  <xacro:property name="pan_joint_lower"  value="$(arg pan_joint_lower)"/>
-  <xacro:property name="pan_joint_upper"  value="$(arg pan_joint_upper)"/>
-  <xacro:property name="tilt_joint_lower" value="$(arg tilt_joint_lower)"/>
-  <xacro:property name="tilt_joint_upper" value="$(arg tilt_joint_upper)"/>
 
   <!-- Duplicates pt_description's own promoted property (not included here - base_pantilt
        uses its own copy of the pantilt control block) for pantilt.module.xacro's gazebo limit. -->
@@ -166,15 +157,7 @@
       </xacro:if>
     </joint>
     <xacro:pantilt_joints
-        pan_motor_id="$(arg pan_motor_id)"
-        tilt_motor_id="$(arg tilt_motor_id)"
-        pan_center_steps="$(arg pan_center_steps)"
-        tilt_center_steps="$(arg tilt_center_steps)"
         sts3215_max_vel_steps="${sts3215_max_vel_steps}"
-        pan_joint_lower="${pan_joint_lower}"
-        pan_joint_upper="${pan_joint_upper}"
-        tilt_joint_lower="${tilt_joint_lower}"
-        tilt_joint_upper="${tilt_joint_upper}"
         ros2_control_hardware_type="$(arg ros2_control_hardware_type)"/>
 
     <!-- IMU/lidar sensors must live in this SAME <ros2_control> block as the plugin above -

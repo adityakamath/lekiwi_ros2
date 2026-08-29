@@ -1,12 +1,7 @@
 # Pantilt payload additions — merged on top of base/urdf_config.yaml.
-pan_motor_id: 1
-tilt_motor_id: 2
-
-pan_center_steps: 2048
-tilt_center_steps: 2048
+#
+# Motor IDs, step-centering, and joint limits are not here - they're pt_description's own
+# physical-calibration constants, baked into pantilt.joints.xacro's macro defaults (single
+# source of truth) rather than duplicated across urdf_config.yaml files. See
+# base_pantilt.control.xacro's matching comment.
 proportional_vel_max: 0
-
-pan_joint_lower: -1.5708
-pan_joint_upper: 1.5708
-tilt_joint_lower: -1.5708
-tilt_joint_upper: 1.5708

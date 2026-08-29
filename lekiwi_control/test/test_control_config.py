@@ -51,22 +51,17 @@ class TestUrdfConfig:
 
 
 class TestUrdfConfigPantilt:
+    """Motor IDs, step-centering, and joint limits are NOT in this file - they're
+    pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
+    macro defaults (single source of truth). See test_urdf_xacro.py (pt_description) for
+    coverage of those values."""
+
     def setup_method(self):
         self.cfg = _load(os.path.join(_CFG_PANTILT, 'urdf_config.yaml'))
 
     def test_required_keys_present(self):
-        for key in ('pan_motor_id', 'tilt_motor_id',
-                    'pan_center_steps', 'tilt_center_steps',
-                    'pan_joint_lower', 'pan_joint_upper',
-                    'tilt_joint_lower', 'tilt_joint_upper'):
-            assert key in self.cfg, f"Missing key '{key}' in pantilt/urdf_config.yaml"
-
-    def test_joint_limits_valid(self):
-        assert self.cfg['pan_joint_lower'] < self.cfg['pan_joint_upper']
-        assert self.cfg['tilt_joint_lower'] < self.cfg['tilt_joint_upper']
-
-    def test_pan_tilt_motor_ids_distinct(self):
-        assert self.cfg['pan_motor_id'] != self.cfg['tilt_motor_id']
+        assert 'proportional_vel_max' in self.cfg, \
+            "Missing key 'proportional_vel_max' in pantilt/urdf_config.yaml"
 
 
 # ── control.yaml ─────────────────────────────────────────────────────────────
@@ -176,7 +171,7 @@ class TestControlYamlPantilt:
 
     def test_pan_tilt_joint_limits_valid(self):
         limits = self.cfg['controller_manager']['ros__parameters']['joint_limits']
-        for joint in ('pan_joint', 'tilt_joint'):
+        for joint in ('shoulder_pan_joint', 'tilt_joint'):
             assert joint in limits, f"Missing joint_limits entry for '{joint}'"
             assert limits[joint]['min_position'] < limits[joint]['max_position']
 

@@ -4,8 +4,14 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="lekiwi">
+  <!-- Pan/tilt motor IDs, step-centering, and joint limits are NOT args here - they're
+       pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
+       macro defaults (single source of truth - see that file and pantilt.control.xacro's
+       matching comment). Override them explicitly on the <xacro:pantilt_joints> call below
+       only if this specific unit is ever calibrated differently from pt_description's
+       defaults. -->
   <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
-  <!-- rad, default +π/2 -->
+  <!-- [0-max_velocity_steps]; 0 = each joint uses commanded velocity -->
   <!-- Velocity mode -->
   <!-- Max hardware velocity in steps/s -->
   <!-- [0-254] -->
@@ -73,8 +79,8 @@
       <state_interface name="current"/>
       <state_interface name="is_moving"/>
     </joint>
-    <!-- Pan axis: rotates the payload around Z -->
-    <joint name="pan_joint">
+    <!-- Shoulder-pan axis: rotates the payload around Z -->
+    <joint name="shoulder_pan_joint">
       <param name="motor_id">1</param>
       <param name="operating_mode">0</param>
       <param name="min_position">-1.5708</param>
@@ -101,7 +107,7 @@
       <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
       <param name="max_velocity_steps">3400</param>
       <param name="max_velocity">4.433204476989503</param>
-      <param name="position_center_steps">2646</param>
+      <param name="position_center_steps">2048</param>
       <command_interface name="position"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -479,29 +485,29 @@
       </geometry>
     </collision>
   </link>
-  <!-- Pan link -->
-  <link name="pan_link">
+  <!-- Shoulder link (was "pan_link") -->
+  <link name="shoulder_link">
     <inertial>
       <mass value="0.119226"/>
-      <origin rpy="0 0 0" xyz="-9.07886e-05 0.0590972 0.031089"/>
+      <origin rpy="0 0 0" xyz="-9.07886e-05 0.0590972 -0.0172669"/>
       <inertia ixx="5.94278e-05" ixy="0" ixz="0" iyy="5.89975e-05" iyz="0" izz="3.13712e-05"/>
     </inertial>
     <visual>
-      <origin rpy="1.5707963267948966 0 3.141592653589793" xyz="-0.0120 0 0.00205"/>
+      <origin rpy="1.5707963267948966 0 3.141592653589793" xyz="-0.0120 0 -0.0463059"/>
       <geometry>
         <mesh filename="package://pt_description/meshes/pan_joint_101.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <visual>
-      <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
+      <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 -0.0483559"/>
       <geometry>
         <mesh filename="package://pt_description/meshes/tilt_motor.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
-      <origin rpy="1.5707963267948966 0 3.141592653589793" xyz="-0.0120 0 0.00205"/>
+      <origin rpy="1.5707963267948966 0 3.141592653589793" xyz="-0.0120 0 -0.0463059"/>
       <geometry>
         <mesh filename="package://pt_description/meshes/pan_joint_101.stl"/>
       </geometry>
@@ -532,19 +538,19 @@
          since joy_teleop's absolute position jumps would otherwise trip spurious limit
          errors. gazebo mode: uses the real computed ceiling instead, since GazeboSimSystem
          actually enforces this limit on the simulated joint. -->
-  <!-- Pan joint (revolute) -->
-  <joint name="pan_joint" type="revolute">
+  <!-- Shoulder-pan joint (revolute; was "pan_joint") -->
+  <joint name="shoulder_pan_joint" type="revolute">
     <parent link="pantilt_base_link"/>
-    <child link="pan_link"/>
-    <origin rpy="0 0 0" xyz="0.0452 0 0.0165"/>
+    <child link="shoulder_link"/>
+    <origin rpy="0 0 0" xyz="0.0452 0 0.0648559"/>
     <axis xyz="0 0 1"/>
     <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1000000.0"/>
   </joint>
   <!-- Tilt joint (revolute) -->
   <joint name="tilt_joint" type="revolute">
-    <parent link="pan_link"/>
+    <parent link="shoulder_link"/>
     <child link="tilt_link"/>
-    <origin rpy="-1.5707963267948966 1.5707963267948966 0" xyz="0.0306 0 0.1025"/>
+    <origin rpy="-1.5707963267948966 1.5707963267948966 0" xyz="0.0306 0 0.0541441"/>
     <axis xyz="0 0 -1"/>
     <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1000000.0"/>
   </joint>
