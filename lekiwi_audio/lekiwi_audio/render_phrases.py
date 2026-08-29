@@ -50,7 +50,8 @@ def collect_phrases(phrases_path: Path) -> set[str]:
     for state_map in data['services'].values():
         for outcome_map in state_map.values():
             phrases.update(outcome_map.values())
-    phrases.update(data.get('nav_goal', {}).values())
+    for watcher_phrases in data.get('goal_status', {}).values():
+        phrases.update(watcher_phrases.values())
     return phrases
 
 

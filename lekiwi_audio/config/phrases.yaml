@@ -1,11 +1,3 @@
-# Phrase table for the audio indicator node.
-#
-# services: <service name>.<request "true"|"false">.<"success"|"failure"> -> spoken text
-# nav_goal: <"success"|"failure"> -> spoken text (ad-hoc /navigate_to_pose outcomes only)
-#
-# A missing entry means "don't announce anything". A missing "failure" entry falls back to a
-# generic "Error" in code.
-
 services:
   /emergency_stop:
     "true":
@@ -40,8 +32,7 @@ services:
       success: "Saving map"
       failure: "Error"
 
-  # ina260_battery_monitor's battery_events_node - no "false" phrase configured (missing entry = silent),
-  # giving once-per-edge announcements. No /battery_charging - net current alone can't detect it.
+  # No "false" phrase - once-per-edge announcements only.
   /battery_low:
     "true":
       success: "Battery low"
@@ -54,6 +45,8 @@ services:
     "true":
       success: "Battery full"
 
-nav_goal:
-  success: "Goal reached"
-  failure: "Goal failed"
+goal_status:
+  nav_goal:
+    success: "Goal reached"
+    failure: "Goal failed"
+    canceled: "Goal canceled"

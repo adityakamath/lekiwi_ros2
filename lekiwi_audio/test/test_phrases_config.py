@@ -31,8 +31,8 @@ def _load_phrases():
     return _load_data()['services']
 
 
-def _load_nav_goal_phrases():
-    return _load_data().get('nav_goal', {})
+def _load_goal_status_phrases():
+    return _load_data().get('goal_status', {})
 
 
 class TestPhrasesConfig:
@@ -69,21 +69,23 @@ class TestPhrasesConfig:
                     )
 
 
-class TestNavGoalPhrases:
+class TestGoalStatusPhrases:
 
     def setup_method(self):
-        self.nav_goal = _load_nav_goal_phrases()
+        self.goal_status = _load_goal_status_phrases()
 
-    def test_keys_are_success_or_failure(self):
-        assert set(self.nav_goal).issubset({'success', 'failure'}), (
-            f'nav_goal: unexpected keys {set(self.nav_goal) - {"success", "failure"}}'
-        )
+    def test_outcome_keys_are_success_failure_or_canceled(self):
+        allowed = {'success', 'failure', 'canceled'}
+        for name, outcome_map in self.goal_status.items():
+            unexpected = set(outcome_map) - allowed
+            assert not unexpected, f'goal_status.{name}: unexpected keys {unexpected}'
 
     def test_all_phrases_are_nonempty_strings(self):
-        for outcome, phrase in self.nav_goal.items():
-            assert isinstance(phrase, str) and phrase.strip(), (
-                f'nav_goal.{outcome}: phrase must be a non-empty string'
-            )
+        for name, outcome_map in self.goal_status.items():
+            for outcome, phrase in outcome_map.items():
+                assert isinstance(phrase, str) and phrase.strip(), (
+                    f'goal_status.{name}.{outcome}: phrase must be a non-empty string'
+                )
 
 
 class TestRenderedAudio:
@@ -96,7 +98,8 @@ class TestRenderedAudio:
             for outcome_map in state_map.values()
             for phrase in outcome_map.values()
         }
-        self.phrases.update(_load_nav_goal_phrases().values())
+        for outcome_map in _load_goal_status_phrases().values():
+            self.phrases.update(outcome_map.values())
 
     def test_every_phrase_has_a_rendered_file(self):
         missing = {p: _phrase_filename(p) for p in self.phrases if not os.path.exists(

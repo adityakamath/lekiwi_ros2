@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Spoken status announcements for e-stop, mode switching, waypoint/map services, Nav2 goals,
-and battery threshold events.
+"""Generic spoken-announcement node: watches ROS 2 introspection/status topics named entirely
+via parameters, and speaks the phrase configured for each outcome in phrases.yaml. No service
+or action name is hard-coded into the node itself.
 
-Watches ROS 2 service introspection and /navigate_to_pose status, not button presses or the
-services' own effects, so announcements fire identically regardless of caller.
+- `services` (+ `state_services` for late-joiner state replay): SetBool services, watched via
+  their `<service>/_service_event` introspection topic.
+- `goal_status_watchers`: action `_action/status` (GoalStatusArray) topics, each named and
+  configured via a `<name>.topic` parameter plus a phrases.yaml `goal_status.<name>` entry.
 
-For the state services (see STATE_SERVICES below), this also announces current state once on
-startup or reconnect - the corresponding server replays its last request+response pair to a
-late-joining subscriber, rather than staying silent until the next transition.
+Ships configured by default for e-stop, mode switching, waypoint/map services, ad-hoc Nav2
+goals, and battery events - see the DEFAULT_* constants below.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import threading
 
 from action_msgs.msg import GoalStatus, GoalStatusArray
 from ament_index_python.packages import get_package_share_directory
+from rcl_interfaces.msg import ParameterDescriptor
 import rclpy
 from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
@@ -49,12 +52,11 @@ DEFAULT_SERVICES = [
     '/battery_full',
 ]
 
-# Ongoing-state services (transient-local durability): a late-joining subscriber replays
-# the last call instead of staying silent. record/reset/save stay one-shot on the plain default.
-STATE_SERVICES = {
+# Transient-local: late joiners get the last call replayed instead of silence.
+DEFAULT_STATE_SERVICES = [
     '/emergency_stop', '/twist_switch', '/waypoint_follow',
     '/battery_low', '/battery_critical', '/battery_full',
-}
+]
 STATE_SERVICE_QOS = QoSProfile(
     depth=2,
     reliability=ReliabilityPolicy.RELIABLE,
@@ -63,22 +65,73 @@ STATE_SERVICE_QOS = QoSProfile(
     liveliness_lease_duration=Duration(seconds=1),
 )
 
-DEFAULT_NAV_GOAL_STATUS_TOPIC = '/navigate_to_pose/_action/status'
+# Each name here gets a <name>.topic parameter (default below if listed, else required).
+# Add another action's status topic by extending this list - no code change needed.
+DEFAULT_GOAL_STATUS_WATCHERS = ['nav_goal']
+DEFAULT_GOAL_STATUS_TOPICS = {'nav_goal': '/navigate_to_pose/_action/status'}
 
-# Only terminal, non-canceled outcomes get announced - see phrases.yaml's nav_goal comment.
-_NAV_GOAL_OUTCOME_KEYS = {
+# Fixed by the action_msgs/GoalStatus wire format, not deployment-specific.
+_GOAL_OUTCOME_KEYS = {
     GoalStatus.STATUS_SUCCEEDED: 'success',
     GoalStatus.STATUS_ABORTED: 'failure',
+    GoalStatus.STATUS_CANCELED: 'canceled',
 }
+
+# CANCELED alongside another still-active goal means the action server preempted it, not a
+# deliberate stop - see GoalStatusWatcher.resolve.
+_GOAL_ACTIVE_STATUSES = (
+    GoalStatus.STATUS_ACCEPTED, GoalStatus.STATUS_EXECUTING, GoalStatus.STATUS_CANCELING,
+)
+
+_READ_ONLY = ParameterDescriptor(read_only=True)  # every parameter is consumed once at startup
 
 
 def _phrase_filename(phrase: str) -> str:
-    """Hash a phrase to its rendered filename.
-
-    Must match render_phrases.phrase_filename() exactly - this is the only
-    link between the two, there's no separate manifest file.
-    """
+    """Hash a phrase to its rendered filename - must match render_phrases.phrase_filename()."""
     return hashlib.sha1(phrase.encode('utf-8')).hexdigest()[:12] + '.wav'
+
+
+def _has_other_active_goal(status_list, exclude_goal_id: bytes) -> bool:
+    """True if some goal besides exclude_goal_id in status_list is still in flight."""
+    return any(
+        s.status in _GOAL_ACTIVE_STATUSES and bytes(s.goal_info.goal_id.uuid) != exclude_goal_id
+        for s in status_list
+    )
+
+
+class GoalStatusWatcher:
+    """Resolves one action's GoalStatusArray updates to phrases, announcing each goal once."""
+
+    def __init__(self, name: str, phrases: dict[str, str]) -> None:
+        """Store the watcher's name (for logging) and its outcome -> phrase map."""
+        self.name = name
+        self._phrases = phrases
+        self._announced: dict[bytes, None] = {}  # goal_id -> None, oldest-first, capped at 16
+
+    def resolve(self, msg: GoalStatusArray) -> list[str]:
+        """Return phrases for goals in msg that just reached an announceable outcome."""
+        phrases = []
+        for status in msg.status_list:
+            goal_id = bytes(status.goal_info.goal_id.uuid)
+            if goal_id in self._announced:
+                continue
+            if (status.status == GoalStatus.STATUS_CANCELED
+                    and _has_other_active_goal(msg.status_list, goal_id)):
+                self._mark(goal_id)  # superseded by a newer goal - its outcome speaks instead
+                continue
+            outcome = _GOAL_OUTCOME_KEYS.get(status.status)
+            phrase = None if outcome is None else self._phrases.get(outcome)
+            if phrase is None:
+                continue
+            self._mark(goal_id)
+            phrases.append(phrase)
+        return phrases
+
+    def _mark(self, goal_id: bytes) -> None:
+        """Record goal_id as handled so a later republish of the same status is a no-op."""
+        self._announced[goal_id] = None
+        if len(self._announced) > 16:  # defensive cap, shouldn't normally fill
+            self._announced.pop(next(iter(self._announced)), None)
 
 
 class SpeechQueue:
@@ -146,24 +199,26 @@ class SpeechQueue:
 
 
 class IndicatorNode(Node):
-    """Watches service introspection and nav goal status, and speaks the matching phrase."""
+    """Watches service introspection and configured goal-status topics, speaking phrases.yaml."""
 
     def __init__(self) -> None:
         """Declare parameters, load phrases.yaml, and subscribe to every watched service/topic."""
         super().__init__('indicator_node')
 
-        self.declare_parameter('speaker_device', DEFAULT_SPEAKER_DEVICE)
-        self.declare_parameter('services', DEFAULT_SERVICES)
-        self.declare_parameter('nav_goal_status_topic', DEFAULT_NAV_GOAL_STATUS_TOPIC)
+        self.declare_parameter('speaker_device', DEFAULT_SPEAKER_DEVICE, _READ_ONLY)
+        self.declare_parameter('services', DEFAULT_SERVICES, _READ_ONLY)
+        self.declare_parameter('state_services', DEFAULT_STATE_SERVICES, _READ_ONLY)
+        self.declare_parameter('goal_status_watchers', DEFAULT_GOAL_STATUS_WATCHERS, _READ_ONLY)
         speaker_device = self.get_parameter('speaker_device').value
         services = self.get_parameter('services').value
-        nav_goal_status_topic = self.get_parameter('nav_goal_status_topic').value
+        state_services = set(self.get_parameter('state_services').value)
+        watcher_names = self.get_parameter('goal_status_watchers').value
 
         share_dir = Path(get_package_share_directory('lekiwi_audio'))
         with open(share_dir / 'config' / 'phrases.yaml') as f:
             phrases_data = yaml.safe_load(f)
         self._phrases = phrases_data['services']
-        self._nav_goal_phrases = phrases_data.get('nav_goal', {})
+        self._goal_status_phrases = phrases_data.get('goal_status', {})
 
         self._speech = SpeechQueue(share_dir / 'sounds', speaker_device, self.get_logger())
 
@@ -172,7 +227,7 @@ class IndicatorNode(Node):
         self._pending: dict[str, dict[tuple, bool]] = {}
 
         for service in services:
-            qos = STATE_SERVICE_QOS if service in STATE_SERVICES else qos_profile_services_default
+            qos = STATE_SERVICE_QOS if service in state_services else qos_profile_services_default
             self.create_subscription(
                 SetBool_Event,
                 f'{service}/_service_event',
@@ -180,18 +235,27 @@ class IndicatorNode(Node):
                 qos,
             )
 
-        # goal_id (bytes) -> None, oldest-first; tracks announced goals since the status
-        # topic republishes every tracked goal's state on every message, not just deltas.
-        self._announced_nav_goals: dict[bytes, None] = {}
-        if nav_goal_status_topic:
-            self.create_subscription(
-                GoalStatusArray,
-                nav_goal_status_topic,
-                self._on_nav_goal_status,
-                10,
-            )
+        self._goal_watchers = self._build_goal_watchers(watcher_names)
 
-        self.get_logger().info(f"indicator_node ready, watching: {', '.join(services)}")
+        self.get_logger().info(
+            f"indicator_node ready, watching services: {', '.join(services)}; "
+            f"goal status: {', '.join(self._goal_watchers) or 'none'}"
+        )
+
+    def _build_goal_watchers(self, watcher_names: list[str]) -> dict[str, GoalStatusWatcher]:
+        """Declare each watcher's <name>.topic parameter and subscribe it, skipping unset ones."""
+        watchers = {}
+        for name in watcher_names:
+            default_topic = DEFAULT_GOAL_STATUS_TOPICS.get(name, '')
+            topic = self.declare_parameter(f'{name}.topic', default_topic, _READ_ONLY).value
+            if not topic:
+                self.get_logger().warning(f'{name}.topic not set - skipping this watcher.')
+                continue
+            watcher = GoalStatusWatcher(name, self._goal_status_phrases.get(name, {}))
+            watchers[name] = watcher
+            self.create_subscription(
+                GoalStatusArray, topic, self._make_goal_status_callback(watcher), 10)
+        return watchers
 
     def destroy_node(self) -> bool:
         """Stop the speech worker thread before the node itself is torn down."""
@@ -202,41 +266,18 @@ class IndicatorNode(Node):
         """Look up the configured phrase for a service call's request value and outcome."""
         state_phrases = self._phrases.get(service, {}).get('true' if request_value else 'false')
         if state_phrases is None:
-            # No entry for this request value - e.g. the false/no-op calls on /record_waypoint,
-            # /reset_waypoints, /save_map (confirmed: false changes nothing there). Deliberately silent.
-            return None
+            return None  # no entry for this request value - e.g. a deliberate false/no-op
         if success:
             return state_phrases.get('success')
-        # A failure with no phrase configured still gets announced generically,
-        # rather than silently dropped just because it wasn't anticipated.
-        return state_phrases.get('failure', 'Error')
+        return state_phrases.get('failure', 'Error')  # unconfigured failure still announces
 
-    def _phrase_for_nav_goal(self, status: int) -> str | None:
-        """Look up the configured phrase for a terminal /navigate_to_pose status, if any."""
-        outcome = _NAV_GOAL_OUTCOME_KEYS.get(status)
-        if outcome is None:
-            return None
-        return self._nav_goal_phrases.get(outcome)
-
-    def _on_nav_goal_status(self, msg: GoalStatusArray) -> None:
-        """Announce each ad-hoc /navigate_to_pose goal's outcome once.
-
-        Every goal here is a genuine ad-hoc goal, never a waypoint-patrol leg: the patrol drives
-        through /follow_waypoints instead, and waypoint_recorder_node's own external-detour
-        detection depends on /navigate_to_pose staying idle during a normal patrol leg.
-        """
-        for status in msg.status_list:
-            phrase = self._phrase_for_nav_goal(status.status)
-            if phrase is None:
-                continue
-            goal_id = bytes(status.goal_info.goal_id.uuid)
-            if goal_id in self._announced_nav_goals:
-                continue
-            self._announced_nav_goals[goal_id] = None
-            if len(self._announced_nav_goals) > 16:  # defensive cap, shouldn't normally fill
-                self._announced_nav_goals.pop(next(iter(self._announced_nav_goals)), None)
-            self.get_logger().info(f'nav goal status={status.status} -> {phrase!r}')
-            self._speech.speak(phrase)
+    def _make_goal_status_callback(self, watcher: GoalStatusWatcher):
+        """Build a GoalStatusArray callback that speaks every phrase watcher.resolve() returns."""
+        def callback(msg: GoalStatusArray) -> None:
+            for phrase in watcher.resolve(msg):
+                self.get_logger().info(f'{watcher.name}: -> {phrase!r}')
+                self._speech.speak(phrase)
+        return callback
 
     def _make_callback(self, service: str):
         """Build a _service_event callback that correlates request/response pairs for service."""
