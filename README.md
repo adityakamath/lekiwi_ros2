@@ -78,6 +78,7 @@ The most commonly used arguments for `lekiwi_bringup lekiwi.launch.py` (run with
 | `pantilt_config` | `pt101`   | Pan-tilt mesh variant: `pt100` or `pt101`                        |
 | `mission`        | `""`      | Navigation mode: `map` (SLAM mapping), `slam`/`amcl` (localization, needs `map_name`) |
 | `map_name`       | `""`      | Map to load, e.g. `livingroom1`                                  |
+| `wp_loops`       | `0`       | Waypoint patrol passes per start: `0` loops forever, `N>0` runs exactly `N` passes |
 | `fusion_mode`    | `base`    | EKF sensor fusion: `base`, `imu`, or `odom`. `odom` required when `imu:=false` |
 | `imu`            | `true`    | Physical BNO055 present on the base (honored on real hardware and `sim:=true`/MuJoCo). `false` needs `fusion_mode:=odom` |
 | `laser`          | `true`    | Physical LD06 LiDAR present on the base. `false` skips `laser.launch.py`'s include entirely |
@@ -113,7 +114,7 @@ Teleoperation is configured for a **Steam Deck** used as a generic joystick, not
 | Screenshot   | Save the current SLAM map                              |
 | Y / A / Settings | Record / toggle / reset a waypoint patrol           |
 
-All of the above (plus navigation goal outcomes) get spoken feedback via `lekiwi_audio` (disabled when `audio:=false`).
+All of the above (plus navigation goal outcomes) get spoken feedback via `lekiwi_audio` (disabled when `audio:=false`). To test waypoint patrol announcements without the default infinite loop, launch with `wp_loops:=1` for a single pass.
 
 ## Costmap Zones
 

@@ -45,6 +45,7 @@ def launch_setup(context):
     pointcloud          = _launch_arg_as_bool(context, 'pointcloud')
     octomap             = _launch_arg_as_bool(context, 'octomap')
     mission             = LaunchConfiguration('mission').perform(context)
+    wp_loops            = LaunchConfiguration('wp_loops').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
     sim                 = _launch_arg_as_bool(context, 'sim')
     gui                 = LaunchConfiguration('gui').perform(context)
@@ -108,6 +109,7 @@ def launch_setup(context):
         'map_name':     map_name,
         'use_sim_time': use_sim_time,
         'diagnostics':  str(diagnostics).lower(),
+        'wp_loops':     wp_loops,
     })
 
     actions = [control, nav]
@@ -272,6 +274,15 @@ def generate_launch_description():
             description=(
                 'Subdirectory name of the map to load for slam or amcl missions '
                 '(e.g. livingroom1). Required for slam and amcl.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'wp_loops',
+            default_value='0',
+            description=(
+                "Overrides lekiwi_navigation/config/nav2/waypoint_recorder.yaml's "
+                'number_of_loops (total patrol passes per start): 0 = loop forever (default), '
+                'N>0 = exactly N passes.'
             ),
         ),
         DeclareLaunchArgument(

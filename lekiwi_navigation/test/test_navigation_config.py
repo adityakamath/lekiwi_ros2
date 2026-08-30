@@ -302,6 +302,7 @@ class TestWaypointRecorderYaml:
 class TestNav2LaunchArgs:
     EXPECTED_ARGS = [
         'params_file', 'map_name', 'use_sim_time', 'autostart', 'log_level', 'diagnostics',
+        'wp_loops',
     ]
 
     def test_expected_args_declared(self):
@@ -313,7 +314,7 @@ class TestNav2LaunchArgs:
 # ── navigation.launch.py and slam.launch.py argument surface ─────────────────
 
 class TestNavigationLaunchArgs:
-    EXPECTED_ARGS = ['fusion_mode', 'mission', 'map_name', 'use_sim_time', 'diagnostics']
+    EXPECTED_ARGS = ['fusion_mode', 'mission', 'map_name', 'use_sim_time', 'diagnostics', 'wp_loops']
 
     def test_expected_args_declared(self):
         output = _show_arguments('lekiwi_navigation', 'navigation.launch.py')

@@ -137,10 +137,10 @@ class GoalStatusWatcher:
 class SpeechQueue:
     """Play announcements one at a time from pre-rendered audio files (see render_phrases.py).
 
-    Queue depth capped with drop-oldest - the most recent state matters, not a stale backlog.
+    Depth-1 with drop-oldest: only the single most recent unplayed phrase is spoken.
     """
 
-    def __init__(self, sounds_dir: Path, speaker_device: str, logger, max_depth: int = 4) -> None:
+    def __init__(self, sounds_dir: Path, speaker_device: str, logger, max_depth: int = 1) -> None:
         """Set the mixer volume and start the worker thread that plays queued phrases."""
         # Sets its own volume rather than assuming voice_pipeline.py already did; missing
         # amixer (CI, no audio hardware) shouldn't prevent startup - playback just no-ops.

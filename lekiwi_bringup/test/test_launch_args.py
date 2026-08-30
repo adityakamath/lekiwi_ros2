@@ -40,7 +40,7 @@ class TestLekiwiBringupArgs:
         'payload', 'pantilt_config', 'diagnostics', 'use_mock', 'joy',
         'sts_serial_port', 'mujoco_model',
         'fusion_mode', 'imu', 'laser', 'audio', 'battery_monitor', 'pointcloud',
-        'octomap', 'mission', 'map_name', 'use_sim_time',
+        'octomap', 'mission', 'map_name', 'wp_loops', 'use_sim_time',
     ]
 
     def test_expected_args_declared(self):

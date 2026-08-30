@@ -76,6 +76,16 @@ def _launch_arg_as_bool(context, name: str) -> bool:
     )
 
 
+def _launch_arg_as_int(context, name: str) -> int:
+    """Resolve a launch argument as a non-negative integer."""
+    value = LaunchConfiguration(name).perform(context).strip()
+    if not value.isdigit():
+        raise RuntimeError(
+            f"[nav2.launch.py] Launch argument '{name}' must be a non-negative integer, got {value!r}."
+        )
+    return int(value)
+
+
 def launch_setup(context, *args, **kwargs):
     """Build and return the Nav2 nodes, resolving map_name to filter mask paths."""
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
@@ -91,6 +101,7 @@ def launch_setup(context, *args, **kwargs):
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     autostart    = _launch_arg_as_bool(context, 'autostart')
     diagnostics  = _launch_arg_as_bool(context, 'diagnostics')
+    wp_loops     = _launch_arg_as_int(context, 'wp_loops')
 
     # bt_navigator must be last - it depends on the other servers being active. Costmap
     # filters get their own lifecycle managers below.
@@ -154,6 +165,15 @@ def launch_setup(context, *args, **kwargs):
         yaml.dump(_filter_dict, _tf)
         _tf.close()
         filter_enable_params = [ParameterFile(_tf.name)]
+
+    _wp_overrides = {'waypoint_recorder_node': {'ros__parameters': {
+        'publish_diagnostics': diagnostics,
+        'number_of_loops': wp_loops,
+    }}}
+    _wp_tf = tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False)
+    yaml.dump(_wp_overrides, _wp_tf)
+    _wp_tf.close()
+    waypoint_recorder_params = ParameterFile(_wp_tf.name)
 
     load_nodes = [
         SetParameter('use_sim_time', use_sim_time),
@@ -219,7 +239,7 @@ def launch_setup(context, *args, **kwargs):
             output='log',
             parameters=[
                 PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'waypoint_recorder.yaml']),
-                {'publish_diagnostics': diagnostics},
+                waypoint_recorder_params,
             ],
             arguments=['--ros-args', '--log-level', log_level],
         ),
@@ -375,6 +395,14 @@ def generate_launch_description():
                 'top-level flag that gates motor_diagnostics/bno055_diagnostics in '
                 'control.launch.py, forwarded here so one argument covers every diagnostics '
                 'publisher.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'wp_loops',
+            default_value='0',
+            description=(
+                "Overrides waypoint_recorder.yaml's number_of_loops: total patrol passes per "
+                'start. 0 = loop forever (default), N>0 = exactly N passes.'
             ),
         ),
         DeclareLaunchArgument(

@@ -20,6 +20,8 @@ Launch arguments:
     use_sim_time true | false  (default: false)
     diagnostics  true | false  (default: false) - forwarded to nav2.launch.py for
                    waypoint_recorder_node's patrol status publishing
+    wp_loops     non-negative int (default: 0 = loop forever) - forwarded to nav2.launch.py,
+                   overrides waypoint_recorder.yaml's number_of_loops
 """
 
 from launch import LaunchDescription
@@ -62,6 +64,7 @@ def generate_launch_description():
             'map_name':     LaunchConfiguration('map_name'),
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'diagnostics':  LaunchConfiguration('diagnostics'),
+            'wp_loops':     LaunchConfiguration('wp_loops'),
         }.items(),
     )
 
@@ -105,6 +108,14 @@ def generate_launch_description():
             description=(
                 'Forwarded to nav2.launch.py: publish waypoint_recorder_node patrol status '
                 'to /diagnostics. Same flag lekiwi_control uses for motor/IMU diagnostics.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'wp_loops',
+            default_value='0',
+            description=(
+                "Forwarded to nav2.launch.py: overrides waypoint_recorder.yaml's "
+                'number_of_loops. 0 = loop forever (default), N>0 = exactly N passes.'
             ),
         ),
         ekf,
