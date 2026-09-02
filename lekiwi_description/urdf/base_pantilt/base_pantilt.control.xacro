@@ -9,6 +9,9 @@
   <xacro:arg name="left_motor_id" default="7"/>
   <xacro:arg name="back_motor_id" default="8"/>
   <xacro:arg name="right_motor_id" default="9"/>
+  <xacro:arg name="internal_max_vel" default="254"/>
+  <xacro:arg name="internal_max_acc" default="254"/>
+  <xacro:arg name="internal_acc_coeff" default="254"/>
   <!-- Pan/tilt motor IDs, step-centering, and joint limits are NOT args here - they're
        pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
        macro defaults (single source of truth - see that file and pantilt.control.xacro's
@@ -108,6 +111,9 @@
       <param name="operating_mode">${base_operating_mode}</param>
       <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
       <param name="max_velocity_steps">${sts3215_max_vel_steps}</param>
+      <param name="internal_max_vel">$(arg internal_max_vel)</param>
+      <param name="internal_max_acc">$(arg internal_max_acc)</param>
+      <param name="internal_acc_coeff">$(arg internal_acc_coeff)</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -126,6 +132,9 @@
       <param name="operating_mode">${base_operating_mode}</param>
       <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
       <param name="max_velocity_steps">${sts3215_max_vel_steps}</param>
+      <param name="internal_max_vel">$(arg internal_max_vel)</param>
+      <param name="internal_max_acc">$(arg internal_max_acc)</param>
+      <param name="internal_acc_coeff">$(arg internal_acc_coeff)</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -144,6 +153,9 @@
       <param name="operating_mode">${base_operating_mode}</param>
       <!-- Motor-specific, model-dependent parameter (per joint so different STS models can share this bus) -->
       <param name="max_velocity_steps">${sts3215_max_vel_steps}</param>
+      <param name="internal_max_vel">$(arg internal_max_vel)</param>
+      <param name="internal_max_acc">$(arg internal_max_acc)</param>
+      <param name="internal_acc_coeff">$(arg internal_acc_coeff)</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>

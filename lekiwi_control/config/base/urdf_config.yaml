@@ -10,3 +10,7 @@ right_motor_id: 9
 
 sts3215_max_vel_steps: 3400
 proportional_acc_max: 25
+
+internal_max_vel: 254
+internal_max_acc: 254
+internal_acc_coeff: 100

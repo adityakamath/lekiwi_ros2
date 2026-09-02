@@ -5,3 +5,7 @@
 # source of truth) rather than duplicated across urdf_config.yaml files. See
 # base_pantilt.control.xacro's matching comment.
 proportional_vel_max: 0
+
+internal_max_vel: 254
+internal_max_acc: 254
+internal_acc_coeff: 100

@@ -27,6 +27,9 @@ _BASE_ARGS = [
     'right_motor_id:=9',
     'sts3215_max_vel_steps:=3400',
     'proportional_acc_max:=25',
+    'internal_max_vel:=254',
+    'internal_max_acc:=254',
+    'internal_acc_coeff:=100',
 ]
 
 _PANTILT_ARGS = _BASE_ARGS + [
@@ -157,6 +160,13 @@ class TestBaseUrdfInterfaces:
                 f"Wheel joint '{j.get('name')}' must have position state interface"
             assert 'velocity' in state_ifaces, \
                 f"Wheel joint '{j.get('name')}' must have velocity state interface"
+
+    def test_internal_register_params_are_exposed(self):
+        rc = self.root.find('ros2_control[@name="lekiwi_base"]')
+        for j in rc.findall('.//joint'):
+            params = {p.get('name'): p.text for p in j.findall('param')}
+            for key in ('internal_max_vel', 'internal_max_acc', 'internal_acc_coeff'):
+                assert key in params, f"Wheel joint '{j.get('name')}' missing '{key}' param"
 
     def test_imu_sensor_block_present(self):
         rc = self.root.find('ros2_control[@name="lekiwi_imu"]')
