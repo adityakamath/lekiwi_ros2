@@ -62,7 +62,7 @@ class TestUrdfConfigPantilt:
         self.cfg = _load(os.path.join(_CFG_PANTILT, 'urdf_config.yaml'))
 
     def test_required_keys_present(self):
-        for key in ('proportional_vel_max', 'internal_control_period',
+        for key in ('proportional_vel_max',
                     'pantilt_internal_max_vel', 'pantilt_internal_max_acc',
                     'pantilt_internal_acc_coeff'):
             assert key in self.cfg, f"Missing key '{key}' in pantilt/urdf_config.yaml"

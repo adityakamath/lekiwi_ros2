@@ -43,6 +43,7 @@
       <param name="internal_max_vel">254</param>
       <param name="internal_max_acc">254</param>
       <param name="internal_acc_coeff">100</param>
+      <param name="internal_control_period">20</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -61,6 +62,7 @@
       <param name="internal_max_vel">254</param>
       <param name="internal_max_acc">254</param>
       <param name="internal_acc_coeff">100</param>
+      <param name="internal_control_period">20</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -79,6 +81,7 @@
       <param name="internal_max_vel">254</param>
       <param name="internal_max_acc">254</param>
       <param name="internal_acc_coeff">100</param>
+      <param name="internal_control_period">20</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -186,14 +189,14 @@
     <visual>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/lekiwi_base.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/lekiwi_base.stl"/>
       </geometry>
       <material name="base_light_grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/lekiwi_base.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/lekiwi_base.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -206,14 +209,14 @@
     <visual>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/ld06_lidar.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/ld06_lidar.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/ld06_lidar.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/ld06_lidar.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -255,14 +258,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/bno055_imu.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/bno055_imu.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -329,14 +332,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/respeaker_flex_mic.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/respeaker_flex_mic.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/respeaker_flex_mic.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/respeaker_flex_mic.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -349,14 +352,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -369,14 +372,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -389,14 +392,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../../meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -482,21 +485,21 @@
     <visual>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0.0002"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pantilt_base_101.stl"/>
+        <mesh filename="package://pt_description/meshes/pantilt_base_101.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <visual>
       <origin rpy="0 0 1.5707963267948966" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pan_motor.stl"/>
+        <mesh filename="package://pt_description/meshes/pan_motor.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0.0002"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pantilt_base_101.stl"/>
+        <mesh filename="package://pt_description/meshes/pantilt_base_101.stl"/>
       </geometry>
     </collision>
   </link>
@@ -510,21 +513,21 @@
     <visual>
       <origin rpy="1.5707963267948966 0 3.141592653589793" xyz="-0.0120 0 -0.0463059"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pan_joint_101.stl"/>
+        <mesh filename="package://pt_description/meshes/pan_joint_101.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <visual>
       <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 -0.0483559"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/tilt_motor.stl"/>
+        <mesh filename="package://pt_description/meshes/tilt_motor.stl"/>
       </geometry>
       <material name="charcoal"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 3.141592653589793" xyz="-0.0120 0 -0.0463059"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/pan_joint_101.stl"/>
+        <mesh filename="package://pt_description/meshes/pan_joint_101.stl"/>
       </geometry>
     </collision>
   </link>
@@ -538,14 +541,14 @@
     <visual>
       <origin rpy="1.5707963267948966 -1.5707963267948966 0" xyz="0.119 0.07579999999999999 -0.0002"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/tilt_joint_oakd_s2.stl"/>
+        <mesh filename="package://pt_description/meshes/tilt_joint_oakd_s2.stl"/>
       </geometry>
       <material name="light_grey"/>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 -1.5707963267948966 0" xyz="0.119 0.07579999999999999 -0.0002"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/tilt_joint_oakd_s2.stl"/>
+        <mesh filename="package://pt_description/meshes/tilt_joint_oakd_s2.stl"/>
       </geometry>
     </collision>
   </link>
@@ -588,7 +591,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt100/main/pt_description/meshes/oakd_s2.stl"/>
+        <mesh filename="package://pt_description/meshes/oakd_s2.stl"/>
       </geometry>
       <material name="mat">
         <color rgba="0.15 0.15 0.15 1.0"/>
