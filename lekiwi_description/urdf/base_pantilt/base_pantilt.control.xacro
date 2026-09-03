@@ -11,7 +11,15 @@
   <xacro:arg name="right_motor_id" default="9"/>
   <xacro:arg name="internal_max_vel" default="254"/>
   <xacro:arg name="internal_max_acc" default="254"/>
-  <xacro:arg name="internal_acc_coeff" default="254"/>
+  <xacro:arg name="internal_acc_coeff" default="100"/>
+  <xacro:arg name="internal_control_period" default="20"/>
+  <!-- Pan/tilt-specific EEPROM tuning, independent from the wheel args above - the pantilt
+       arm accelerates/moves too fast at the wheels' aggressive settings, drawing enough
+       current to crash the Pi. Defaults here match pantilt.joints.xacro's own macro
+       defaults; override via urdf_config.yaml's pantilt_internal_* keys. -->
+  <xacro:arg name="pantilt_internal_max_vel" default="254"/>
+  <xacro:arg name="pantilt_internal_max_acc" default="254"/>
+  <xacro:arg name="pantilt_internal_acc_coeff" default="100"/>
   <!-- Pan/tilt motor IDs, step-centering, and joint limits are NOT args here - they're
        pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
        macro defaults (single source of truth - see that file and pantilt.control.xacro's
@@ -114,6 +122,7 @@
       <param name="internal_max_vel">$(arg internal_max_vel)</param>
       <param name="internal_max_acc">$(arg internal_max_acc)</param>
       <param name="internal_acc_coeff">$(arg internal_acc_coeff)</param>
+      <param name="internal_control_period">$(arg internal_control_period)</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -135,6 +144,7 @@
       <param name="internal_max_vel">$(arg internal_max_vel)</param>
       <param name="internal_max_acc">$(arg internal_max_acc)</param>
       <param name="internal_acc_coeff">$(arg internal_acc_coeff)</param>
+      <param name="internal_control_period">$(arg internal_control_period)</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -156,6 +166,7 @@
       <param name="internal_max_vel">$(arg internal_max_vel)</param>
       <param name="internal_max_acc">$(arg internal_max_acc)</param>
       <param name="internal_acc_coeff">$(arg internal_acc_coeff)</param>
+      <param name="internal_control_period">$(arg internal_control_period)</param>
       <command_interface name="velocity"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
@@ -170,7 +181,10 @@
     </joint>
     <xacro:pantilt_joints
         sts3215_max_vel_steps="${sts3215_max_vel_steps}"
-        ros2_control_hardware_type="$(arg ros2_control_hardware_type)"/>
+        ros2_control_hardware_type="$(arg ros2_control_hardware_type)"
+        internal_max_vel="$(arg pantilt_internal_max_vel)"
+        internal_max_acc="$(arg pantilt_internal_max_acc)"
+        internal_acc_coeff="$(arg pantilt_internal_acc_coeff)"/>
 
     <!-- IMU/lidar sensors must live in this SAME <ros2_control> block as the plugin above -
          see base.control.xacro (base-only) for why. -->

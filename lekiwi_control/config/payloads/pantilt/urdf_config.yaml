@@ -5,7 +5,10 @@
 # source of truth) rather than duplicated across urdf_config.yaml files. See
 # base_pantilt.control.xacro's matching comment.
 proportional_vel_max: 0
+internal_control_period: 20
 
-internal_max_vel: 254
-internal_max_acc: 254
-internal_acc_coeff: 100
+# Pan/tilt-specific EEPROM tuning - separate from the wheels' internal_max_vel/internal_max_acc/
+# internal_acc_coeff above (base/urdf_config.yaml), which stay at the wheels' aggressive values.
+pantilt_internal_max_vel: 65
+pantilt_internal_max_acc: 50
+pantilt_internal_acc_coeff: 0

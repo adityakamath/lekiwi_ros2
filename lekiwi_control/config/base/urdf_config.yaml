@@ -14,3 +14,4 @@ proportional_acc_max: 25
 internal_max_vel: 254
 internal_max_acc: 254
 internal_acc_coeff: 100
+internal_control_period: 10

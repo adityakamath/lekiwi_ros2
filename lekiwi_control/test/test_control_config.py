@@ -39,7 +39,9 @@ class TestUrdfConfig:
     def test_required_keys_present(self):
         for key in ('serial_port', 'baud_rate', 'use_mock', 'use_sync_write',
                     'left_motor_id', 'back_motor_id', 'right_motor_id',
-                    'sts3215_max_vel_steps', 'proportional_acc_max'):
+                    'sts3215_max_vel_steps', 'proportional_acc_max',
+                    'internal_max_vel', 'internal_max_acc', 'internal_acc_coeff',
+                    'internal_control_period'):
             assert key in self.cfg, f"Missing key '{key}' in urdf_config.yaml"
 
     def test_baud_rate_is_positive_int(self):
@@ -60,8 +62,10 @@ class TestUrdfConfigPantilt:
         self.cfg = _load(os.path.join(_CFG_PANTILT, 'urdf_config.yaml'))
 
     def test_required_keys_present(self):
-        assert 'proportional_vel_max' in self.cfg, \
-            "Missing key 'proportional_vel_max' in pantilt/urdf_config.yaml"
+        for key in ('proportional_vel_max', 'internal_control_period',
+                    'pantilt_internal_max_vel', 'pantilt_internal_max_acc',
+                    'pantilt_internal_acc_coeff'):
+            assert key in self.cfg, f"Missing key '{key}' in pantilt/urdf_config.yaml"
 
 
 # ── control.yaml ─────────────────────────────────────────────────────────────

@@ -98,12 +98,19 @@ def launch_setup(context):
         f' right_motor_id:={_cfg["right_motor_id"]}'
         f' sts3215_max_vel_steps:={_cfg["sts3215_max_vel_steps"]}'
         f' proportional_acc_max:={_cfg["proportional_acc_max"]}'
+        f' internal_max_vel:={_cfg["internal_max_vel"]}'
+        f' internal_max_acc:={_cfg["internal_max_acc"]}'
+        f' internal_acc_coeff:={_cfg["internal_acc_coeff"]}'
+        f' internal_control_period:={_cfg["internal_control_period"]}'
         f' imu:={str(imu).lower()}'
     )
     if payload == 'pantilt':
         xacro_cmd += (
             f' pantilt_config:={pantilt_config}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
+            f' pantilt_internal_max_vel:={_cfg["pantilt_internal_max_vel"]}'
+            f' pantilt_internal_max_acc:={_cfg["pantilt_internal_max_acc"]}'
+            f' pantilt_internal_acc_coeff:={_cfg["pantilt_internal_acc_coeff"]}'
         )
     if hw_type == 'mujoco':
         xacro_cmd += (
