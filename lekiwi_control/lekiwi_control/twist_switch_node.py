@@ -116,7 +116,9 @@ class TeleopSwitchNode(Node):
         """Forward msg to output only if it is from the currently active input."""
         if switched != self._switched:
             return
-        self._pub.publish(self._convert(msg, in_stamped))
+        # _pub's message type and _convert's return type are both keyed off
+        # self._output_stamped at runtime, so they always agree - the stub can't see that.
+        self._pub.publish(self._convert(msg, in_stamped))  # pyright: ignore[reportArgumentType]
 
     def _convert(self, msg, in_stamped: bool):
         """Convert msg to the output type, stamping or stripping header as needed."""

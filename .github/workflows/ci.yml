@@ -94,3 +94,15 @@ jobs:
             src/lekiwi_ros2/lekiwi_navigation/test \
             src/lekiwi_ros2/lekiwi_description/test \
             src/lekiwi_ros2/lekiwi_audio/test
+
+      - name: basedpyright (lekiwi_control)
+        # kilted only - basedpyright needs rclpy/message packages importable (hence running
+        # here, post colcon-build, not in the pip-only lint job above), and running it twice
+        # per push for the same source tree isn't worth the extra CI minutes unless kilted
+        # and jazzy's generated stubs actually diverge.
+        if: matrix.ros_distro == 'kilted'
+        run: |
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
+          . install/setup.sh
+          pip install --break-system-packages --ignore-installed basedpyright
+          cd src/lekiwi_ros2 && basedpyright lekiwi_control/lekiwi_control

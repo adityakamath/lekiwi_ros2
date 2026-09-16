@@ -13,3 +13,16 @@ select = ["E", "F", "W"]
 ignore = [
     "E501",  # line length - not enforced here; several pre-existing lines already exceed it
 ]
+
+[tool.basedpyright]
+# Scoped to lekiwi_control for now, not the whole repo - the highest-value package to
+# start on since it talks directly to motion/mode-switching topics and services. Other
+# packages are follow-up work, added incrementally the same way.
+include = ["lekiwi_control/lekiwi_control"]
+pythonVersion = "3.12"
+# basedpyright's own default rules are stricter than upstream pyright's (reportAny,
+# reportUnannotatedClassAttribute, ...) and fire constantly against rclpy's
+# Parameter.value and generated message classes, which are inherently loosely typed at
+# the library boundary. "standard" matches pyright's own default and keeps the 0-errors
+# gate meaningful instead of noisy.
+typeCheckingMode = "standard"

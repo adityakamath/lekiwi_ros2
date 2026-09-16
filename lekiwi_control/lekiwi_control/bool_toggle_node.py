@@ -69,7 +69,9 @@ class BoolToggle:
         self._client = node.create_client(
             SetBool, target_service, callback_group=ReentrantCallbackGroup()
         )
-        node.create_service(Trigger, trigger_service, self._handle_trigger)
+        # rclpy accepts async service callbacks at runtime; create_service's stub only
+        # declares the sync signature.
+        node.create_service(Trigger, trigger_service, self._handle_trigger)  # pyright: ignore[reportArgumentType]
 
         # (client_gid, sequence_number) -> request value, populated on REQUEST_RECEIVED and
         # consumed on RESPONSE_SENT - same correlation lekiwi_audio's indicator_node uses.
@@ -92,7 +94,9 @@ class BoolToggle:
 
         if msg.info.event_type == ServiceEventInfo.REQUEST_RECEIVED:
             if msg.request:
-                self._pending_target_calls[key] = msg.request[0].data
+                # generated service-event messages are plain lists at runtime; the stub
+                # infers a non-indexable Set from the setter's isinstance narrowing.
+                self._pending_target_calls[key] = msg.request[0].data  # pyright: ignore[reportIndexIssue]
             if len(self._pending_target_calls) > 16:  # defensive cap, shouldn't normally fill
                 self._pending_target_calls.pop(next(iter(self._pending_target_calls)), None)
             return
@@ -101,7 +105,7 @@ class BoolToggle:
             if key not in self._pending_target_calls or not msg.response:
                 return
             request_value = self._pending_target_calls.pop(key)
-            if not msg.response[0].success:
+            if not msg.response[0].success:  # pyright: ignore[reportIndexIssue]
                 return
             if request_value != self._active:
                 self._node.get_logger().info(
@@ -129,6 +133,15 @@ class BoolToggle:
         req = SetBool.Request()
         req.data = new_state
         result = await self._client.call_async(req)
+
+        if result is None:
+            response.success = False
+            response.message = (
+                f"toggle '{self._name}': target service call to '{self._target_service}' "
+                'returned no response'
+            )
+            self._node.get_logger().error(response.message)
+            return response
 
         if not result.success:
             response.success = False
