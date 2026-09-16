@@ -7,16 +7,20 @@ per session via a session-scoped fixture. Tests exercise pure logic methods that
 do not require a live ROS graph (no service calls, no subscribers).
 
 Nodes under test:
-  - TeleopSwitchNode  (_convert, _handle, _switch_cb)
-  - BoolToggleNode    (configuration loading, toggle state)
+  - TeleopSwitchNode     (_convert, _handle, _switch_cb)
+  - BoolToggleNode       (configuration loading, toggle state)
+  - CollisionToggleNode  (button edge detection)
 """
 
 import pytest
 import rclpy
 from geometry_msgs.msg import Twist, TwistStamped
+from sensor_msgs.msg import Joy
+from unittest.mock import MagicMock
 
 from lekiwi_control.twist_switch_node import TeleopSwitchNode
 from lekiwi_control.bool_toggle_node import BoolToggle
+from lekiwi_control.collision_toggle_node import CollisionToggleNode
 
 # rclpy is initialized by conftest.py (session-scoped, idempotent).
 
@@ -173,3 +177,107 @@ class TestBoolToggleNodeConfig:
         assert 'emergency_stop' in toggle_names
         assert 'twist_switch' in toggle_names
         assert 'waypoint_follow' in toggle_names
+
+
+# ── CollisionToggleNode ─────────────────────────────────────────────────────
+
+_BUTTON = 10   # R1, matches collision_toggle.yaml
+
+
+def _joy(buttons):
+    msg = Joy()
+    msg.buttons = list(buttons)
+    return msg
+
+
+def _pressed():
+    """Joy message with button 10 pressed."""
+    return _joy([0] * _BUTTON + [1])
+
+
+def _released():
+    """Joy message with all buttons released (including button 10)."""
+    return _joy([0] * (_BUTTON + 1))
+
+
+@pytest.fixture
+def collision_node():
+    n = CollisionToggleNode()
+    # Replace client so _set_enabled does not try to contact a live service.
+    mock_client = MagicMock()
+    mock_client.service_is_ready.return_value = False
+    n._client = mock_client
+    yield n
+    n.destroy_node()
+
+
+class TestCollisionToggleButtonEdge:
+    """Tests the _last_state gating inside _joy_callback."""
+
+    def test_initial_state_is_released(self, collision_node):
+        assert collision_node._last_state is False
+
+    def test_press_updates_last_state(self, collision_node):
+        collision_node._joy_callback(_pressed())
+        assert collision_node._last_state is True
+
+    def test_hold_does_not_change_last_state(self, collision_node):
+        collision_node._joy_callback(_pressed())
+        collision_node._joy_callback(_pressed())   # same state
+        assert collision_node._last_state is True  # still True
+
+    def test_release_updates_last_state(self, collision_node):
+        collision_node._joy_callback(_pressed())
+        collision_node._joy_callback(_released())
+        assert collision_node._last_state is False
+
+    def test_out_of_range_button_ignored(self, collision_node):
+        collision_node._joy_callback(_joy([]))     # empty buttons list
+        assert collision_node._last_state is False  # unchanged
+
+    def test_press_calls_set_enabled_false(self, collision_node):
+        """On press, _set_enabled(False) disables the collision stop."""
+        calls = []
+        collision_node._set_enabled = lambda enabled: calls.append(enabled)
+        collision_node._joy_callback(_pressed())
+        assert calls == [False]
+
+    def test_release_calls_set_enabled_true(self, collision_node):
+        """On release, _set_enabled(True) re-enables the collision stop."""
+        # First press so _last_state=True, then patch, then release.
+        collision_node._joy_callback(_pressed())   # state -> True (service_is_ready=False so no call)
+        calls = []
+        collision_node._set_enabled = lambda enabled: calls.append(enabled)
+        collision_node._joy_callback(_released())
+        assert calls == [True]
+
+
+class TestCollisionToggleUnavailableTarget:
+    """collision_monitor (or any target_node) doesn't need to exist for this node to run -
+    e.g. lekiwi_navigation isn't launched at all. _set_enabled must no-op, not raise, and
+    must not spam a warning on every /joy button edge.
+    """
+
+    def test_set_enabled_is_noop_without_target(self, collision_node):
+        collision_node._set_enabled(True)  # must not raise
+        collision_node._client.call_async.assert_not_called()
+
+    def test_warns_once_per_outage(self, collision_node):
+        """Repeated calls while unavailable log only once, not on every call."""
+        warnings = []
+        collision_node.get_logger().warning = lambda msg: warnings.append(msg)
+        collision_node._set_enabled(True)
+        collision_node._set_enabled(False)
+        collision_node._set_enabled(True)
+        assert len(warnings) == 1
+
+    def test_rewarns_after_recovery(self, collision_node):
+        """Once the target becomes available, a later outage warns again."""
+        warnings = []
+        collision_node.get_logger().warning = lambda msg: warnings.append(msg)
+        collision_node._set_enabled(True)  # unavailable -> warns once
+        collision_node._client.service_is_ready.return_value = True
+        collision_node._set_enabled(True)  # available -> resets the flag
+        collision_node._client.service_is_ready.return_value = False
+        collision_node._set_enabled(True)  # unavailable again -> warns again
+        assert len(warnings) == 2

@@ -14,8 +14,9 @@ Nodes launched (in lifecycle order):
     planner_server         SmacPlanner2D (A* + built-in smoother)
     behavior_server        Spin / BackUp / Wait recoveries
     velocity_smoother      rate-limits MPPI output
-    collision_monitor      last-resort safety stop
-    collision_toggle_node               R1 deadman disable for FootprintApproach (plain node)
+    collision_monitor      last-resort safety stop (R1 deadman toggle for its
+                           FootprintApproach polygon lives in lekiwi_control's
+                           control_support_node, not here - see collision_toggle_node.py)
     waypoint_follower                   patrol loop
     waypoint_recorder_node              record/follow/reset waypoint services (plain node)
     bt_navigator                        Behavior Tree orchestrator (started last)
@@ -264,18 +265,6 @@ def launch_setup(context, *args, **kwargs):
             parameters=[configured_params],
             arguments=['--ros-args', '--log-level', log_level],
             remappings=remappings,
-        ),
-        # ── Collision Toggle ─────────────────────────────────────────────
-        # Not a lifecycle node.
-        Node(
-            package='lekiwi_navigation',
-            executable='collision_toggle_node',
-            name='collision_toggle_node',
-            output='log',
-            parameters=[
-                PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'collision_toggle.yaml']),
-            ],
-            arguments=['--ros-args', '--log-level', log_level],
         ),
         # ── Costmap Filters (no-go + speed zones) ────────────────────────
         Node(

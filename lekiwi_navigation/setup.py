@@ -26,7 +26,6 @@ setup(
     entry_points={
         'console_scripts': [
             'map_saver_node = lekiwi_navigation.map_saver_node:main',
-            'collision_toggle_node = lekiwi_navigation.collision_toggle_node:main',
             'waypoint_recorder_node = lekiwi_navigation.waypoint_recorder_node:main',
         ],
     },

@@ -173,10 +173,12 @@ def launch_setup(context):
         }.items(),
     )
 
-    # bool_toggle_node + twist_switch_node: one process, one MultiThreadedExecutor - both are
-    # lightweight and always launch together. No name= here: each node keeps its own hardcoded
-    # name in code (matching its own config section below), and launch_ros's name= would emit
-    # a bare -r __node:=<name> remap that renames every rclpy.Node in the process to it.
+    # bool_toggle_node + twist_switch_node + collision_toggle_node: one process, one
+    # MultiThreadedExecutor - all three are lightweight and always launch together. No name=
+    # here: each node keeps its own hardcoded name in code (matching its own config section
+    # below), and launch_ros's name= would emit a bare -r __node:=<name> remap that renames
+    # every rclpy.Node in the process to it. collision_toggle_node's target (collision_monitor,
+    # in lekiwi_navigation) doesn't need to be running - it no-ops if it isn't.
     control_support_node = Node(
         package='lekiwi_control',
         executable='control_support_node',
@@ -184,6 +186,7 @@ def launch_setup(context):
         parameters=[
             f'{pkg_ctrl}/config/base/toggles.yaml',
             f'{pkg_ctrl}/config/base/twist_switch.yaml',
+            f'{pkg_ctrl}/config/base/collision_toggle.yaml',
             {'use_sim_time': use_sim_time},
         ],
     )

@@ -37,6 +37,7 @@ class CollisionToggleNode(Node):
         target_node = self.get_parameter('target_node').value
 
         self._last_state = False  # assumed released at startup
+        self._warned_unavailable = False  # edge-trigger the "no target" log, see _set_enabled
         self._client = self.create_client(SetParameters, f'{target_node}/set_parameters')
 
         self.create_subscription(Joy, '/joy', self._joy_callback, 10)
@@ -61,10 +62,17 @@ class CollisionToggleNode(Node):
     def _set_enabled(self, enabled: bool):
         """Call set_parameters on the target node with the new enabled value."""
         if not self._client.service_is_ready():
-            self.get_logger().error(
-                'collision_toggle_node: set_parameters service not available'
-            )
+            # Warn once per outage, not once per /joy button edge - target_node may
+            # legitimately never exist (e.g. lekiwi_navigation isn't running at all), and
+            # this fires on every press/release, not just on an explicit user action.
+            if not self._warned_unavailable:
+                self._warned_unavailable = True
+                self.get_logger().warning(
+                    'collision_toggle_node: set_parameters service not available - '
+                    'no-op until it appears (expected if lekiwi_navigation is not running)'
+                )
             return
+        self._warned_unavailable = False
 
         req = SetParameters.Request()
         req.parameters = [

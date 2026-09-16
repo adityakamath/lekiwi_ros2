@@ -158,6 +158,27 @@ class TestTwistSwitchYaml:
             assert key in params, f"Missing key '{key}' in twist_switch.yaml"
 
 
+# ── collision_toggle.yaml ────────────────────────────────────────────────────
+# Moved from lekiwi_navigation - the node now runs inside lekiwi_control's
+# control_support_node (its target, collision_monitor, stays in lekiwi_navigation).
+
+class TestCollisionToggleYaml:
+    def setup_method(self):
+        self.cfg = _load(os.path.join(_CFG_BASE, 'collision_toggle.yaml'))
+
+    def test_section_present(self):
+        assert 'collision_toggle_node' in self.cfg
+
+    def test_required_keys_present(self):
+        params = self.cfg['collision_toggle_node']['ros__parameters']
+        for key in ('button', 'target_node', 'parameter_name'):
+            assert key in params, f"Missing key '{key}' in collision_toggle.yaml"
+
+    def test_targets_collision_monitor(self):
+        node = self.cfg['collision_toggle_node']['ros__parameters']['target_node']
+        assert node == '/collision_monitor'
+
+
 # ── pantilt/control.yaml ─────────────────────────────────────────────────────
 
 class TestControlYamlPantilt:
