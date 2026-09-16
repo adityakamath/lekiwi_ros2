@@ -45,6 +45,12 @@ services:
     "true":
       success: "Battery full"
 
+  /charger_connected:
+    "true":
+      success: "Charger connected"
+    "false":
+      success: "Charger disconnected"
+
 goal_status:
   nav_goal:
     success: "Goal reached"

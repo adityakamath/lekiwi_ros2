@@ -145,10 +145,14 @@ def launch_setup(context):
 
     if battery_monitor:
         # Starts both battery_monitor_node and battery_events_node (the latter exposes
-        # /battery_low, /battery_critical, /battery_full as SetBool services for indicator_node).
+        # /battery_low, /battery_critical, /battery_full, /charger_connected as SetBool
+        # services for indicator_node). params_file is left at its own default
+        # (ina260_battery_monitor's own config/battery.yaml) deliberately - only the one
+        # LeKiwi-specific override goes here, layered on top via overrides_file, so this
+        # never re-duplicates (and re-drifts from) the upstream package's own defaults.
         pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
-            'params_file': f'{pkg_bringup}/config/battery.yaml',
+            'overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
         }))
 
     if payload == 'pantilt':

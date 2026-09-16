@@ -1,0 +1,10 @@
+# Layered on top of ina260_battery_monitor's own config/battery.yaml (see
+# battery_monitor.launch.py's overrides_file argument) - this file must contain ONLY genuine
+# LeKiwi-specific overrides, never a full copy of every parameter. A full copy drifts out of
+# sync with the upstream default the moment either file is edited without the other (this
+# happened - the previous full-duplicate version of this file sat stale at publish_rate_hz:
+# 2.0 and was missing every /charger_connected parameter for an unknown period before being
+# caught during live testing, 2026-09-13).
+battery_monitor_node:
+  ros__parameters:
+    state_file_path: "~/.ros/ina260_battery_monitor/state.yaml"

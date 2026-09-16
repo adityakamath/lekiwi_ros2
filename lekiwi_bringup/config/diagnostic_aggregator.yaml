@@ -6,6 +6,7 @@
 #   motor_diagnostics_node (sts_hardware_interface)  -> "Motor: <joint_name>"
 #   bno055_diagnostics (bno055_hardware_interface)   -> "BNO055 IMU"
 #   waypoint_recorder_node patrol status              -> "waypoint_recorder: patrol"
+#   battery_monitor_node (ina260_battery_monitor)     -> "battery: ina260"
 #
 # Loaded by aggregator_node, run under the node name "analyzers" (see lekiwi.launch.py) -
 # the top-level "analyzers" key here must match that node name for ROS 2's YAML-params
@@ -28,4 +29,9 @@ analyzers:
       type: diagnostic_aggregator/GenericAnalyzer
       path: Patrol
       startswith: ['waypoint_recorder:']
+      timeout: 5.0
+    battery:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Battery
+      startswith: ['battery:']
       timeout: 5.0

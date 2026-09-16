@@ -50,12 +50,13 @@ DEFAULT_SERVICES = [
     '/battery_low',
     '/battery_critical',
     '/battery_full',
+    '/charger_connected',
 ]
 
 # Transient-local: late joiners get the last call replayed instead of silence.
 DEFAULT_STATE_SERVICES = [
     '/emergency_stop', '/twist_switch', '/waypoint_follow',
-    '/battery_low', '/battery_critical', '/battery_full',
+    '/battery_low', '/battery_critical', '/battery_full', '/charger_connected',
 ]
 STATE_SERVICE_QOS = QoSProfile(
     depth=2,
