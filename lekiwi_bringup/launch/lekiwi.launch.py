@@ -146,13 +146,18 @@ def launch_setup(context):
     if battery_monitor:
         # Starts both battery_monitor_node and battery_events_node (the latter exposes
         # /battery_low, /battery_critical, /battery_full, /charger_connected as SetBool
-        # services for indicator_node). params_file is left at its own default
+        # services for indicator_node). battery_params_file is left at its own default
         # (ina260_battery_monitor's own config/battery.yaml) deliberately - only the one
-        # LeKiwi-specific override goes here, layered on top via overrides_file, so this
-        # never re-duplicates (and re-drifts from) the upstream package's own defaults.
+        # LeKiwi-specific override goes here, layered on top via battery_overrides_file, so
+        # this never re-duplicates (and re-drifts from) the upstream package's own defaults.
+        # Argument names are battery-prefixed, not the generic params_file/overrides_file -
+        # nav2.launch.py (included above, as `nav`) declares its own params_file argument in
+        # this same launch tree's shared LaunchConfiguration namespace, and a generic name
+        # here would silently resolve to nav2's value instead of this package's own default
+        # (found the hard way - see battery_monitor.launch.py's own module docstring).
         pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
-            'overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
+            'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
         }))
 
     if payload == 'pantilt':
