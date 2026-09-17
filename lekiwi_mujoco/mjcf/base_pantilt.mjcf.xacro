@@ -16,12 +16,12 @@
   <xacro:arg name="standalone" default="false"/>
 
   <!-- xacro:include, not a plain <include> - base_shared.xml needs $(arg scene) resolved. -->
-  <xacro:include filename="$(find lekiwi_description)/mjcf/base_shared.xml"/>
+  <xacro:include filename="$(find lekiwi_mujoco)/mjcf/base_shared.xml"/>
   <xacro:include filename="$(find pt_description)/mjcf/pantilt.mjcf.xacro"/>
 
   <worldbody>
     <body name="base_link" pos="0 0 0.040640" childclass="lekiwi_base">
-      <include file="$(find lekiwi_description)/mjcf/base_subtree.xml"/>
+      <include file="$(find lekiwi_mujoco)/mjcf/base_subtree.xml"/>
 
       <body name="pantilt_mount" pos="0.032725 0 0.0525">
         <xacro:pantilt_body/>

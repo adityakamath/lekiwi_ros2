@@ -58,6 +58,7 @@ def launch_setup(context):
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
+    pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
@@ -68,10 +69,10 @@ def launch_setup(context):
         final_mujoco_model = mujoco_model
     elif hw_type == 'mujoco':
         if payload == 'pantilt':
-            mjcf_cmd = [xacro, f'{pkg_desc}/mjcf/base_pantilt.mjcf.xacro',
+            mjcf_cmd = [xacro, f'{pkg_mujoco}/mjcf/base_pantilt.mjcf.xacro',
                         f'pantilt_config:={pantilt_config}', 'scene:=true']
         else:
-            mjcf_cmd = [xacro, f'{pkg_desc}/mjcf/base.mjcf.xacro', 'scene:=true']
+            mjcf_cmd = [xacro, f'{pkg_mujoco}/mjcf/base.mjcf.xacro', 'scene:=true']
         mjcf_xml = subprocess.run(mjcf_cmd, capture_output=True, text=True, check=True).stdout
         mjcf_file = tempfile.NamedTemporaryFile(
             mode='w', suffix='.xml', prefix='lekiwi_mujoco_', delete=False)
@@ -329,7 +330,7 @@ def generate_launch_description():
             'mujoco_model',
             default_value='',
             description='Path to a pre-built MJCF file to load; empty means xacro-process '
-                        'lekiwi_description/mjcf/base.mjcf.xacro or base_pantilt.mjcf.xacro '
+                        'lekiwi_mujoco/mjcf/base.mjcf.xacro or base_pantilt.mjcf.xacro '
                         '(picked by payload, with pantilt_config) at launch time instead. Only '
                         'used when ros2_control_hardware_type:="mujoco".',
         ),
