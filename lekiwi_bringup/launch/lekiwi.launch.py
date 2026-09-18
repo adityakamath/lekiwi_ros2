@@ -48,7 +48,7 @@ def launch_setup(context):
     wp_loops            = LaunchConfiguration('wp_loops').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
     sim                 = _launch_arg_as_bool(context, 'sim')
-    gui                 = LaunchConfiguration('gui').perform(context)
+    mujoco_gui          = LaunchConfiguration('mujoco_gui').perform(context)
     joy                 = LaunchConfiguration('joy').perform(context)
     sts_serial_port     = LaunchConfiguration('sts_serial_port').perform(context)
     mujoco_model        = LaunchConfiguration('mujoco_model').perform(context)
@@ -100,7 +100,7 @@ def launch_setup(context):
     }
     if sim:
         control_args['ros2_control_hardware_type'] = 'mujoco'
-        control_args['mujoco_headless'] = 'false' if gui.lower() in ('true', '1') else 'true'
+        control_args['mujoco_headless'] = 'false' if mujoco_gui.lower() in ('true', '1') else 'true'
     control = include(pkg_control, 'launch/control.launch.py', control_args)
 
     nav = include(pkg_nav,     'launch/navigation.launch.py', {
@@ -308,8 +308,8 @@ def generate_launch_description():
                         'equivalent at all). Base and pantilt payload both supported.',
         ),
         DeclareLaunchArgument(
-            'gui',
-            default_value='true',
+            'mujoco_gui',
+            default_value='false',
             description='[sim only] Launch with the MuJoCo Simulate viewer attached.',
         ),
     ]
