@@ -62,6 +62,7 @@ jobs:
             ros-${{ matrix.ros_distro }}-teleop-twist-keyboard \
             ros-${{ matrix.ros_distro }}-xacro
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
+          pip install --break-system-packages -r src/lekiwi_ros2/lekiwi_mujoco/requirements.txt "gymnasium>=1.2,<2"
           # test_render_phrases.py imports lekiwi_audio.tts to monkeypatch Synthesizer, which
           # imports onnxruntime/kokoro_onnx/soundfile at module level even though the tests
           # themselves stub out the actual model - so these still need to be installed here.
@@ -76,7 +77,7 @@ jobs:
         run: |
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           colcon build --packages-select \
-            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup lekiwi_audio \
+            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_mujoco lekiwi_bringup lekiwi_audio \
             pt_description \
             --packages-ignore pt_control pt_bringup \
               sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor
@@ -93,6 +94,7 @@ jobs:
             src/lekiwi_ros2/lekiwi_control/test \
             src/lekiwi_ros2/lekiwi_navigation/test \
             src/lekiwi_ros2/lekiwi_description/test \
+            src/lekiwi_ros2/lekiwi_mujoco/test \
             src/lekiwi_ros2/lekiwi_audio/test
 
       - name: basedpyright (lekiwi_control)
@@ -106,3 +108,23 @@ jobs:
           . install/setup.sh
           pip install --break-system-packages --ignore-installed basedpyright
           cd src/lekiwi_ros2 && basedpyright lekiwi_control/lekiwi_control
+
+  mujoco:
+    name: MuJoCo models and keyboard (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install simulation dependencies
+        run: pip install -e "./lekiwi_mujoco[gym]" "pytest<8"
+      - name: Validate generated models, dynamics and URDF geometry
+        run: pytest lekiwi_mujoco/test -q
