@@ -20,7 +20,8 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 ## Packages
 
 - **lekiwi_bringup** — Top-level launch files that bring up the full system (control, navigation, sensors, payload) based on `payload`/`sim`/`mission` and other arguments.
-- **lekiwi_description** — URDF and MJCF robot models, meshes, and visualization launch files.
+- **lekiwi_description** — URDF robot models, meshes, and visualization launch files.
+- **lekiwi_mujoco** — MuJoCo models for the base and pan-tilt variants, generated from the URDF and controller config, plus a standalone (no ROS) viewer, Gymnasium adapter and benchmark. See its [README](lekiwi_mujoco/README.md).
 - **lekiwi_control** — ros2_control hardware interfaces, controller configs, and launch files (real, mock, or MuJoCo).
 - **lekiwi_navigation** — SLAM (slam_toolbox), localization (AMCL), Nav2, EKF sensor fusion, and map storage.
 - **lekiwi_audio** — Spoken status announcements for e-stop, mode switching, waypoint actions, and battery threshold events.
@@ -36,6 +37,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 - **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
 - **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation
 - **[mujoco_ros2_control](https://github.com/ros-controls/mujoco_ros2_control)** (`sudo apt install ros-kilted-mujoco-ros2-control`): MuJoCo simulation backend, `sim:=true` only
+- **MuJoCo, xacro, PyYAML (Python)** (`pip install -r lekiwi_mujoco/requirements.txt` into the interpreter ROS launch uses): `sim:=true` generates its model with `lekiwi_mujoco` at launch time
 - **[pantilt_ros2](https://github.com/adityakamath/pantilt_ros2)** (git submodule under `payloads/`): Pan-tilt + OAK-D camera payload — see its [README](payloads/pantilt_ros2/README.md) for its own dependencies (depthai-ros, cloudini, etc.)
 
 ## Installation and Usage
@@ -124,7 +126,7 @@ Nav2 no-go and speed-limited zones are supported. Zone masks live under `lekiwi_
 
 `sim:=true` runs against MuJoCo instead of real hardware. Verified working end-to-end for both `payload:=""` and `payload:=pantilt`: wheel and pan-tilt commands drive real simulated physics, `imu_sensor_broadcaster` publishes real IMU data (including gravity), and odometry/TF update correctly — a single `payload:=pantilt` `controller_manager` was confirmed driving wheels and pan-tilt concurrently without interference, matching the shared-bus design (see [pantilt_ros2 README](payloads/pantilt_ros2/README.md#launch-time-bring-up-on-a-shared-bus)). Not validated for fidelity against real hardware behavior — only that the `ros2_control` integration itself works.
 
-The simulated OAK-D camera does not work — same `mujoco_ros2_control_node` GLFW init failure documented in [pantilt_ros2's Simulation section](payloads/pantilt_ros2/README.md#simulation) — so `oakd`/`pointcloud`/`octomap` have no simulated equivalent; `sim:=true` skips them entirely (see [Launch Arguments](#launch-arguments)). This no longer affects anything else: `mujoco_gui:=false` (the default) runs fully headless with no display or GPU required, and the camera-init failure just logs `Failed to initialize GLFW. Disabling camera publishing.` instead of taking the process down — the earlier full-stack crash traced back to `gui`/`mujoco_gui` defaulting to `true`, which forced the interactive-viewer GLFW path on a display-less host.
+`sim:=true` runs headless by default (`mujoco_gui:=true` opens the MuJoCo viewer and needs a display). The model is generated at launch from the URDF and controller config by [`lekiwi_mujoco`](lekiwi_mujoco/README.md), which also documents standalone use without ROS, the model and its uncalibrated approximations, and the open simulation work.
 
 ## Structure
 
@@ -132,6 +134,7 @@ The simulated OAK-D camera does not work — same `mujoco_ros2_control_node` GLF
 lekiwi_ros2/
 ├── lekiwi_control/      # Control, diagnostics, launch files
 ├── lekiwi_description/  # URDF models and meshes
+├── lekiwi_mujoco/       # MuJoCo models, standalone viewer, Gymnasium adapter
 ├── lekiwi_navigation/   # SLAM, localization, EKF sensor fusion, maps
 ├── lekiwi_bringup/      # System integration launch files
 ├── lekiwi_audio/        # Spoken status announcements (e-stop, mode switching, waypoints)

@@ -1,6 +1,17 @@
 # Pi simulation with a local native MuJoCo viewer
 
-Proposed first implementation; end-to-end Pi integration is not yet verified.
+Proposed first implementation; the remote connection and viewer are not implemented or verified.
+
+## Status — 2026-09-18
+
+- Headless `sim:=true` runs on the Pi with all controllers active. `mujoco_gui` defaults to
+  `false`: the earlier GLFW crash came from requesting the interactive viewer on a
+  display-less host, so no X server, GPU or OpenGL is needed. The camera-init warning is harmless.
+- The laptop side may be ROS 2 based (rclpy, `rmw_zenoh_cpp` and MuJoCo in a Pixi
+  environment); it never steps physics.
+- Still open: check whether `/joint_states`, TF and odometry already carry enough state
+  for the viewer (roller coverage), then Zenoh router endpoints between Pi and laptop
+  (deployment configuration, not repository code).
 
 ## Verified Pi prerequisites — 2026-09-17
 
