@@ -9,7 +9,9 @@ run from this package's root dir (-m puts the cwd on sys.path). After `pip insta
 mujoco_preview`.
 """
 import argparse
+from collections import deque
 import json
+import math
 from pathlib import Path
 from queue import SimpleQueue
 from threading import Lock
@@ -26,6 +28,30 @@ import mujoco.viewer
 from lekiwi_mujoco.paths import package_share
 
 PACKAGE = package_share('lekiwi_mujoco')
+
+
+class Trail:
+    """Bounded visual-only XY trail for the flat scene; never adds physics bodies."""
+    def __init__(self):
+        self.points = deque(maxlen=1000)
+
+    def clear(self):
+        self.points.clear()
+
+    def draw(self, scene, position):
+        point = (float(position[0]), float(position[1]), .003)
+        if not self.points or math.dist(point, self.points[-1]) >= .01:
+            self.points.append(point)
+        scene.ngeom = 0
+        points = list(self.points)
+        for start, end in zip(points, points[1:]):
+            if scene.ngeom == scene.maxgeom:
+                break
+            geom = scene.geoms[scene.ngeom]
+            mujoco.mjv_initGeom(geom, mujoco.mjtGeom.mjGEOM_LINE, [0, 0, 0],
+                               [0, 0, 0], [1, 0, 0, 0, 1, 0, 0, 0, 1], [.1, .85, 1., 1.])
+            mujoco.mjv_connector(geom, mujoco.mjtGeom.mjGEOM_LINE, 2., start, end)
+            scene.ngeom += 1
 
 
 class KeyboardControl:
@@ -166,6 +192,7 @@ def main():
     data = simulation.data
     keyboard = KeyboardControl(model, simulation.control)
     keys = HeldKeys()
+    trail = Trail()
     paused = False
     frames = 0
     if args.telemetry:
@@ -199,6 +226,7 @@ def main():
                         simulation.stop()
                         keys.clear()
                         simulation.reset()
+                        trail.clear()
                     elif key == 'focus_lost':
                         keyboard.stop(data)
                         simulation.stop()
@@ -207,6 +235,7 @@ def main():
                     for _ in range(steps):
                         keyboard.update(data, held, model.opt.timestep)
                         simulation.step()
+                trail.draw(viewer.user_scn, data.xpos[simulation.robot.base])
                 info = simulation.info()
                 state = {'model': str(path), 'sim_time': info['sim_time'],
                          'paused': paused, 'contacts': info['contacts'],
