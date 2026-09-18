@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Measure open-loop body motion in the current models."""
+"""Measure open-loop body motion in the current models.
+
+Standalone, no install needed: `python3 -m lekiwi_mujoco.benchmark_mujoco --output /tmp/out.json`,
+run from this package's root dir (-m puts the cwd on sys.path). After `pip install -e .`
+(or a colcon build), the same tool is also `benchmark_mujoco` on PATH / `ros2 run lekiwi_mujoco
+benchmark_mujoco`.
+"""
 import argparse
 import json
 from pathlib import Path

@@ -23,7 +23,7 @@
        quat = q_z(mount_angle) ⊗ q_y(90°), mount_angle = pi/3 (matches base.control.xacro's
        "offset" property). -->
   <body name="left_wheel_link" pos="0.066120 0.114522 0.010360" quat="0.61237244 -0.35355339 0.61237244 0.35355339">
-    <joint name="left_wheel_joint" class="wheel"/>
+    <joint name="left_wheel_joint" type="hinge" axis="0 0 1" damping="0" class="sts3215"/>
     <!-- Effective passive roller ring: 16 axisymmetric contact rollers.
          Aggregate wheel mass/inertia are supplied from URDF by the generator.
          Count, shape, friction and bearing losses are simulation approximations. -->
@@ -96,7 +96,7 @@
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
   <body name="back_wheel_link" pos="-0.132239 0.000000 0.010360" quat="0.00000000 -0.70710678 0.00000000 0.70710678">
-    <joint name="back_wheel_joint" class="wheel"/>
+    <joint name="back_wheel_joint" type="hinge" axis="0 0 1" damping="0" class="sts3215"/>
     <!-- Effective passive roller ring: 16 axisymmetric contact rollers.
          Aggregate wheel mass/inertia are supplied from URDF by the generator.
          Count, shape, friction and bearing losses are simulation approximations. -->
@@ -167,7 +167,7 @@
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
   <body name="right_wheel_link" pos="0.066120 -0.114522 0.010360" quat="0.61237244 0.35355339 0.61237244 -0.35355339">
-    <joint name="right_wheel_joint" class="wheel"/>
+    <joint name="right_wheel_joint" type="hinge" axis="0 0 1" damping="0" class="sts3215"/>
     <!-- Effective passive roller ring: 16 axisymmetric contact rollers.
          Aggregate wheel mass/inertia are supplied from URDF by the generator.
          Count, shape, friction and bearing losses are simulation approximations. -->

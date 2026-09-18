@@ -1,13 +1,12 @@
 """Observable state excludes free-base and passive-roller privileged state."""
 import numpy as np
 import pytest
-from lekiwi_mujoco.instance import RobotInstance
 from lekiwi_mujoco.mujoco_env import LeKiwiEnv
 
 
 @pytest.mark.parametrize('variant,count', [('base', 3), ('pt101', 5)])
 def test_sensor_contract(variant, count):
-    with LeKiwiEnv(variant=variant, instance=RobotInstance(prefix='sensor/')) as env:
+    with LeKiwiEnv(variant=variant) as env:
         obs, _ = env.reset()
         assert 'qpos' not in obs and 'qvel' not in obs
         assert len(obs['joint_position']) == count

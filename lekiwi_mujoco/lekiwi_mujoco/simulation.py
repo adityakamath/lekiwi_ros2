@@ -1,10 +1,12 @@
 """ROS/GUI-independent commands, stepping, reset and state for a single robot."""
 import math
+from types import MappingProxyType
 
 import mujoco
 import numpy as np
 
-from lekiwi_mujoco.instance import RobotInstance, WHEELS
+WHEELS = ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint')
+PAYLOAD = ('shoulder_pan_joint', 'tilt_joint')
 
 
 def finite_vector(value, size, label):
@@ -14,11 +16,48 @@ def finite_vector(value, size, label):
     return value
 
 
+class RobotBindings:
+    """Resolve the single robot's named elements once against a compiled model."""
+    def __init__(self, model):
+        self.model = model
+
+        def required(kind, name):
+            result = mujoco.mj_name2id(model, kind, name)
+            if result < 0:
+                raise ValueError(f'Missing robot element: {name}')
+            return result
+
+        self.base = required(mujoco.mjtObj.mjOBJ_BODY, 'base_link')
+        self.wheels = tuple(required(mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in WHEELS)
+        self.payload = tuple(name for name in PAYLOAD
+                             if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name) >= 0)
+        if self.payload and self.payload != PAYLOAD:
+            raise ValueError('Pan-tilt model must contain both payload actuators')
+        names = WHEELS + self.payload
+        self.actuator_ids = MappingProxyType({name: required(mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in names})
+        self.joint_ids = MappingProxyType({name: required(mujoco.mjtObj.mjOBJ_JOINT, name) for name in names})
+        for name in names:
+            if model.actuator_trnid[self.actuator_ids[name], 0] != self.joint_ids[name]:
+                raise ValueError(f'Actuator/joint mismatch: {name}')
+        self.sensor_ids = self._named_ids(mujoco.mjtObj.mjOBJ_SENSOR, model.nsensor)
+        self.camera_ids = self._named_ids(mujoco.mjtObj.mjOBJ_CAMERA, model.ncam)
+
+    def _named_ids(self, kind, count):
+        return MappingProxyType({name: i for i in range(count)
+                                 if (name := mujoco.mj_id2name(self.model, kind, i))})
+
+    def numeric(self, name):
+        result = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_NUMERIC, name)
+        if result < 0:
+            raise ValueError(f'Missing robot metadata: {name}; regenerate the model')
+        return self.model.numeric(result).data.copy()
+
+
 class RobotControl:
     """Common command semantics. Limits constrain commands, not physical state."""
     def __init__(self, model, bindings=None):
         self.model = model
-        self.bindings = bindings or RobotInstance().resolve(model)
+        self.bindings = bindings or RobotBindings(model)
         self.wheels = list(self.bindings.wheels)
         self.base_limits = finite_vector(self.bindings.numeric('base_velocity_limits'), 3, 'base limits')
         self.wheel_limits = np.array([self.bindings.numeric('velocity_limit_' + name)[0] for name in WHEELS])
@@ -86,10 +125,10 @@ class Simulation:
     step(count) accepts actuator edits in data.ctrl (e.g. viewer sliders); position
     requests persist until reached or replaced, with slew limits at each tick.
     """
-    def __init__(self, model, instance=None):
+    def __init__(self, model):
         self.model = model
         self.data = mujoco.MjData(model)
-        self.robot = (instance or RobotInstance()).resolve(model)
+        self.robot = RobotBindings(model)
         self.control = RobotControl(model, self.robot)
         self.ready = False
         self._requested = self.data.ctrl.copy()

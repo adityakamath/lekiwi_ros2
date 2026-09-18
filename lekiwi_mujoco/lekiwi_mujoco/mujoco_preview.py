@@ -2,6 +2,11 @@
 """Inspect an existing LeKiwi MJCF in MuJoCo's passive native viewer.
 
 On macOS run with mjpython. No waypoint follower or ROS controller is included.
+
+Standalone, no install needed: `python3 -m lekiwi_mujoco.mujoco_preview --variant pt101`,
+run from this package's root dir (-m puts the cwd on sys.path). After `pip install -e .`
+(or a colcon build), the same tool is also `mujoco_preview` on PATH / `ros2 run lekiwi_mujoco
+mujoco_preview`.
 """
 import argparse
 import json
@@ -12,7 +17,6 @@ import time
 from tempfile import TemporaryDirectory
 
 from lekiwi_mujoco.build_mujoco_models import build
-from lekiwi_mujoco.instance import RobotInstance
 from lekiwi_mujoco.simulation import RobotControl, Simulation
 
 import glfw
@@ -145,26 +149,19 @@ def main():
     parser.add_argument('--control-package', type=Path)
     parser.add_argument('--description-package', type=Path)
     parser.add_argument('--pt-package', type=Path)
-    parser.add_argument('--robot-name', default='lekiwi')
-    parser.add_argument('--prefix', default='')
-    parser.add_argument('--spawn', type=float, nargs=3, default=[0, 0, 0], metavar=('X', 'Y', 'Z'))
-    parser.add_argument('--spawn-quat', type=float, nargs=4, default=[1, 0, 0, 0])
     parser.add_argument('--scene', default='flat', help='flat, none, or scene MJCF path')
     parser.add_argument('--model', type=Path, help='Use an explicit prebuilt XML and its embedded limits instead of regenerating')
     parser.add_argument('--island-colors', action='store_true', help='Debug constraint islands instead of displaying robot materials')
     parser.add_argument('--telemetry', type=Path, help='Optional live model-state JSON')
     args = parser.parse_args()
-    instance = RobotInstance(args.robot_name, args.prefix, tuple(args.spawn), tuple(args.spawn_quat))
-    if args.model and (args.spawn != [0, 0, 0] or args.spawn_quat != [1, 0, 0, 0]):
-        parser.error("Spawn options apply to generated models; prebuilt models retain their compiled spawn")
     filename = 'lekiwi_base.xml' if args.variant == 'base' else f'lekiwi_{args.variant}_oakd_s2.xml'
     # Keep generated files alive for the viewer lifetime; mesh paths are absolute.
     generated = TemporaryDirectory(prefix='lekiwi_preview_') if args.model is None else None
     path = (args.model.resolve() if args.model else
             build(args.variant, Path(generated.name) / filename, absolute=True, scene=args.scene, control_dir=args.control_package,
-                  description_dir=args.description_package, pt_package=args.pt_package, instance=instance))
+                  description_dir=args.description_package, pt_package=args.pt_package))
     model = mujoco.MjModel.from_xml_path(str(path))
-    simulation = Simulation(model, instance)
+    simulation = Simulation(model)
     simulation.reset()
     data = simulation.data
     keyboard = KeyboardControl(model, simulation.control)

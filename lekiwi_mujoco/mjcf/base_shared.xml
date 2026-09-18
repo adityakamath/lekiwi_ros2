@@ -6,12 +6,15 @@
   <compiler angle="radian"/>
 
   <default>
+    <!-- Wheel joints reference class="sts3215" directly (base_subtree.xml), overriding
+         damping="0" locally - BAM's identified damping is for a small-range position-
+         controlled arm joint, not a continuously-spinning velocity-controlled wheel, and
+         measurably fights the velocity actuator at speed. armature/frictionloss are the
+         only attributes that end up mattering from this class anyway - mujoco_parameters.py's
+         sync_robot_parameters() overwrites both for every actuated joint from
+         config/mujoco.yaml's actuators.wheel block right after the MJCF is parsed. -->
+    <xacro:include filename="$(find lekiwi_mujoco)/mjcf/sts3215.mjcf.xacro"/>
     <default class="lekiwi_base">
-      <default class="wheel">
-        <!-- Uncalibrated STS3215 dynamics, same defaults used for the pan/tilt joints in
-             pt_description/mjcf/pantilt_shared.xml (same motor family, this project-wide). -->
-        <joint type="hinge" axis="0 0 1" frictionloss="0.1" armature="0.1"/>
-      </default>
       <default class="passive_roller">
         <!-- Tangential free roller axis: traction around rim, passive slip along axle. -->
         <joint type="hinge" axis="0 1 0" limited="false" damping="0.00002"

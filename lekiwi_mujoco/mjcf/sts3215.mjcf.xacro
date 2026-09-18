@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!-- STS3215 MuJoCo joint defaults, shared by every STS3215-driven joint in lekiwi (the three
+     wheel joints here; pt_description/mjcf/pantilt_shared.xml keeps its own uncalibrated copy
+     for the pan/tilt joints - same motor family, separate repo). Copied verbatim from
+     so_arm_ros2/so_arm_mujoco/mjcf/sts3215.mjcf.xacro - the BAM identification is a property
+     of the motor, not the mechanism it drives. -->
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <default class="sts3215">
+    <!-- Identified from real STS3215 (12V) trajectories via Rhoban's BAM project
+         (github.com/Rhoban/bam), model "m1", params/feetech_sts3215_12V/m1.json (PR #5).
+         Derived with bam.to_mujoco's own voltage_controlled_to_mujoco formula, corrected to
+         fold in error_gain_ratio (the per-unit gain correction STS3215Actuator.compute_control
+         actually applies - bam.to_mujoco's static export omits it, a known gap in that
+         deprecated tool). kp/error_gain/max_pwm=32/0.166/0.97 are STS3215Actuator's firmware
+         constants (fixed across supply voltages); vin=12 for this identified variant. -->
+    <joint damping="1.057835" frictionloss="0.195871" armature="0.032460"/>
+    <position kp="42.911886" kv="0.0" forcerange="-8.537717 8.537717"/>
+    <!-- so_arm_mujoco's copy also nests visual/collision geom sub-classes here for its own
+         STS3215 motor meshes; omitted here since lekiwi's own wheel geoms use separate
+         classes (roller_geom, base_visual) and pt_description/mjcf/pantilt_shared.xml
+         already defines its own same-named visual/collision classes - MJCF class names
+         are global, so duplicating them would collide when payload variants compose. -->
+  </default>
+</mujoco>

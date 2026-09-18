@@ -1,4 +1,4 @@
-"""Cross-client behavior and prefixed single-instance regression checks."""
+"""Cross-client behavior and single-instance regression checks."""
 from pathlib import Path
 
 import glfw
@@ -6,8 +6,6 @@ import mujoco
 import numpy as np
 import pytest
 
-from lekiwi_mujoco.build_mujoco_models import build
-from lekiwi_mujoco.instance import RobotInstance
 from lekiwi_mujoco.mujoco_env import LeKiwiEnv
 from lekiwi_mujoco.mujoco_preview import KeyboardControl
 from lekiwi_mujoco.simulation import Simulation
@@ -75,29 +73,6 @@ def test_batching_reset_and_slider_goal(model):
     same(a.data, b.data)
 
 
-@pytest.mark.parametrize('variant', ['base', 'pt100', 'pt101'])
-def test_prefixed_spawn_serialization_and_reset(tmp_path, variant):
-    instance = RobotInstance(prefix='robot/', position=(1, 2, .1), quaternion=(1, 0, 0, 1))
-    path = build(variant, tmp_path / 'robot.xml', absolute=True, instance=instance)
-    model = mujoco.MjModel.from_xml_path(str(path))
-    sim = Simulation(model, instance)
-    sim.reset(settle_seconds=0)
-    assert sim.pose() == pytest.approx([1, 2, np.pi / 2])
-    root = sim.robot.free_qpos
-    np.testing.assert_allclose(sim.data.qpos[root:root+7], sim.robot.spawn_qpos)
-    assert sim.robot.sensor_ids
-    assert bool(sim.robot.camera_ids) == (variant != 'base')
-    sim.step(5, np.ones(3 + len(sim.robot.payload)))
-    sim.reset(settle_seconds=0)
-    np.testing.assert_allclose(sim.data.qpos[root:root+7], sim.robot.spawn_qpos)
-    with pytest.raises(ValueError, match='Missing robot element'):
-        Simulation(model)
-    with LeKiwiEnv(model_path=path, instance=instance) as env:
-        env.reset()
-        env.step(np.ones(env.action_space.shape))
-        assert env.data.time == pytest.approx(.02)
-
-
 def test_invalid_execution_inputs(model):
     sim = Simulation(model)
     with pytest.raises(RuntimeError):
@@ -111,5 +86,3 @@ def test_invalid_execution_inputs(model):
             sim.steps_for(interval)
     with pytest.raises(ValueError):
         sim.step(action=[0, 0, 0, np.nan, 0])
-    with pytest.raises(ValueError):
-        RobotInstance(quaternion=(0, 0, 0, 0))

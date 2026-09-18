@@ -22,14 +22,14 @@ class LeKiwiEnv(gym.Env):
     metadata = {'render_modes': ['rgb_array'], 'render_fps': 50}
 
     def __init__(self, variant='pt101', model_path=None, render_mode=None,
-                 control_dt=.02, width=640, height=480, scene='flat', control_dir=None, description_dir=None, pt_package=None, instance=None, observation_mode="sensors"):
+                 control_dt=.02, width=640, height=480, scene='flat', control_dir=None, description_dir=None, pt_package=None, observation_mode="sensors"):
         if render_mode not in (None, 'rgb_array'):
             raise ValueError('Use render_mode=None or rgb_array; use mujoco_preview.py for manual inspection')
         self._temporary = TemporaryDirectory(prefix='lekiwi_gym_') if model_path is None else None
         path = Path(model_path) if model_path else build(
-            variant, Path(self._temporary.name) / 'model.xml', absolute=True, scene=scene, control_dir=control_dir, description_dir=description_dir, pt_package=pt_package, instance=instance)
+            variant, Path(self._temporary.name) / 'model.xml', absolute=True, scene=scene, control_dir=control_dir, description_dir=description_dir, pt_package=pt_package)
         self.model = mujoco.MjModel.from_xml_path(str(path))
-        self.simulation = Simulation(self.model, instance)
+        self.simulation = Simulation(self.model)
         self.data = self.simulation.data
         if observation_mode not in ("sensors", "privileged"):
             raise ValueError("observation_mode must be sensors or privileged")
