@@ -11,6 +11,7 @@ pt_control/launch/pantilt.launch.py - see pantilt_ros2 README's "Launch-time bri
 """
 
 import subprocess
+import sys
 import tempfile
 
 import yaml
@@ -54,31 +55,30 @@ def launch_setup(context):
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
     mujoco_model    = LaunchConfiguration('mujoco_model').perform(context)
+    mujoco_scene = LaunchConfiguration('mujoco_scene').perform(context)
     mujoco_headless = LaunchConfiguration('mujoco_headless').perform(context)
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
-    pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
 
-    # MJCF must land on disk (not stay in-memory) since its <include> is filesystem-path-based -
-    # one file per payload, unlike the urdf var above.
+    # The control plugin loads MJCF from disk. Generate one model per payload.
     if mujoco_model:
         final_mujoco_model = mujoco_model
     elif hw_type == 'mujoco':
-        if payload == 'pantilt':
-            mjcf_cmd = [xacro, f'{pkg_mujoco}/mjcf/base_pantilt.mjcf.xacro',
-                        f'pantilt_config:={pantilt_config}', 'scene:=true']
-        else:
-            mjcf_cmd = [xacro, f'{pkg_mujoco}/mjcf/base.mjcf.xacro', 'scene:=true']
-        mjcf_xml = subprocess.run(mjcf_cmd, capture_output=True, text=True, check=True).stdout
-        mjcf_file = tempfile.NamedTemporaryFile(
-            mode='w', suffix='.xml', prefix='lekiwi_mujoco_', delete=False)
-        mjcf_file.write(mjcf_xml)
-        mjcf_file.close()
-        final_mujoco_model = mjcf_file.name
+        # One compiler for committed assets, headless tests and ROS; it also
+        # resolves the pinned payload's optical frame into MuJoCo's convention.
+        with tempfile.NamedTemporaryFile(
+                suffix='.xml', prefix='lekiwi_mujoco_', delete=False) as mjcf_file:
+            final_mujoco_model = mjcf_file.name
+        subprocess.run([
+            sys.executable, '-m', 'lekiwi_mujoco.build_mujoco_models',
+            '--control-package', pkg_ctrl, '--description-package', pkg_desc,
+            '--variant', pantilt_config if payload == 'pantilt' else 'base',
+            '--output', final_mujoco_model, '--absolute', '--scene', mujoco_scene,
+        ], capture_output=True, text=True, check=True)
     else:
         final_mujoco_model = ''
 
@@ -327,10 +327,12 @@ def generate_launch_description():
                         'base.control.xacro/base_pantilt.control.xacro - but not wired into this '
                         'launch file.',
         ),
+        DeclareLaunchArgument('mujoco_scene', default_value='flat',
+                              description='flat, none, or scene MJCF path for generated models'),
         DeclareLaunchArgument(
             'mujoco_model',
             default_value='',
-            description='Path to a pre-built MJCF file to load; empty means xacro-process '
+            description='Path to a pre-built MJCF file to load; empty means generate with MjSpec from '
                         'lekiwi_mujoco/mjcf/base.mjcf.xacro or base_pantilt.mjcf.xacro '
                         '(picked by payload, with pantilt_config) at launch time instead. Only '
                         'used when ros2_control_hardware_type:="mujoco".',
