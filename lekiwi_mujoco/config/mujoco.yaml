@@ -1,0 +1,26 @@
+# Simulation-only approximations. Not a conversion of servo EEPROM registers.
+physics:
+  timestep: 0.002
+  integrator: implicitfast
+  iterations: 60
+contact:
+  # Fixed 16-roller topology per wheel; lengths scale with configured wheel radius.
+  roller_radius_fraction: 0.17647058823529413  # 0.009 / 0.051
+  roller_half_width_fraction: 0.35294117647058826  # 0.018 / 0.051
+  roller_mass_fraction: 0.02  # fraction of URDF wheel mass PER roller
+  friction: [1.0, 0.001, 0.00001]
+  damping: 0.00002
+  armature: 0.000001
+  chassis_radius: 0.108
+  chassis_half_height: 0.0575
+  chassis_center: [0.0, 0.0, 0.05025]
+actuators:
+  wheel:
+    velocity_gain: 5.0
+    armature: 0.1
+    frictionloss: 0.1
+  pantilt:
+    position_gain: 50.0
+    damping_ratio: 1.5
+    armature: 0.1
+    frictionloss: 0.1

@@ -18,6 +18,7 @@ _URDF_PANTILT = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt.urd
 
 # Mock hardware args matching urdf_config.yaml defaults so the xacro parses cleanly.
 _BASE_ARGS = [
+    'base_controller_config:=' + os.path.join(_PKG_SRC, '..', 'lekiwi_control', 'config', 'base', 'control.yaml'),
     'serial_port:=/dev/ttySERVO',
     'use_mock:=true',
     'baud_rate:=1000000',

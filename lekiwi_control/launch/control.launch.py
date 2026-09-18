@@ -90,6 +90,7 @@ def launch_setup(context):
 
     xacro_cmd = (
         f'{xacro} {urdf}'
+        f' base_controller_config:={pkg_ctrl}/config/base/control.yaml'
         f' serial_port:={final_serial_port}'
         f' use_mock:={final_use_mock}'
         f' baud_rate:={_cfg["baud_rate"]}'

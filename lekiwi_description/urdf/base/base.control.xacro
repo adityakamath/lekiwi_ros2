@@ -50,8 +50,6 @@
   <xacro:property name="proportional_acc_max" value="$(arg proportional_acc_max)"/>        <!-- [0-254] -->
 
   <!-- Wheel geometry for omnidirectional control -->
-  <xacro:property name="wheel_radius" value="0.051"/>  <!-- meters -->
-  <xacro:property name="offset" value="${pi/3}"/>  <!-- 60° -->
   <xacro:property name="theta" value="${2*pi/3}"/>  <!-- 120° between wheels -->
 
   <!-- Maximum allowable speed/acceleration/torque for each motor -->

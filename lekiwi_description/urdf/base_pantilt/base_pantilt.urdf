@@ -352,14 +352,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
     </collision>
     <inertial>
@@ -372,14 +372,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
     </collision>
     <inertial>
@@ -392,14 +392,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
       <material name="base_charcoal"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+        <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
     </collision>
     <inertial>

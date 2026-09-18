@@ -4,14 +4,13 @@
      base_pantilt.mjcf.xacro for base+payload, add base_<payload>.mjcf.xacro for new payloads
      rather than an arg-driven branch here. Geometry lives in base_shared.xml/base_subtree.xml.
 
-     Standalone: xacro base.mjcf.xacro > /tmp/lekiwi_base.xml
-     control.launch.py runs the same command at launch time and passes the result as
+     Generate runnable models with scripts/build_mujoco_models.py.
+     control.launch.py uses this MjSpec generator and passes the result as
      mujoco_model. Uses $(find package), not relative paths - relative paths resolve against
      the output file's location at launch time, not this file's own directory. -->
 <mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="lekiwi">
-  <xacro:arg name="scene" default="true"/>
 
-  <!-- xacro:include, not a plain <include> - base_shared.xml needs $(arg scene) resolved. -->
+  <!-- Robot assets only; build_mujoco_models.py composes a separate scene. -->
   <xacro:include filename="$(find lekiwi_mujoco)/mjcf/base_shared.xml"/>
 
   <worldbody>

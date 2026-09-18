@@ -5,17 +5,16 @@
      mounts at base_pantilt.common.xacro's pantilt_base_offset_x/z, matching
      base_pantilt.urdf.xacro's fixed joint.
 
-     Standalone: xacro base_pantilt.mjcf.xacro pantilt_config:=pt101 > /tmp/lekiwi_pt101.xml
-     control.launch.py runs the same command at launch time when payload:=pantilt. -->
+     Use scripts/build_mujoco_models.py to synchronize URDF parameters and compose
+     the scene. control.launch.py uses that same generator at launch time. -->
 <mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="lekiwi_pantilt">
   <xacro:arg name="pantilt_config" default="pt101"/>
-  <xacro:arg name="scene" default="true"/>
   <!-- Declared here BEFORE including pantilt.mjcf.xacro (which defaults standalone to true)
        so this default wins - xacro uses the first <xacro:arg> declaration seen. Suppresses
        pantilt.mjcf.xacro's own worldbody/scene emission. -->
   <xacro:arg name="standalone" default="false"/>
 
-  <!-- xacro:include, not a plain <include> - base_shared.xml needs $(arg scene) resolved. -->
+  <!-- Robot assets only; build_mujoco_models.py composes a separate scene. -->
   <xacro:include filename="$(find lekiwi_mujoco)/mjcf/base_shared.xml"/>
   <xacro:include filename="$(find pt_description)/mjcf/pantilt.mjcf.xacro"/>
 

@@ -170,14 +170,14 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
         <material name="base_charcoal"/>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
       </collision>
       <inertial>
@@ -191,14 +191,14 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
         <material name="base_charcoal"/>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
       </collision>
       <inertial>
@@ -212,14 +212,14 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
         <material name="base_charcoal"/>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl"/>
+          <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
       </collision>
       <inertial>

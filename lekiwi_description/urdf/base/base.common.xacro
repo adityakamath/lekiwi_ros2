@@ -8,8 +8,17 @@
   <!-- Base mesh rotation about Z (rad) -->
   <xacro:property name="base_offset_rz" value="${3*pi/2}"/>
 
+  <!-- Common wheel geometry: used by ROS controllers, URDF and MuJoCo. -->
+  <!-- Required input: base_controller_config:=/path/to/base/control.yaml.
+       The launch/integration layer supplies it; description does not depend on control. -->
+  <xacro:property name="base_geometry" value="${xacro.load_yaml('$(arg base_controller_config)')['base_controller']['ros__parameters']}"/>
+  <xacro:property name="wheel_radius" value="${base_geometry['wheel_radius']}"/>
+  <xacro:property name="offset" value="${base_geometry['wheel_offset']}"/>
+  <!-- CAD wheel mesh radius in metres; a mesh reference measurement, not an operating parameter. -->
+  <xacro:property name="wheel_mesh_radius" value="0.051"/>
+  <xacro:property name="wheel_mesh_scale" value="${wheel_radius / wheel_mesh_radius}"/>
   <!-- Wheel mount offsets -->
-  <xacro:property name="wheel_base_radius" value="0.132239"/>
+  <xacro:property name="wheel_base_radius" value="${base_geometry['robot_radius']}"/>
   <xacro:property name="wheel_base_offset_z" value="0.01036"/>
 
   <!-- LD06 laser offsets from base_link -->
