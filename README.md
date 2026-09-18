@@ -86,7 +86,7 @@ The most commonly used arguments for `lekiwi_bringup lekiwi.launch.py` (run with
 | `battery_monitor` | `true`   | Physical INA260 current/voltage sensor present on the base. `false` skips `ina260_battery_monitor`'s launch include entirely |
 | `pointcloud`     | `false`   | Enable RGBD point cloud output from the OAK-D camera              |
 | `sim`            | `false`   | Run in MuJoCo instead of real hardware                            |
-| `gui`            | `true`    | [`sim` only] Show the MuJoCo viewer                                |
+| `mujoco_gui`     | `false`   | [`sim` only] Show the MuJoCo viewer (runs fully headless otherwise, no display/GPU needed) |
 | `diagnostics`    | `false`   | Launch motor/IMU diagnostics nodes                                |
 | `joy`            | `false`   | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |
 
@@ -124,7 +124,7 @@ Nav2 no-go and speed-limited zones are supported. Zone masks live under `lekiwi_
 
 `sim:=true` runs against MuJoCo instead of real hardware. Verified working end-to-end for both `payload:=""` and `payload:=pantilt`: wheel and pan-tilt commands drive real simulated physics, `imu_sensor_broadcaster` publishes real IMU data (including gravity), and odometry/TF update correctly — a single `payload:=pantilt` `controller_manager` was confirmed driving wheels and pan-tilt concurrently without interference, matching the shared-bus design (see [pantilt_ros2 README](payloads/pantilt_ros2/README.md#launch-time-bring-up-on-a-shared-bus)). Not validated for fidelity against real hardware behavior — only that the `ros2_control` integration itself works.
 
-The simulated OAK-D camera does not work — same `mujoco_ros2_control_node` GLFW init failure documented in [pantilt_ros2's Simulation section](payloads/pantilt_ros2/README.md#simulation) — so `oakd`/`pointcloud`/`octomap` have no simulated equivalent; `sim:=true` skips them entirely (see [Launch Arguments](#launch-arguments)).
+The simulated OAK-D camera does not work — same `mujoco_ros2_control_node` GLFW init failure documented in [pantilt_ros2's Simulation section](payloads/pantilt_ros2/README.md#simulation) — so `oakd`/`pointcloud`/`octomap` have no simulated equivalent; `sim:=true` skips them entirely (see [Launch Arguments](#launch-arguments)). This no longer affects anything else: `mujoco_gui:=false` (the default) runs fully headless with no display or GPU required, and the camera-init failure just logs `Failed to initialize GLFW. Disabling camera publishing.` instead of taking the process down — the earlier full-stack crash traced back to `gui`/`mujoco_gui` defaulting to `true`, which forced the interactive-viewer GLFW path on a display-less host.
 
 ## Structure
 
