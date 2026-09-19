@@ -1,5 +1,5 @@
-#ifndef ESTOP_MUJOCO_PLUGIN__EMERGENCY_STOP_HPP_
-#define ESTOP_MUJOCO_PLUGIN__EMERGENCY_STOP_HPP_
+#ifndef MUJOCO_ROS2_PLUGINS__MUJOCO_ROS2_PLUGINS_HPP_
+#define MUJOCO_ROS2_PLUGINS__MUJOCO_ROS2_PLUGINS_HPP_
 
 #include <mujoco/mujoco.h>
 
@@ -7,8 +7,16 @@
 #include <atomic>
 #include <vector>
 
-namespace estop_mujoco_plugin
+#include <mujoco_ros2_control_plugins/mujoco_ros2_control_plugins_base.hpp>
+#include <pluginlib/class_list_macros.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+// The one header of this package: the plugin base class, the export macro and the ROS-free
+// cores of the plugins (testable with plain MuJoCo).
+namespace mujoco_ros2_plugins
 {
+
+using PluginBase = mujoco_ros2_control_plugins::MuJoCoROS2ControlPluginBase;
 
 // ROS-free core of the emergency stop, so it can be tested with plain MuJoCo. Robot-agnostic.
 class EmergencyStop
@@ -60,6 +68,10 @@ private:
   std::vector<double> held_;
 };
 
-}  // namespace estop_mujoco_plugin
+}  // namespace mujoco_ros2_plugins
 
-#endif  // ESTOP_MUJOCO_PLUGIN__EMERGENCY_STOP_HPP_
+// Registers a plugin class under this package's loader base class.
+#define MUJOCO_ROS2_PLUGINS_EXPORT(plugin_class) \
+  PLUGINLIB_EXPORT_CLASS(plugin_class, mujoco_ros2_plugins::PluginBase)
+
+#endif  // MUJOCO_ROS2_PLUGINS__MUJOCO_ROS2_PLUGINS_HPP_

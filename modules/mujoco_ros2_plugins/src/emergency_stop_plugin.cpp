@@ -1,16 +1,13 @@
 #include <memory>
 
-#include <mujoco_ros2_control_plugins/mujoco_ros2_control_plugins_base.hpp>
-#include <pluginlib/class_list_macros.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
-#include "estop_mujoco_plugin/emergency_stop.hpp"
+#include "mujoco_ros2_plugins/mujoco_ros2_plugins.hpp"
 
-namespace estop_mujoco_plugin
+namespace mujoco_ros2_plugins
 {
 
-class EmergencyStopPlugin : public mujoco_ros2_control_plugins::MuJoCoROS2ControlPluginBase
+class EmergencyStopPlugin : public PluginBase
 {
 public:
   bool init(rclcpp::Node::SharedPtr node, const mjModel * model, mjData * /*data*/) override
@@ -47,8 +44,6 @@ private:
   EmergencyStop stop_;
 };
 
-}  // namespace estop_mujoco_plugin
+}  // namespace mujoco_ros2_plugins
 
-PLUGINLIB_EXPORT_CLASS(
-  estop_mujoco_plugin::EmergencyStopPlugin,
-  mujoco_ros2_control_plugins::MuJoCoROS2ControlPluginBase)
+MUJOCO_ROS2_PLUGINS_EXPORT(mujoco_ros2_plugins::EmergencyStopPlugin)

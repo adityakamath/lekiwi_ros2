@@ -32,8 +32,8 @@ def test_the_simulations_plugin_config_only_names_plugins_the_estop_module_regis
     import xml.etree.ElementTree as ET
     import yaml
     plugins = yaml.safe_load((ROOT / 'config/mujoco_ros2_control_plugins.yaml').read_text())['/**']['ros__parameters']['mujoco_plugins']
-    ours = {p['type'] for p in plugins.values() if p['type'].startswith('estop_mujoco_plugin/')}
-    registered = {c.get('name') for c in ET.parse(ROOT.parent / 'modules/estop_mujoco_plugin/plugins.xml').getroot().iter('class')}
-    assert ours == {'estop_mujoco_plugin/EmergencyStopPlugin'} and ours <= registered
-    assert 'estop_mujoco_plugin' in [e.text for e in ET.parse(ROOT / 'package.xml').getroot() if 'depend' in e.tag]
+    ours = {p['type'] for p in plugins.values() if p['type'].startswith('mujoco_ros2_plugins/')}
+    registered = {c.get('name') for c in ET.parse(ROOT.parent / 'modules/mujoco_ros2_plugins/plugins.xml').getroot().iter('class')}
+    assert ours == {'mujoco_ros2_plugins/EmergencyStopPlugin'} and ours <= registered
+    assert 'mujoco_ros2_plugins' in [e.text for e in ET.parse(ROOT / 'package.xml').getroot() if 'depend' in e.tag]
 

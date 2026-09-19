@@ -1,6 +1,6 @@
-<library path="estop_mujoco_plugin">
-  <class name="estop_mujoco_plugin/EmergencyStopPlugin"
-         type="estop_mujoco_plugin::EmergencyStopPlugin"
+<library path="mujoco_ros2_plugins">
+  <class name="mujoco_ros2_plugins/EmergencyStopPlugin"
+         type="mujoco_ros2_plugins::EmergencyStopPlugin"
          base_class_type="mujoco_ros2_control_plugins::MuJoCoROS2ControlPluginBase">
     <description>
       Provides /emergency_stop (std_srvs/SetBool), the service the real STS hardware interface

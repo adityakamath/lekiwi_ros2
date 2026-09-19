@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#include "estop_mujoco_plugin/emergency_stop.hpp"
+#include "mujoco_ros2_plugins/mujoco_ros2_plugins.hpp"
 
 namespace
 {
@@ -62,13 +62,13 @@ protected:
   mjSpec * spec_{nullptr};
   mjModel * model_{nullptr};
   mjData * data_{nullptr};
-  estop_mujoco_plugin::EmergencyStop stop_;
+  mujoco_ros2_plugins::EmergencyStop stop_;
 };
 
 TEST_F(EmergencyStopTest, ActuatorTypesAreClassified)
 {
-  EXPECT_FALSE(estop_mujoco_plugin::EmergencyStop::holds_position(model_, 0));  // velocity servo
-  EXPECT_TRUE(estop_mujoco_plugin::EmergencyStop::holds_position(model_, 1));   // position servo
+  EXPECT_FALSE(mujoco_ros2_plugins::EmergencyStop::holds_position(model_, 0));  // velocity servo
+  EXPECT_TRUE(mujoco_ros2_plugins::EmergencyStop::holds_position(model_, 1));   // position servo
 }
 
 TEST_F(EmergencyStopTest, InactiveLeavesTheControllersCommandsAlone)

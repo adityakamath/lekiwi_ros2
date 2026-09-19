@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(estop_mujoco_plugin)
+project(mujoco_ros2_plugins)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -12,7 +12,10 @@ find_package(pluginlib REQUIRED)
 find_package(mujoco_vendor REQUIRED)
 find_package(mujoco_ros2_control_plugins REQUIRED)
 
-add_library(${PROJECT_NAME} SHARED src/emergency_stop_plugin.cpp)
+# One library holds every plugin: add a source file here and a class to plugins.xml.
+set(PLUGIN_SOURCES src/emergency_stop_plugin.cpp)
+
+add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
@@ -35,7 +38,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_emergency_stop test/test_emergency_stop.cpp)
   target_include_directories(test_emergency_stop PRIVATE include)
-  target_link_libraries(test_emergency_stop mujoco::mujoco)
+  target_link_libraries(test_emergency_stop ${PROJECT_NAME} mujoco::mujoco)
 
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_plugin_registration test/test_plugin_registration.py TIMEOUT 60)

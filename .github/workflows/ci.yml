@@ -69,7 +69,7 @@ jobs:
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/lekiwi_audio/requirements-build.txt
 
       - name: Install the MuJoCo plugin build dependencies
-        # For modules/estop_mujoco_plugin (C++), which needs mujoco_ros2_control_plugins: kilted only.
+        # For modules/mujoco_ros2_plugins (C++), which needs mujoco_ros2_control_plugins: kilted only.
         if: matrix.ros_distro == 'kilted'
         run: apt-get install -y --no-install-recommends build-essential cmake ros-kilted-mujoco-ros2-control-plugins ros-kilted-ament-cmake-gtest ros-kilted-ament-cmake-pytest
 
@@ -81,20 +81,20 @@ jobs:
         # their (never-built) install output unless explicitly ignored. Each has its own CI already.
         run: |
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
-          # estop_mujoco_plugin (C++, needs mujoco_ros2_control_plugins) is built on kilted only.
-          if [ "${{ matrix.ros_distro }}" = kilted ]; then ESTOP=estop_mujoco_plugin; SKIP=; else ESTOP=; SKIP=estop_mujoco_plugin; fi
+          # mujoco_ros2_plugins (C++, needs mujoco_ros2_control_plugins) is built on kilted only.
+          if [ "${{ matrix.ros_distro }}" = kilted ]; then ESTOP=mujoco_ros2_plugins; SKIP=; else ESTOP=; SKIP=mujoco_ros2_plugins; fi
           colcon build --packages-select \
             lekiwi_control lekiwi_navigation lekiwi_description lekiwi_mujoco lekiwi_bringup lekiwi_audio \
             pt_description pt_mujoco $ESTOP \
             --packages-ignore pt_control pt_bringup \
               sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor $SKIP
 
-      - name: estop_mujoco_plugin tests
+      - name: mujoco_ros2_plugins tests
         if: matrix.ros_distro == 'kilted'
         run: |
           . /opt/ros/kilted/setup.sh
           . install/setup.sh
-          colcon test --packages-select estop_mujoco_plugin --event-handlers console_direct+
+          colcon test --packages-select mujoco_ros2_plugins --event-handlers console_direct+
           colcon test-result --verbose
 
       - name: pytest
