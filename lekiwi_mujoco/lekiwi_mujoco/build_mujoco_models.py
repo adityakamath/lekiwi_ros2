@@ -171,6 +171,7 @@ def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_
     packages = {'lekiwi_description': Path(description_dir).resolve() if description_dir else (PACKAGE or package_share('lekiwi_description'))}
     if variant != 'base':
         packages['pt_description'] = Path(pt_package).resolve() if pt_package else package_share('pt_description')
+        packages['pt_mujoco'] = package_share('pt_mujoco')
     source = SIM_PACKAGE / 'mjcf' / ('base.mjcf.xacro' if variant == 'base' else 'base_pantilt.mjcf.xacro')
     with package_paths(packages):
         doc = xacro.process_file(str(source), mappings={

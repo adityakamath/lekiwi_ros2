@@ -442,7 +442,6 @@ def test_payload_mass_changes_and_new_camera_inertia(parameter_workspace):
     source = PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'
     payload = parameter_workspace.parent / 'payload'
     shutil.copytree(source / 'urdf', payload / 'urdf')
-    shutil.copytree(source / 'mjcf', payload / 'mjcf')
     shutil.copytree(source / 'meshes', payload / 'meshes')
     module = payload / 'urdf/pantilt.module.xacro'
     text = module.read_text().replace('<mass value="1.0"/>', '<mass value="1.3"/>')

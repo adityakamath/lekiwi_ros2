@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!-- STS3215 MuJoCo joint defaults, shared by every STS3215-driven joint in lekiwi (the three
-     wheel joints here; pt_description/mjcf/pantilt_shared.xml keeps its own uncalibrated copy
+     wheel joints here; pt_mujoco/mjcf/pantilt_shared.xml keeps its own uncalibrated copy
      for the pan/tilt joints - same motor family, separate repo). Copied verbatim from
      so_arm_ros2/so_arm_mujoco/mjcf/sts3215.mjcf.xacro - the BAM identification is a property
      of the motor, not the mechanism it drives. -->
@@ -17,7 +17,7 @@
     <position kp="42.911886" kv="0.0" forcerange="-8.537717 8.537717"/>
     <!-- so_arm_mujoco's copy also nests visual/collision geom sub-classes here for its own
          STS3215 motor meshes; omitted here since lekiwi's own wheel geoms use separate
-         classes (roller_geom, base_visual) and pt_description/mjcf/pantilt_shared.xml
+         classes (roller_geom, base_visual) and pt_mujoco/mjcf/pantilt_shared.xml
          already defines its own same-named visual/collision classes - MJCF class names
          are global, so duplicating them would collide when payload variants compose. -->
   </default>

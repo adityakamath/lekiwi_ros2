@@ -42,11 +42,11 @@
     <material name="base_light_grey" rgba="0.8 0.8 0.8 1"/>
     <material name="base_charcoal" rgba="0.15 0.15 0.15 1"/>
     <material name="base_transparent" rgba="1 0 0 0.3"/>
-    <mesh name="ld06_lidar" file="/home/ubuntu/ros2_ws/src/lekiwi_ros2/lekiwi_description/meshes/ld06_lidar.stl"/>
-    <mesh name="bno055_imu" file="/home/ubuntu/ros2_ws/src/lekiwi_ros2/lekiwi_description/meshes/bno055_imu.stl"/>
-    <mesh name="respeaker_flex_mic" file="/home/ubuntu/ros2_ws/src/lekiwi_ros2/lekiwi_description/meshes/respeaker_flex_mic.stl"/>
-    <mesh name="lekiwi_base_visual" file="/home/ubuntu/ros2_ws/src/lekiwi_ros2/lekiwi_description/meshes/lekiwi_base_mujoco.stl"/>
-    <mesh name="omni_wheel_visual" file="/home/ubuntu/ros2_ws/src/lekiwi_ros2/lekiwi_description/meshes/omni_wheel_mujoco.stl"/>
+    <mesh name="ld06_lidar" file="../../lekiwi_description/meshes/ld06_lidar.stl"/>
+    <mesh name="bno055_imu" file="../../lekiwi_description/meshes/bno055_imu.stl"/>
+    <mesh name="respeaker_flex_mic" file="../../lekiwi_description/meshes/respeaker_flex_mic.stl"/>
+    <mesh name="lekiwi_base_visual" file="../../lekiwi_description/meshes/lekiwi_base_mujoco.stl"/>
+    <mesh name="omni_wheel_visual" file="../../lekiwi_description/meshes/omni_wheel_mujoco.stl"/>
   </asset>
 
   <worldbody>

@@ -49,7 +49,7 @@
   <asset>
     <material name="base_light_grey" rgba="0.8 0.8 0.8 1.0"/>
     <material name="base_charcoal" rgba="0.15 0.15 0.15 1.0"/>
-    <!-- Matches pt_description/mjcf/pantilt_shared.xml's "transparent" material - same
+    <!-- Matches pt_mujoco/mjcf/pantilt_shared.xml's "transparent" material - same
          purpose, kept as a separate asset since MuJoCo assets are namespaced per-model and
          this file's own "transparent" needs to exist independently of pantilt's. -->
     <material name="base_transparent" rgba="1 0 0 0.3"/>

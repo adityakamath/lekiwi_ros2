@@ -8,6 +8,7 @@
   <buildtool_depend>ament_python</buildtool_depend>
   <exec_depend>lekiwi_description</exec_depend>
   <exec_depend>pt_description</exec_depend>
+  <exec_depend>pt_mujoco</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>

@@ -9,7 +9,7 @@
        triangles) exceeds MuJoCo's 200000-face STL loader limit, so collision keeps using
        this primitive; the decimated copy below is visual-only. group="3" + the transparent
        material keep it from visually competing with that mesh - same convention as the
-       wheels (wheel_geom class) and pt_description/mjcf/pantilt_shared.xml's "collision"
+       wheels (wheel_geom class) and pt_mujoco/mjcf/pantilt_shared.xml's "collision"
        class. -->
   <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" group="3" material="base_transparent"/>
   <!-- quat = Rz(base_offset_rz), base_offset_rz = 3*pi/2 (base.common.xacro) - given as an
