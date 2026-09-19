@@ -17,12 +17,12 @@ This repository is a work in progress and includes experimental and AI-generated
 
 | Package | Purpose |
 |---------|---------|
-| [`lekiwi_bringup`](lekiwi_bringup/) | Top-level launch files that bring up the whole system, and the udev rules |
-| [`lekiwi_control`](lekiwi_control/) | `ros2_control` setup, controllers, joystick teleop, diagnostics and emergency-stop handling |
-| [`lekiwi_description`](lekiwi_description/) | URDF models and meshes for the base and each payload |
+| [`lekiwi_bringup`](lekiwi_bringup/README.md) | Top-level launch files that bring up the whole system, and the udev rules |
+| [`lekiwi_control`](lekiwi_control/README.md) | `ros2_control` setup, controllers, joystick teleop, diagnostics and emergency-stop handling |
+| [`lekiwi_description`](lekiwi_description/README.md) | URDF models and meshes for the base and each payload |
 | [`lekiwi_mujoco`](lekiwi_mujoco/README.md) | MuJoCo models generated from the URDF, and a standalone (no ROS) viewer |
 | [`lekiwi_navigation`](lekiwi_navigation/) | Nav2, SLAM (slam_toolbox), localization (AMCL), EKF sensor fusion, maps and waypoint patrol |
-| [`lekiwi_audio`](lekiwi_audio/) | Spoken status announcements (e-stop, mode switching, waypoints, battery) |
+| [`lekiwi_audio`](lekiwi_audio/README.md) | Spoken status announcements (e-stop, mode switching, waypoints, battery) |
 
 These are separate repositories, included as git submodules under `modules/` and `payloads/`:
 
