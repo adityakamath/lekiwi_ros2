@@ -286,7 +286,7 @@ def main():
     else:
         for variant in ('base', 'pt100', 'pt101'):
             filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_oakd_s2.xml'
-            print(build(variant, SIM_PACKAGE / 'mjcf' / filename, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package))
+            print(build(variant, SIM_PACKAGE / 'mjcf' / filename, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar))
 
 
 if __name__ == '__main__':

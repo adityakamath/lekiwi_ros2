@@ -509,7 +509,16 @@ def test_payload_servo_parameters_come_from_pt_mujoco_not_lekiwi(parameter_works
 def test_payload_joint_names_are_shared_with_pt_mujoco():
     from lekiwi_mujoco import simulation
     from pt_mujoco import simulation as payload
-    assert simulation.PAYLOAD == payload.PAYLOAD == ('shoulder_pan_joint', 'tilt_joint')
+    assert simulation.payload_names() == payload.PAYLOAD == ('shoulder_pan_joint', 'tilt_joint')
+
+
+def test_the_base_simulation_runs_without_pt_mujoco_and_a_payload_model_says_why_it_cannot(monkeypatch):
+    import mujoco
+    from lekiwi_mujoco import simulation
+    monkeypatch.setattr(simulation, 'payload_names', lambda: None)
+    simulation.Simulation(mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_base.xml')))
+    with pytest.raises(ValueError, match='pt_mujoco is not available'):
+        simulation.Simulation(mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101_oakd_s2.xml')))
 
 
 def test_pantilt_camera_rate_overrides_pt_mujoco_only_in_rate():

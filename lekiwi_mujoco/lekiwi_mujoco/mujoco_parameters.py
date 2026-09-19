@@ -53,6 +53,8 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
                    'imu_joint', 'imu_frame_joint', 'mic_joint'] + [p + '_wheel_joint' for p in WHEELS]
     for name in base_joints:
         joint = urdf.find(f"joint[@name='{name}']")
+        if joint is None:
+            raise ValueError(f'Missing URDF joint {name}')
         body = spec.body(joint.find('child').get('link'))
         if body is None:
             raise ValueError(f'Missing MuJoCo body for {name}')

@@ -7,10 +7,17 @@ import numpy as np
 
 from lekiwi_mujoco.paths import payload_package
 
-payload_package()
-from pt_mujoco.simulation import PAYLOAD  # noqa: E402
-
 WHEELS = ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint')
+
+
+def payload_names():
+    # pt_mujoco is only needed for models that carry the payload, so the base runs without it
+    try:
+        payload_package()
+        from pt_mujoco.simulation import PAYLOAD
+    except (ImportError, FileNotFoundError):
+        return None
+    return PAYLOAD
 
 
 def finite_vector(value, size, label):
@@ -33,9 +40,13 @@ class RobotBindings:
 
         self.base = required(mujoco.mjtObj.mjOBJ_BODY, 'base_link')
         self.wheels = tuple(required(mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in WHEELS)
-        self.payload = tuple(name for name in PAYLOAD
+        payload = payload_names()
+        if payload is None and model.nu > len(WHEELS):
+            raise ValueError('This model has a payload but pt_mujoco is not available')
+        payload = payload or ()
+        self.payload = tuple(name for name in payload
                              if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name) >= 0)
-        if self.payload and self.payload != PAYLOAD:
+        if self.payload and self.payload != payload:
             raise ValueError('Pan-tilt model must contain both payload actuators')
         names = WHEELS + self.payload
         self.actuator_ids = MappingProxyType({name: required(mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in names})
