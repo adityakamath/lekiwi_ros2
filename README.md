@@ -100,7 +100,7 @@ The base runs on its own (`payload:=""`). Optional payloads, each in its own rep
 
 1. **Registered** in `_VALID_PAYLOADS` in `lekiwi_bringup/launch/lekiwi.launch.py`, which forwards `payload` to the control launch (which also starts teleop) and the laser launch.
 2. **Description:** the payload repository provides a URDF module with a fixed mount joint; `lekiwi_description/urdf/base_<name>/` combines it with the base.
-3. **Control and teleop:** the payload's own control package supplies its controller (`pantilt_controller.yaml`, which `lekiwi_control` gives to the spawner with `--param-file`) and its servo profile, so nothing is copied into lekiwi and one `controller_manager` still drives the base and the payload. `lekiwi_control` keeps only what depends on the host, the joystick layout in `config/payloads/<name>/<name>_teleop.yaml`, loaded on top of `base_teleop.yaml`.
+3. **Control and teleop:** the payload's own control package supplies its controller (`pantilt_controller.yaml`, which `lekiwi_control` gives to the spawner with `--param-file`) and its servo profile, so nothing is copied into lekiwi and one `controller_manager` still drives the base and the payload. `lekiwi_control` keeps only what depends on the host, the joystick layout in `config/<name>_teleop.yaml`, loaded on top of `base_teleop.yaml`.
 4. **Sensors:** a payload that blocks part of the LiDAR's view adds `lekiwi_bringup/config/<name>_laser_filter.yaml`, which `laser.launch.py` applies automatically.
 5. **Simulation:** the payload's MuJoCo package builds its model from the robot's URDF (for `pantilt`, `pt_mujoco`'s `build_payload_spec`), and `lekiwi_mujoco` attaches it at the URDF's mount joint.
 
