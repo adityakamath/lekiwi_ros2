@@ -21,7 +21,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 
 - **lekiwi_bringup** — Top-level launch files that bring up the full system (control, navigation, sensors, payload) based on `payload`/`sim`/`mission` and other arguments.
 - **lekiwi_description** — URDF robot models, meshes, and visualization launch files.
-- **lekiwi_mujoco** — MuJoCo models for the base and pan-tilt variants, generated from the URDF and controller config, plus a standalone (no ROS) viewer and benchmark. See its [README](lekiwi_mujoco/README.md).
+- **lekiwi_mujoco** — MuJoCo models for the base and pan-tilt variants, generated from the URDF and controller config (the pan-tilt payload is built by `pt_mujoco` from `pantilt_ros2` and mounted at the URDF's mount joint), plus a standalone (no ROS) viewer and benchmark. See its [README](lekiwi_mujoco/README.md).
 - **lekiwi_control** — ros2_control hardware interfaces, controller configs, and launch files (real, mock, or MuJoCo).
 - **lekiwi_navigation** — SLAM (slam_toolbox), localization (AMCL), Nav2, EKF sensor fusion, and map storage.
 - **lekiwi_audio** — Spoken status announcements for e-stop, mode switching, waypoint actions, and battery threshold events.
@@ -37,8 +37,8 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 - **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
 - **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation
 - **[mujoco_ros2_control](https://github.com/ros-controls/mujoco_ros2_control)** (`sudo apt install ros-kilted-mujoco-ros2-control`): MuJoCo simulation backend, `sim:=true` only
-- **MuJoCo, xacro, PyYAML (Python)** (`pip install -r lekiwi_mujoco/requirements.txt` into the interpreter ROS launch uses): `sim:=true` generates its model with `lekiwi_mujoco` at launch time
-- **[pantilt_ros2](https://github.com/adityakamath/pantilt_ros2)** (git submodule under `payloads/`): Pan-tilt + OAK-D camera payload — see its [README](payloads/pantilt_ros2/README.md) for its own dependencies (depthai-ros, cloudini, etc.)
+- **MuJoCo, xacro, PyYAML (Python)** (`pip install -r lekiwi_mujoco/requirements.txt` into the interpreter ROS launch uses): `sim:=true` generates its model with `lekiwi_mujoco` (and `pt_mujoco` for the payload) at launch time
+- **[pantilt_ros2](https://github.com/adityakamath/pantilt_ros2)** (git submodule under `payloads/`): Pan-tilt + OAK-D camera payload, including its MuJoCo model package `pt_mujoco` — see its [README](payloads/pantilt_ros2/README.md) for its own dependencies (depthai-ros, cloudini, etc.)
 
 ## Installation and Usage
 
@@ -127,7 +127,7 @@ Nav2 no-go and speed-limited zones are supported. Zone masks live under `lekiwi_
 
 `sim:=true` runs against MuJoCo instead of real hardware. Verified working end-to-end for both `payload:=""` and `payload:=pantilt`: wheel and pan-tilt commands drive real simulated physics, `imu_sensor_broadcaster` publishes real IMU data (including gravity), and odometry/TF update correctly — a single `payload:=pantilt` `controller_manager` was confirmed driving wheels and pan-tilt concurrently without interference, matching the shared-bus design (see [pantilt_ros2 README](payloads/pantilt_ros2/README.md#launch-time-bring-up-on-a-shared-bus)). Not validated for fidelity against real hardware behavior — only that the `ros2_control` integration itself works.
 
-`sim:=true` runs headless by default (`mujoco_gui:=true` opens the MuJoCo viewer and needs a display). The model is generated at launch from the URDF and controller config by [`lekiwi_mujoco`](lekiwi_mujoco/README.md). The simulated hardware covers the wheels, pan-tilt, IMU, lidar (`/scan`) and the OAK-D camera (`/oak/rgb/image_raw`, `/oak/stereo/image_raw`); the battery monitor and audio are not simulated and stay skipped. The `lekiwi_mujoco` README documents how each sensor is produced, the walled `arena` scene (`mujoco_scene:=arena` on `control.launch.py`), standalone use without ROS, the model's uncalibrated approximations, and the open simulation work.
+`sim:=true` runs headless by default (`mujoco_gui:=true` opens the MuJoCo viewer and needs a display). The model is generated at launch from the URDF and controller config by [`lekiwi_mujoco`](lekiwi_mujoco/README.md), which mounts the pan-tilt model from [`pt_mujoco`](payloads/pantilt_ros2/pt_mujoco/README.md). The simulated hardware covers the wheels, pan-tilt, IMU, lidar (`/scan`) and the OAK-D camera (`/oak/rgb/image_raw`, `/oak/stereo/image_raw`); the battery monitor and audio are not simulated and stay skipped. The `lekiwi_mujoco` README documents how each sensor is produced, the walled `arena` scene (`mujoco_scene:=arena` on `control.launch.py`), standalone use without ROS, the model's uncalibrated approximations, and the open simulation work.
 
 ## Structure
 
@@ -145,7 +145,7 @@ lekiwi_ros2/
 │   ├── ldlidar_ros2/               # LD06 LiDAR driver (git submodule)
 │   └── ina260_battery_monitor/                # INA260 battery monitoring (git submodule)
 └── payloads/
-    └── pantilt_ros2/    # Pan-tilt + OAK-D camera payload (git submodule)
+    └── pantilt_ros2/    # Pan-tilt + OAK-D camera payload, incl. pt_mujoco (git submodule)
 ```
 
 ## License

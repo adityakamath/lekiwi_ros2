@@ -78,7 +78,7 @@ jobs:
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           colcon build --packages-select \
             lekiwi_control lekiwi_navigation lekiwi_description lekiwi_mujoco lekiwi_bringup lekiwi_audio \
-            pt_description \
+            pt_description pt_mujoco \
             --packages-ignore pt_control pt_bringup \
               sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor
 

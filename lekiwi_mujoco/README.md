@@ -8,7 +8,7 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`) generated from the URDF, plus
 
 - Python: `pip install -r requirements.txt` (`mujoco==3.13.0`, `numpy`, `xacro`, `PyYAML`) into the
   interpreter used by colcon/ROS launch. Add `pytest<8` for the tests.
-- Payload submodule: `git submodule update --init payloads/pantilt_ros2`.
+- Payload submodule: `git submodule update --init payloads/pantilt_ros2` (provides `pt_description` and `pt_mujoco`, which builds the pan-tilt model from the robot's URDF; it is found in the checkout when not installed).
 - ROS sim only (Kilted): `sudo apt install ros-kilted-mujoco-ros2-control
   ros-kilted-mujoco-ros2-control-plugins ros-kilted-mujoco-3d-lidar ros-kilted-laser-filters`
   (0.1.2 or newer; older releases have no camera or native lidar plugin).
@@ -57,7 +57,7 @@ audio are not simulated. Sensors come from plugins configured in `config/`:
 | Topic | Source |
 |---|---|
 | `/scan` | Native `mujoco.plugin.lidar` (360 rays, 5 Hz) publishes `/scan_raw`; `laser_filters` (`config/mujoco_laser_filter*.yaml`) turns no-hit into `inf` and masks the pan-tilt into `/scan` |
-| `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | `CameraPlugin`, headless EGL, 5 Hz; frame `oak_rgb_camera_optical_frame`; image is upside down like the real, inverted OAK-D mount |
+| `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | `CameraPlugin` (configured by `pt_mujoco`, rate lowered to 5 Hz here), headless EGL; frame `oak_rgb_camera_optical_frame`; image is upside down like the real, inverted OAK-D mount |
 | `/free_joint_state_publisher/free_joint_states` | Ground-truth base pose and velocity |
 | `/joint_states`, `/imu_sensor_broadcaster/imu`, `/base_controller/odom` | ros2_control on the simulated hardware |
 
@@ -71,13 +71,13 @@ loads in ROS's MuJoCo, so standalone tools use per-ray rangefinders.
 
 | File | Controls |
 |---|---|
-| `config/mujoco.yaml` | Timestep/solver, contact and roller parameters, actuator gains, servo armature/friction (BAM-identified STS3215), native lidar, standalone base speed |
-| `config/mujoco_ros2_control_plugins.yaml`, `mujoco_camera_pantilt.yaml` | ROS plugins (lidar, ground-truth pose, camera) |
-| `mjcf/base_shared.xml`, `base_subtree.xml`, `sts3215.mjcf.xacro` | Shared MJCF (16 contact rollers per wheel; wheel joint damping forced to 0); geometry, masses and limits are overwritten from the URDF at build time |
+| `config/mujoco.yaml` | Timestep/solver, contact and roller parameters, wheel actuator gains, wheel servo armature/friction (BAM-identified STS3215), native lidar, standalone base speed |
+| `config/mujoco_ros2_control_plugins.yaml`, `mujoco_camera_pantilt.yaml` | ROS plugins (lidar, ground-truth pose); the camera plugin config comes from `pt_mujoco` and the second file only lowers its rate for the Pi |
+| `mjcf/base_shared.xml`, `base_subtree.xml`, `sts3215.mjcf.xacro` | Shared MJCF (16 contact rollers per wheel; wheel joint damping forced to 0); geometry, masses and limits are overwritten from the URDF at build time; the pan-tilt payload is not here, `pt_mujoco` builds it and it is attached at the URDF's `pantilt_mount_joint` |
 | `mjcf/scenes/flat.xml`, `arena.xml` | Floor only; 6 x 6 m walled room with obstacles |
 
 Asset lookup uses the source checkout, ROS prefixes or the Python `share` directory; override with
-`LEKIWI_MUJOCO_SHARE`, `LEKIWI_DESCRIPTION_SHARE`, `PT_DESCRIPTION_SHARE`, `LEKIWI_CONTROL_SHARE`
+`LEKIWI_MUJOCO_SHARE`, `LEKIWI_DESCRIPTION_SHARE`, `PT_DESCRIPTION_SHARE`, `PT_MUJOCO_SHARE`, `LEKIWI_CONTROL_SHARE`
 or the builder's `--control-package`, `--description-package`, `--pt-package`.
 
 ## Limitations
@@ -88,6 +88,6 @@ sim from a laptop, run `foxglove_bridge` on the Pi and connect Foxglove to `ws:/
 
 ## Tests
 
-`pytest lekiwi_mujoco/test -q` (about 5 minutes on a Raspberry Pi). `test_without_ros.py` runs the
+`pytest lekiwi_mujoco/test -q` (about 3 minutes on a Raspberry Pi). `test_without_ros.py` runs the
 tools with ROS imports blocked and needs `mujoco` and `xacro` pip-installed. CI runs the suite in
 the ROS container and on Linux, macOS and Windows.

@@ -473,7 +473,7 @@ def test_payload_is_mounted_from_pt_mujoco_at_the_urdf_mount(parameter_workspace
 
 
 def _expanded_urdf(variant):
-    from lekiwi_mujoco.build_mujoco_models import expand_urdf, package_paths
+    from lekiwi_mujoco.build_mujoco_models import expand_urdf
     packages = {'lekiwi_description': DESCRIPTION, 'pt_description': PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'}
     urdf, _, _ = expand_urdf(variant, packages, PACKAGE.parent / 'lekiwi_control')
     return ET.tostring(urdf)
