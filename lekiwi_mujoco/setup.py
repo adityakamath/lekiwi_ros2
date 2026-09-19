@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 package_name = 'lekiwi_mujoco'
 assets = []
-for folder in ('mjcf', 'config', 'docs'):
+for folder in ('mjcf', 'config'):
     for directory in sorted({p.parent for p in Path(folder).rglob('*') if p.is_file()}):
         assets.append(('share/' + package_name + '/' + str(directory),
                        [str(p) for p in sorted(directory.iterdir()) if p.is_file()]))
@@ -14,7 +14,6 @@ setup(
                 ('share/' + package_name, ['package.xml', 'README.md', 'requirements.txt']), *assets],
     install_requires=['setuptools', 'mujoco==3.13.0', 'numpy>=1.26,<3', 'PyYAML>=6,<7',
                       'xacro>=2.0,<3'],
-    extras_require={'gym': ['gymnasium>=1.2,<2']},
     zip_safe=False, license='Apache-2.0',
     maintainer='Aditya Kamath (Kamath Robotics)', maintainer_email='adityakamath@live.com',
     description='LeKiwi MuJoCo simulation infrastructure without a ROS runtime requirement',

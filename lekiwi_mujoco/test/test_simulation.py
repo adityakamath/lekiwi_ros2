@@ -1,13 +1,10 @@
 """Cross-client behavior and single-instance regression checks."""
 from pathlib import Path
 
-import glfw
 import mujoco
 import numpy as np
 import pytest
 
-from lekiwi_mujoco.mujoco_env import LeKiwiEnv
-from lekiwi_mujoco.mujoco_preview import KeyboardControl
 from lekiwi_mujoco.simulation import Simulation
 
 
@@ -20,30 +17,6 @@ def same(a, b):
     for key in ('qpos', 'qvel', 'ctrl', 'sensordata'):
         np.testing.assert_allclose(getattr(a, key), getattr(b, key), atol=1e-12, rtol=0)
     assert a.time == pytest.approx(b.time)
-
-
-@pytest.mark.parametrize('keys,action', [
-    ({glfw.KEY_UP}, [1, 0, 0, 0, 0]),
-    ({glfw.KEY_LEFT}, [0, 1, 0, 0, 0]),
-    ({glfw.KEY_LEFT_SHIFT, glfw.KEY_LEFT}, [0, 0, 1, 0, 0]),
-    ({glfw.KEY_LEFT_ALT, glfw.KEY_LEFT, glfw.KEY_UP}, [0, 0, 0, 1, 1]),
-])
-def test_keyboard_and_gym_share_physics(model, keys, action):
-    with LeKiwiEnv(model_path=Path(__file__).resolve().parents[1] / 'mjcf/lekiwi_pt101_oakd_s2.xml') as env:
-        sim = Simulation(model)
-        sim.reset()
-        env.reset()
-        keyboard = KeyboardControl(model, sim.control)
-        for _ in range(4):
-            env.step(action)
-            for _ in range(env.frame_skip):
-                keyboard.update(sim.data, keys, model.opt.timestep)
-                sim.step()
-        same(sim.data, env.data)
-        keyboard.update(sim.data, set(), model.opt.timestep)
-        sim.step()
-        env.simulation.step(action=np.zeros(5))
-        same(sim.data, env.data)
 
 
 def test_batching_reset_and_slider_goal(model):

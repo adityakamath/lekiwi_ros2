@@ -62,7 +62,7 @@ jobs:
             ros-${{ matrix.ros_distro }}-teleop-twist-keyboard \
             ros-${{ matrix.ros_distro }}-xacro
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
-          pip install --break-system-packages -r src/lekiwi_ros2/lekiwi_mujoco/requirements.txt "gymnasium>=1.2,<2"
+          pip install --break-system-packages -r src/lekiwi_ros2/lekiwi_mujoco/requirements.txt
           # test_render_phrases.py imports lekiwi_audio.tts to monkeypatch Synthesizer, which
           # imports onnxruntime/kokoro_onnx/soundfile at module level even though the tests
           # themselves stub out the actual model - so these still need to be installed here.
@@ -125,6 +125,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install simulation dependencies
-        run: pip install -e "./lekiwi_mujoco[gym]" "pytest<8"
+        run: pip install -e ./lekiwi_mujoco "pytest<8"
       - name: Validate generated models, dynamics and URDF geometry
         run: pytest lekiwi_mujoco/test -q

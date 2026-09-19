@@ -1,5 +1,4 @@
 # Model generation, native viewer and headless simulation.
-# For Gymnasium: pip install -e ".[gym]"
 mujoco==3.13.0
 numpy>=1.26,<3
 xacro>=2.0,<3

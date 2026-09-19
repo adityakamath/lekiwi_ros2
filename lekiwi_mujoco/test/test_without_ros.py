@@ -32,8 +32,7 @@ for variant in ('base', 'pt100', 'pt101'):
     sim.stop()
     sim.reset()
     assert sim.data.time == 0
-assert 'gymnasium' not in sys.modules
-print('All three variants generated, stepped, stopped and reset without ROS or Gymnasium')
+print('All three variants generated, stepped, stopped and reset without ROS')
 '''
     environment = {key: os.environ[key] for key in ('HOME', 'PATH', 'TMPDIR', 'SYSTEMROOT') if key in os.environ}
     result = subprocess.run([sys.executable, '-I', '-c', program, str(package), str(tmp_path)],
