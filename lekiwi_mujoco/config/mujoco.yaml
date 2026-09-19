@@ -17,9 +17,7 @@ contact:
 actuators:
   wheel:
     velocity_gain: 5.0
-    # BAM-identified STS3215 values (mjcf/sts3215.mjcf.xacro) - sync_robot_parameters()
-    # overwrites the MJCF default class's own armature/frictionloss with these at build
-    # time, so this is the value that actually takes effect, not the MJCF class alone.
+    # BAM-identified STS3215 values, applied over the MJCF defaults at build time
     armature: 0.032460
     frictionloss: 0.195871
 command:

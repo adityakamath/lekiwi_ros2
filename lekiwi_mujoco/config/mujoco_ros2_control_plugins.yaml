@@ -1,13 +1,10 @@
-# Plugins loaded by mujoco_ros2_control's ros2_control_node (control.launch.py, hardware type
-# mujoco). Camera config is in mujoco_camera_pantilt.yaml, loaded only for payload:=pantilt.
+# Plugins for mujoco_ros2_control (hardware type mujoco); the camera is in mujoco_camera_pantilt.yaml.
 /**:
   ros__parameters:
     mujoco_plugins:
       mujoco_3d_lidar_plugin:
         type: "mujoco_ros2_control_plugins/Mujoco3dLidarPlugin"
-        # Keyed by the MJCF sensor name (build_mujoco_models --lidar plugin). Raw scan: the
-        # plugin reports "no hit" as -1, so laser_filters turns it into /scan (see
-        # mujoco_laser_filter*.yaml), the same raw-to-filtered split the real LD06 uses.
+        # Raw scan (no hit = -1); laser_filters turns it into /scan, as with the real LD06
         lidar:
           frame_name: laser_frame
           topic: /scan_raw

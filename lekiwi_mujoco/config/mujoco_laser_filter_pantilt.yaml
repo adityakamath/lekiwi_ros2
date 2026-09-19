@@ -1,6 +1,4 @@
-# Same as mujoco_laser_filter.yaml, plus the pan-tilt self-occlusion mask. The real payload
-# config (lekiwi_bringup payloads/pantilt/laser_filter.yaml) keeps 0.56..5.72 rad of a
-# 0..2pi scan; this scan is -pi..pi, so the same forward arc is removed in place instead.
+# mujoco_laser_filter.yaml plus the pan-tilt mask (same arc as the real config, for a -pi..pi scan)
 laser_scan_filter_chain:
   ros__parameters:
     qos_overrides:
