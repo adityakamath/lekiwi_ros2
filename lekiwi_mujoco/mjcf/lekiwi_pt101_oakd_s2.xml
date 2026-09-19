@@ -33,15 +33,11 @@
         </default>
       </default>
       <default class="pt_payload">
+        <default class="pt_sts3215">
+          <joint armature="0.03246" damping="1.05784" frictionloss="0.195871"/>
+          <general forcerange="-8.53772 8.53772" biastype="affine" gainprm="42.9119" biasprm="0 -42.9119"/>
+        </default>
         <default class="pantilt">
-          <joint armature="0.1" frictionloss="0.1"/>
-          <general forcerange="-2.942 2.942" biastype="affine" gainprm="50" biasprm="0 -50 1.5"/>
-          <default class="pan">
-            <joint range="-1.5708 1.5708"/>
-          </default>
-          <default class="tilt">
-            <joint range="-1.5708 1.5708" axis="0 0 -1"/>
-          </default>
           <default class="visual">
             <geom type="mesh" contype="0" conaffinity="0" group="2" density="0"/>
           </default>
@@ -679,13 +675,13 @@
             <geom class="collision" pos="0 0 0.0002" quat="0.5 0.5 0.5 0.5" mass="0" mesh="pantilt_base_link_mesh"/>
             <body name="shoulder_link" pos="0.0452 0 0.0648559">
               <inertial pos="-9.07886e-05 0.0590972 -0.0172669" quat="0.707107 0 0.707107 0" mass="0.119226" diaginertia="3.13712e-05 5.89975e-05 5.94278e-05"/>
-              <joint name="shoulder_pan_joint" class="pan"/>
+              <joint name="shoulder_pan_joint" class="pt_sts3215" range="-1.5708 1.5708"/>
               <geom class="visual" pos="-0.012 0 -0.0463059" quat="0 0 0.707107 0.707107" material="light_grey" mesh="shoulder_link_mesh"/>
               <geom class="visual" pos="0 0 -0.0483559" quat="0.5 0.5 0.5 0.5" material="charcoal" mesh="tilt_motor"/>
               <geom class="collision" pos="-0.012 0 -0.0463059" quat="0 0 0.707107 0.707107" mass="0" mesh="shoulder_link_mesh"/>
               <body name="tilt_link" pos="0.0306 0 0.0541441" quat="0.5 -0.5 0.5 0.5">
                 <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-                <joint name="tilt_joint" class="tilt"/>
+                <joint name="tilt_joint" class="pt_sts3215" range="-1.5708 1.5708" axis="0 0 -1"/>
                 <geom class="visual" pos="0.119 0.0758 -0.0002" quat="0.5 0.5 -0.5 0.5" material="light_grey" mesh="tilt_joint_oakd_s2"/>
                 <geom class="collision" pos="0.119 0.0758 -0.0002" quat="0.5 0.5 -0.5 0.5" mass="0" mesh="tilt_joint_oakd_s2"/>
                 <body name="oak_link" pos="-0.0306 -0.012165 0" quat="0.5 -0.5 0.5 -0.5">
@@ -716,8 +712,8 @@
     <general name="left_wheel_joint" joint="left_wheel_joint" ctrlrange="-4.4332 4.4332" ctrllimited="true" forcelimited="true" forcerange="-2.942 2.942" biastype="affine" gainprm="5" biasprm="0 0 -5"/>
     <general name="back_wheel_joint" joint="back_wheel_joint" ctrlrange="-4.4332 4.4332" ctrllimited="true" forcelimited="true" forcerange="-2.942 2.942" biastype="affine" gainprm="5" biasprm="0 0 -5"/>
     <general name="right_wheel_joint" joint="right_wheel_joint" ctrlrange="-4.4332 4.4332" ctrllimited="true" forcelimited="true" forcerange="-2.942 2.942" biastype="affine" gainprm="5" biasprm="0 0 -5"/>
-    <general name="shoulder_pan_joint" class="pan" joint="shoulder_pan_joint" ctrlrange="-1.5708 1.5708" ctrllimited="true" forcelimited="true"/>
-    <general name="tilt_joint" class="tilt" joint="tilt_joint" ctrlrange="-1.5708 1.5708" ctrllimited="true" forcelimited="true"/>
+    <general name="shoulder_pan_joint" class="pt_sts3215" joint="shoulder_pan_joint" ctrlrange="-1.5708 1.5708" ctrllimited="true" forcelimited="true" forcerange="-2.942 2.942"/>
+    <general name="tilt_joint" class="pt_sts3215" joint="tilt_joint" ctrlrange="-1.5708 1.5708" ctrllimited="true" forcelimited="true" forcerange="-2.942 2.942"/>
   </actuator>
 
   <sensor>

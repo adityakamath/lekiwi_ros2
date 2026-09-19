@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- STS3215 MuJoCo joint defaults, shared by every STS3215-driven joint in lekiwi (the three
-     wheel joints here; pt_mujoco/mjcf/pantilt_shared.xml keeps its own uncalibrated copy
-     for the pan/tilt joints - same motor family, separate repo). Copied verbatim from
+     wheel joints here; pt_mujoco/mjcf/sts3215.mjcf.xacro is its own copy for the
+     pan/tilt joints - same motor family, separate repo). Copied verbatim from
      so_arm_ros2/so_arm_mujoco/mjcf/sts3215.mjcf.xacro - the BAM identification is a property
      of the motor, not the mechanism it drives. -->
 <mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
