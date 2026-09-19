@@ -57,8 +57,8 @@ def set_origin(element, origin):
 
 def expand_urdf(variant, packages, control):
     """The robot URDF in mock mode, plus the controller geometry and payload joint limits it is built from."""
-    config = yaml.safe_load((control / 'config/base/control.yaml').read_text())['base_controller']['ros__parameters']
-    motor = yaml.safe_load((control / 'config/base/urdf_config.yaml').read_text())
+    config = yaml.safe_load((control / 'config/control.yaml').read_text())['base_controller']['ros__parameters']
+    motor = yaml.safe_load((control / 'config/urdf_config.yaml').read_text())
     payload_limits = {}
     if variant != 'base':
         # Optional limit overrides come from the payload's own control package, like the real robot's.
@@ -69,7 +69,7 @@ def expand_urdf(variant, packages, control):
     with package_paths(packages):
         doc = xacro.process_file(str(packages['lekiwi_description'] / 'urdf' / source), mappings={
             'pantilt_config': variant, 'use_mock': 'true',
-            'base_controller_config': str(control / 'config/base/control.yaml'),
+            'base_controller_config': str(control / 'config/control.yaml'),
             **{key: str(value).lower() if isinstance(value, bool) else str(value) for key, value in motor.items()},
             'simulation_controllers': '', 'payload_simulation_controllers': ''})
     return ET.fromstring(doc.toxml()), config, payload_limits

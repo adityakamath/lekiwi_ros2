@@ -1,4 +1,4 @@
-# Pantilt payload additions — merged on top of base/base_teleop.yaml.
+# Pantilt payload additions — merged on top of base_teleop.yaml.
 # Adds D-pad pan/tilt control (shared L1 deadman with base drive).
 joy_teleop:
   ros__parameters:

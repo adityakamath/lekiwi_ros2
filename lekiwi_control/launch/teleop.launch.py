@@ -35,8 +35,8 @@ def launch_setup(context):
         executable='joy_teleop',
         name='joy_teleop',
         parameters=[
-            f'{pkg_ctrl}/config/base/base_teleop.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/{payload}_teleop.yaml']),
+            f'{pkg_ctrl}/config/base_teleop.yaml',
+            *([] if not payload else [f'{pkg_ctrl}/config/{payload}_teleop.yaml']),
             {'use_sim_time': use_sim_time},
         ],
         output='screen',

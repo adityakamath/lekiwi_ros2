@@ -59,7 +59,7 @@ Real hardware (not `sim:=true`) depends on three USB devices showing up at fixed
 | Symlink              | Device                             | Consumed by                                                       |
 |-----------------------|-------------------------------------|----------------------------------------------------------------------|
 | `/dev/ttyLIDAR`       | LD06 LiDAR (CP210x USB-UART)        | `lekiwi_bringup/config/laser.yaml` → `port_name`                     |
-| `/dev/ttySERVO`       | Feetech STS servo bus               | `lekiwi_control/config/base/urdf_config.yaml` → `serial_port`        |
+| `/dev/ttySERVO`       | Feetech STS servo bus               | `lekiwi_control/config/urdf_config.yaml` → `serial_port`        |
 | reSpeaker Flex ALSA nodes | XVF3800 USB audio               | `lekiwi_audio` selects it by ALSA card name; the rule only grants non-root permission, it doesn't rename the card |
 
 Install once per robot:

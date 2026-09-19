@@ -13,8 +13,8 @@ import yaml
 
 # Resolve source package root (works with both symlink-install and regular install).
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-_CFG_BASE = os.path.join(_PKG_SRC, 'config', 'base')
-_CFG_PANTILT = os.path.join(_PKG_SRC, 'config', 'payloads', 'pantilt')
+_CFG_BASE = os.path.join(_PKG_SRC, 'config')
+_CFG_PANTILT = _CFG_BASE
 
 
 def _load(path):

@@ -37,7 +37,7 @@ def test_models_settle_and_preserve_interfaces_and_wheel_mass(filename):
     source = 'base/base.urdf.xacro' if variant == 'base' else 'base_pantilt/base_pantilt.urdf.xacro'
     with package_paths({'lekiwi_description': DESCRIPTION,
                         'pt_description': PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'}):
-        doc = xacro.process_file(str(DESCRIPTION / 'urdf' / source), mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/base/control.yaml'), 'pantilt_config': variant, 'use_mock': 'true'})
+        doc = xacro.process_file(str(DESCRIPTION / 'urdf' / source), mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/control.yaml'), 'pantilt_config': variant, 'use_mock': 'true'})
     urdf = ET.fromstring(doc.toxml())
     masses = {link.get('name'): float(link.find('inertial/mass').get('value'))
               for link in urdf.findall('link') if link.find('inertial/mass') is not None}
@@ -133,7 +133,7 @@ def test_payload_frames_and_visual_meshes_match_urdf(variant, pan, tilt):
     payload = PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'
     with package_paths({'lekiwi_description': DESCRIPTION, 'pt_description': payload}):
         doc = xacro.process_file(str(DESCRIPTION / 'urdf/base_pantilt/base_pantilt.urdf.xacro'),
-                                 mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/base/control.yaml'), 'pantilt_config': variant, 'use_mock': 'true',
+                                 mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/control.yaml'), 'pantilt_config': variant, 'use_mock': 'true',
                                            'simulation_controllers': '', 'payload_simulation_controllers': ''})
     urdf = ET.fromstring(doc.toxml())
     transforms = {'base_footprint': np.eye(4)}
@@ -202,8 +202,8 @@ def test_limits_regenerate_from_edited_configuration_and_urdf(tmp_path, monkeypa
     simulation = tmp_path / 'lekiwi_mujoco'
     for folder in ['mjcf', 'config']:
         shutil.copytree(PACKAGE / folder, simulation / folder)
-    control = tmp_path / 'lekiwi_control/config/base'
-    shutil.copytree(PACKAGE.parent / 'lekiwi_control/config/base', control)
+    control = tmp_path / 'lekiwi_control/config'
+    shutil.copytree(PACKAGE.parent / 'lekiwi_control/config', control)
     config = simulation / 'config/mujoco.yaml'
     config_data = yaml.safe_load(config.read_text())
     config_data['command']['base_velocity'] = [.08, .06, .25]
@@ -328,7 +328,7 @@ def _inertia_about_body_origin(model, body, parent_rotation=None, position=None)
 def test_changed_geometry_and_inertia_propagate(parameter_workspace, variant):
     import yaml
     from lekiwi_mujoco.build_mujoco_models import build_robot_spec
-    path = parameter_workspace.parent / 'lekiwi_control/config/base/control.yaml'
+    path = parameter_workspace.parent / 'lekiwi_control/config/control.yaml'
     settings = yaml.safe_load(path.read_text())
     geometry = settings['base_controller']['ros__parameters']
     geometry.update(wheel_radius=.0612, robot_radius=.15, wheel_offset=.9)
@@ -383,7 +383,7 @@ def test_inconsistent_parameters_fail_generation(parameter_workspace, failure):
     import yaml
     from lekiwi_mujoco.build_mujoco_models import build_robot_spec
     if failure == 'radius':
-        path = parameter_workspace.parent / 'lekiwi_control/config/base/control.yaml'
+        path = parameter_workspace.parent / 'lekiwi_control/config/control.yaml'
         settings = yaml.safe_load(path.read_text())
         settings['base_controller']['ros__parameters']['wheel_radius'] = -1
         path.write_text(yaml.safe_dump(settings))

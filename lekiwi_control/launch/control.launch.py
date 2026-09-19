@@ -91,13 +91,13 @@ def launch_setup(context):
     else:
         final_mujoco_model = ''
 
-    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/base/urdf_config.yaml'))
+    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/urdf_config.yaml'))
     final_serial_port = serial_port if serial_port else _cfg['serial_port']
     final_use_mock    = use_mock if use_mock else str(_cfg['use_mock']).lower()
 
     xacro_cmd = (
         f'{xacro} {urdf}'
-        f' base_controller_config:={pkg_ctrl}/config/base/control.yaml'
+        f' base_controller_config:={pkg_ctrl}/config/control.yaml'
         f' serial_port:={final_serial_port}'
         f' use_mock:={final_use_mock}'
         f' baud_rate:={_cfg["baud_rate"]}'
@@ -148,7 +148,7 @@ def launch_setup(context):
         executable='ros2_control_node',
         parameters=[
             robot_description,
-            f'{pkg_ctrl}/config/base/control.yaml',
+            f'{pkg_ctrl}/config/control.yaml',
             {'use_sim_time': use_sim_time},
             odom_tf_params,
         ],
@@ -164,7 +164,7 @@ def launch_setup(context):
         executable='ros2_control_node',
         parameters=[
             robot_description,
-            f'{pkg_ctrl}/config/base/control.yaml',
+            f'{pkg_ctrl}/config/control.yaml',
             f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
             *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
                f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml'] if payload == 'pantilt' else []),
@@ -240,9 +240,9 @@ def launch_setup(context):
         executable='control_support_node',
         output='log',
         parameters=[
-            f'{pkg_ctrl}/config/base/toggles.yaml',
-            f'{pkg_ctrl}/config/base/twist_switch.yaml',
-            f'{pkg_ctrl}/config/base/collision_toggle.yaml',
+            f'{pkg_ctrl}/config/toggles.yaml',
+            f'{pkg_ctrl}/config/twist_switch.yaml',
+            f'{pkg_ctrl}/config/collision_toggle.yaml',
             {'use_sim_time': use_sim_time},
         ],
     )
@@ -316,7 +316,7 @@ def launch_setup(context):
                     name='bno055_diagnostics',
                     output='log',
                     parameters=[
-                        f'{pkg_ctrl}/config/base/bno055_diagnostics.yaml',
+                        f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
                         {'enable_mock_mode': final_use_mock},
                     ],
                 )],

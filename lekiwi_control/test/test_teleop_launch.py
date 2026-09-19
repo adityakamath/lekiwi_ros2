@@ -1,4 +1,4 @@
-"""teleop.launch.py loads config/base/base_teleop.yaml plus config/payloads/<name>/<name>_teleop.yaml.
+"""teleop.launch.py loads config/base_teleop.yaml plus config/<name>_teleop.yaml.
 
 Calls the launch setup function directly with a fake context: no nodes are started.
 """
@@ -35,7 +35,7 @@ def test_pantilt_payload_adds_its_own_teleop_file_on_top():
 
 
 def test_teleop_files_follow_the_naming_pattern_in_source():
-    assert (SOURCE / 'config/base/base_teleop.yaml').is_file()
-    assert (SOURCE / 'config/payloads/pantilt/pantilt_teleop.yaml').is_file()
-    assert not (SOURCE / 'config/base/teleop.yaml').exists()
-    assert not (SOURCE / 'config/payloads/pantilt/teleop.yaml').exists()
+    assert (SOURCE / 'config/base_teleop.yaml').is_file()
+    assert (SOURCE / 'config/pantilt_teleop.yaml').is_file()
+    assert not (SOURCE / 'config/base').exists()
+    assert not (SOURCE / 'config/payloads').exists()
