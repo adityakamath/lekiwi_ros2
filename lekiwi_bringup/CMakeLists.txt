@@ -15,6 +15,9 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_launch_args test/test_launch_args.py
     TIMEOUT 120
   )
+  ament_add_pytest_test(test_laser_filter test/test_laser_filter.py
+    TIMEOUT 60
+  )
 endif()
 
 ament_package()

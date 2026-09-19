@@ -95,7 +95,8 @@ jobs:
             src/lekiwi_ros2/lekiwi_navigation/test \
             src/lekiwi_ros2/lekiwi_description/test \
             src/lekiwi_ros2/lekiwi_mujoco/test \
-            src/lekiwi_ros2/lekiwi_audio/test
+            src/lekiwi_ros2/lekiwi_audio/test \
+            src/lekiwi_ros2/lekiwi_bringup/test/test_laser_filter.py
 
       - name: basedpyright (lekiwi_control)
         # kilted only - basedpyright needs rclpy/message packages importable (hence running
