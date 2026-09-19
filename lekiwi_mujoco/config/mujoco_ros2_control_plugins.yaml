@@ -1,0 +1,22 @@
+# Plugins for mujoco_ros2_control (hardware type mujoco); the camera is in mujoco_camera_pantilt.yaml.
+/**:
+  ros__parameters:
+    mujoco_plugins:
+      mujoco_3d_lidar_plugin:
+        type: "mujoco_ros2_control_plugins/Mujoco3dLidarPlugin"
+        # Raw scan (no hit = -1); laser_filters turns it into /scan, as with the real LD06
+        lidar:
+          frame_name: laser_frame
+          topic: /scan_raw
+      # Ground-truth base pose/velocity (no controller drift).
+      free_joint_state_publisher:
+        type: "mujoco_ros2_control_plugins/FreeJointStatePublisherPlugin"
+        frame_id: ""
+        publish_rate: 30.0
+      # /emergency_stop for the simulation (the real one is served by sts_hardware_interface):
+      # stops the wheels and holds the pan-tilt while enabled. Package: modules/mujoco_ros2_plugins.
+      emergency_stop_plugin:
+        type: "mujoco_ros2_plugins/EmergencyStopPlugin"
+      # Push a body for a test (service apply_wrench): shove the robot to try Nav2's recoveries.
+      external_wrench_plugin:
+        type: "mujoco_ros2_control_plugins/ExternalWrenchPlugin"

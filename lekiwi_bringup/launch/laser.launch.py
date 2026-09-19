@@ -3,7 +3,8 @@
 Launch LD06 laser scanner for LeKiwi robot.
 
 Starts ldlidar_ros2_node with configuration from laser.yaml. A payload-specific
-laser filter is used automatically when one exists; custom_filter overrides it.
+laser filter (config/<payload>_laser_filter.yaml) is used automatically when one
+exists; custom_filter overrides it.
 """
 
 import os
@@ -32,7 +33,7 @@ def launch_setup(context):
             )
     elif payload_value:
         payload_filter_file = os.path.join(
-            pkg_bringup, 'config', 'payloads', payload_value, 'laser_filter.yaml'
+            pkg_bringup, 'config', f'{payload_value}_laser_filter.yaml'
         )
         if os.path.exists(payload_filter_file):
             filter_config_file = payload_filter_file

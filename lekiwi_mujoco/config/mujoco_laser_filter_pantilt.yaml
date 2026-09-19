@@ -1,0 +1,23 @@
+# mujoco_laser_filter.yaml plus the pan-tilt mask (same arc as the real config, for a -pi..pi scan)
+laser_scan_filter_chain:
+  ros__parameters:
+    qos_overrides:
+      scan_filtered:
+        publisher:
+          reliability: best_effort
+          depth: 5
+    filter1:
+      name: no_hit_to_inf
+      type: laser_filters/LaserScanRangeFilter
+      params:
+        use_message_range_limits: false
+        lower_threshold: 0.001
+        lower_replacement_value: .inf
+        upper_threshold: .inf
+        upper_replacement_value: .inf
+    filter2:
+      name: payload_mask
+      type: laser_filters/LaserScanAngularBoundsFilterInPlace
+      params:
+        lower_angle: -0.56
+        upper_angle: 0.56

@@ -169,7 +169,7 @@ class TestBoolToggleNodeConfig:
         import os
         params_file = os.path.join(
             os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-            'config', 'base', 'toggles.yaml'
+            'config', 'toggles.yaml'
         )
         import yaml
         cfg = yaml.safe_load(open(params_file))

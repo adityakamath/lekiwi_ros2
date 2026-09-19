@@ -38,24 +38,11 @@ base_controller:
     odom_frame_id: odom
     base_frame_id: base_footprint
 
-    enable_odom_tf: false     # EKF publishes odom TF instead
+    enable_odom_tf: false     # overridden by control.launch.py (enable_odom_tf arg); the EKF publishes it under lekiwi.launch.py
     open_loop: false
     position_feedback: false
 
     cmd_vel_timeout: 0.5  # s
-
-    # 3-DoF safe limits - must stay in sync with nav2.yaml/control.launch.py.
-    linear:
-      x:
-        max_velocity: 0.2      # m/s
-        max_acceleration: 1.0  # m/s^2
-      y:
-        max_velocity: 0.17      # m/s
-        max_acceleration: 0.85  # m/s^2
-    angular:
-      z:
-        max_velocity: 0.68     # rad/s
-        max_acceleration: 3.4  # rad/s^2
 
 imu_sensor_broadcaster:
   ros__parameters:

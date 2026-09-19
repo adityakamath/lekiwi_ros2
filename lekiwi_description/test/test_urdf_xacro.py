@@ -8,6 +8,7 @@ hardware arguments so no physical device is required.
 
 import os
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -18,6 +19,7 @@ _URDF_PANTILT = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt.urd
 
 # Mock hardware args matching urdf_config.yaml defaults so the xacro parses cleanly.
 _BASE_ARGS = [
+    'base_controller_config:=' + os.path.join(_PKG_SRC, '..', 'lekiwi_control', 'config', 'control.yaml'),
     'serial_port:=/dev/ttySERVO',
     'use_mock:=true',
     'baud_rate:=1000000',
@@ -39,6 +41,15 @@ _PANTILT_ARGS = _BASE_ARGS + [
 # Motor IDs, step-centering, and joint limits are not passed here - they're
 # pt_description's own physical-calibration constants, baked into
 # pantilt.joints.xacro's macro defaults (single source of truth).
+
+
+_PT_MESHES_URL = 'https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/'
+
+
+def _portable(xml):
+    """Pre-built URDFs point at the local meshes by relative path and at the pan-tilt meshes by GitHub URL."""
+    xml = xml.replace('package://lekiwi_description/meshes/', '../../meshes/')
+    return xml.replace('package://pt_description/meshes/', _PT_MESHES_URL)
 
 
 def _xacro(xacro_file, args):
@@ -220,15 +231,16 @@ class TestBaseUrdfMujocoImu:
         rc = root.find('ros2_control[@name="lekiwi_base"]')
         assert rc.find('.//sensor[@name="bno055"]') is not None, \
             "mujoco lekiwi_base block should contain a bno055 sensor when imu:=true"
-        assert rc.find('.//sensor[@name="lidar"]') is not None, "lidar sensor should still be present"
+        assert rc.find('.//sensor[@name="lidar"]') is None, \
+            "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
 
     def test_mujoco_bno055_sensor_absent_when_imu_false(self):
         root = self._render('false')
         rc = root.find('ros2_control[@name="lekiwi_base"]')
         assert rc.find('.//sensor[@name="bno055"]') is None, \
             "mujoco lekiwi_base block should omit the bno055 sensor when imu:=false"
-        assert rc.find('.//sensor[@name="lidar"]') is not None, \
-            "lidar sensor should still be present when imu:=false"
+        assert rc.find('.//sensor[@name="lidar"]') is None, \
+            "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
 
 
 class TestBasePantiltUrdfInterfaces:
@@ -278,8 +290,8 @@ class TestPrebuiltUrdfConsistency:
         with open(prebuilt) as f:
             existing = f.read()
         # Normalize both to ignore path-comment differences.
-        assert self._strip_comments(generated) == self._strip_comments(existing), \
-            "base.urdf is stale — regenerate with: xacro base.urdf.xacro ... > base.urdf"
+        assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
+            'base.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
     def test_base_pantilt_urdf_not_stale(self):
         prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt.urdf')
@@ -289,8 +301,39 @@ class TestPrebuiltUrdfConsistency:
         assert rc == 0
         with open(prebuilt) as f:
             existing = f.read()
-        assert self._strip_comments(generated) == self._strip_comments(existing), \
-            "base_pantilt.urdf is stale — regenerate with: xacro base_pantilt.urdf.xacro ... > base_pantilt.urdf"
+        assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
+            'base_pantilt.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
+
+
+# ── EEPROM tuning that reaches each motor on the shared bus ─────────────────────
+
+class TestSharedBusTuning:
+    """One hardware block owns the bus: wheels keep the aggressive tuning, the pan-tilt keeps its own."""
+
+    def setup_method(self):
+        stdout, _, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
+        assert rc == 0
+        self.rc = ET.fromstring(stdout).find('ros2_control[@name="lekiwi_base"]')
+
+    def _params(self, joint):
+        return {p.get('name'): p.text.strip() for p in self.rc.find(f'joint[@name="{joint}"]').findall('param')}
+
+    def test_wheels_use_the_aggressive_tuning_and_ids_7_8_9(self):
+        for joint, motor in (('left_wheel_joint', '7'), ('back_wheel_joint', '8'), ('right_wheel_joint', '9')):
+            params = self._params(joint)
+            assert params['motor_id'] == motor
+            assert (params['internal_max_vel'], params['internal_max_acc'], params['internal_acc_coeff']) == ('254', '254', '100')
+
+    def test_pantilt_joints_use_the_modules_own_tuning_and_ids_1_2(self):
+        for joint, motor in (('shoulder_pan_joint', '1'), ('tilt_joint', '2')):
+            params = self._params(joint)
+            assert params['motor_id'] == motor
+            assert (params['internal_max_vel'], params['internal_max_acc'], params['internal_acc_coeff']) == ('65', '50', '0')
+
+    def test_bus_level_settings_stay_in_the_one_hardware_block(self):
+        hardware = {p.get('name'): p.text.strip() for p in self.rc.find('hardware').findall('param')}
+        assert hardware['serial_port'] == '/dev/ttySERVO' and hardware['proportional_vel_max'] == '0'
+        assert len(self.rc.findall('hardware')) == 1
 
 
 # ── pantilt_config variant ────────────────────────────────────────────────────
@@ -304,3 +347,11 @@ class TestBasePantiltUrdfVariants:
         args.append(f'pantilt_config:={variant}')
         _, stderr, rc = _xacro(_URDF_PANTILT, args)
         assert rc == 0, f"xacro failed for pantilt_config:={variant}:\n{stderr}"
+
+
+if __name__ == '__main__' and '--write' in sys.argv:
+    for folder, name, args in (('base', 'base', _BASE_ARGS), ('base_pantilt', 'base_pantilt', _PANTILT_ARGS)):
+        result = subprocess.run(['xacro', f'{folder}/{name}.urdf.xacro'] + args, cwd=os.path.join(_PKG_SRC, 'urdf'),
+                                capture_output=True, text=True, check=True)
+        with open(os.path.join(_PKG_SRC, 'urdf', folder, f'{name}.urdf'), 'w') as out:
+            out.write(_portable(result.stdout))

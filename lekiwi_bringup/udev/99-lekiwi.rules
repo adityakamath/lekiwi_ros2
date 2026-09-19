@@ -14,7 +14,7 @@
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="ttyLIDAR"
 
 # Feetech STS servo bus (CH340-family USB-serial adapter)
-# Consumed by lekiwi_control/config/base/urdf_config.yaml -> serial_port
+# Consumed by lekiwi_control/config/urdf_config.yaml -> serial_port
 KERNEL=="ttyACM*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d3", SYMLINK+="ttySERVO"
 
 # reSpeaker Flex (XVF3800 USB audio)

@@ -13,8 +13,8 @@ import yaml
 
 # Resolve source package root (works with both symlink-install and regular install).
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-_CFG_BASE = os.path.join(_PKG_SRC, 'config', 'base')
-_CFG_PANTILT = os.path.join(_PKG_SRC, 'config', 'payloads', 'pantilt')
+_CFG_BASE = os.path.join(_PKG_SRC, 'config')
+_CFG_PANTILT = _CFG_BASE
 
 
 def _load(path):
@@ -39,7 +39,7 @@ class TestUrdfConfig:
     def test_required_keys_present(self):
         for key in ('serial_port', 'baud_rate', 'use_mock', 'use_sync_write',
                     'left_motor_id', 'back_motor_id', 'right_motor_id',
-                    'sts3215_max_vel_steps', 'proportional_acc_max',
+                    'sts3215_max_vel_steps', 'proportional_acc_max', 'proportional_vel_max',
                     'internal_max_vel', 'internal_max_acc', 'internal_acc_coeff',
                     'internal_control_period'):
             assert key in self.cfg, f"Missing key '{key}' in urdf_config.yaml"
@@ -50,22 +50,6 @@ class TestUrdfConfig:
     def test_motor_ids_are_distinct(self):
         ids = [self.cfg['left_motor_id'], self.cfg['back_motor_id'], self.cfg['right_motor_id']]
         assert len(ids) == len(set(ids)), "Motor IDs must be distinct"
-
-
-class TestUrdfConfigPantilt:
-    """Motor IDs, step-centering, and joint limits are NOT in this file - they're
-    pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
-    macro defaults (single source of truth). See test_urdf_xacro.py (pt_description) for
-    coverage of those values."""
-
-    def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'urdf_config.yaml'))
-
-    def test_required_keys_present(self):
-        for key in ('proportional_vel_max',
-                    'pantilt_internal_max_vel', 'pantilt_internal_max_acc',
-                    'pantilt_internal_acc_coeff'):
-            assert key in self.cfg, f"Missing key '{key}' in pantilt/urdf_config.yaml"
 
 
 # ── control.yaml ─────────────────────────────────────────────────────────────
@@ -84,18 +68,18 @@ class TestControlYaml:
     def test_base_controller_present(self):
         assert 'base_controller' in self.cfg
 
-    def test_velocity_limits_consistent(self):
+    def test_no_dead_limit_blocks(self):
+        # omni_wheel_drive_controller declares no velocity/acceleration parameters; speed limits
+        # are the teleop axis scales (base_teleop.yaml) and Nav2's.
         params = self.cfg['base_controller']['ros__parameters']
-        assert params['linear']['x']['max_velocity'] > 0
-        assert params['linear']['y']['max_velocity'] > 0
-        assert params['angular']['z']['max_velocity'] > 0
+        assert 'linear' not in params and 'angular' not in params
 
 
-# ── teleop.yaml ──────────────────────────────────────────────────────────────
+# ── base_teleop.yaml ──────────────────────────────────────────────────────────────
 
 class TestTeleopYaml:
     def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_BASE, 'teleop.yaml'))
+        self.cfg = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
 
     def test_joy_teleop_present(self):
         assert 'joy_teleop' in self.cfg
@@ -104,6 +88,11 @@ class TestTeleopYaml:
         actions = self.cfg['joy_teleop']['ros__parameters']
         assert 'teleop' in actions, "Missing 'teleop' drive action"
 
+    def test_axis_scales_are_positive_speed_limits(self):
+        axes = self.cfg['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+        for name in ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'):
+            assert axes[name]['scale'] > 0
+
     def test_deadman_button_defined(self):
         teleop = self.cfg['joy_teleop']['ros__parameters']['teleop']
         assert 'deadman_buttons' in teleop and len(teleop['deadman_buttons']) > 0
@@ -111,7 +100,7 @@ class TestTeleopYaml:
     def test_toggle_services_present(self):
         actions = self.cfg['joy_teleop']['ros__parameters']
         for svc in ('estop_toggle', 'twist_switch_toggle'):
-            assert svc in actions, f"Missing toggle service '{svc}' in teleop.yaml"
+            assert svc in actions, f"Missing toggle service '{svc}' in base_teleop.yaml"
 
 
 # ── toggles.yaml ─────────────────────────────────────────────────────────────
@@ -137,7 +126,7 @@ class TestTogglesYaml:
 
     def test_teleop_yaml_does_not_contain_bool_toggle_node(self):
         """Confirms the decoupling: bool_toggle_node config lives only in toggles.yaml."""
-        teleop_cfg = _load(os.path.join(_CFG_BASE, 'teleop.yaml'))
+        teleop_cfg = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
         assert 'bool_toggle_node' not in teleop_cfg
 
 
@@ -179,37 +168,11 @@ class TestCollisionToggleYaml:
         assert node == '/collision_monitor'
 
 
-# ── pantilt/control.yaml ─────────────────────────────────────────────────────
-
-class TestControlYamlPantilt:
-    def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'control.yaml'))
-
-    def test_pantilt_controller_registered(self):
-        types = self.cfg['controller_manager']['ros__parameters']
-        assert 'pantilt_controller' in types, \
-            "pantilt/control.yaml must register pantilt_controller in controller_manager"
-
-    def test_pantilt_controller_type(self):
-        ct = self.cfg['controller_manager']['ros__parameters']['pantilt_controller']['type']
-        assert 'ForwardCommandController' in ct
-
-    def test_pan_tilt_joint_limits_valid(self):
-        limits = self.cfg['controller_manager']['ros__parameters']['joint_limits']
-        for joint in ('shoulder_pan_joint', 'tilt_joint'):
-            assert joint in limits, f"Missing joint_limits entry for '{joint}'"
-            assert limits[joint]['min_position'] < limits[joint]['max_position']
-
-    def test_pantilt_controller_uses_position_interface(self):
-        iface = self.cfg['pantilt_controller']['ros__parameters']['interface_name']
-        assert iface == 'position'
-
-
-# ── pantilt/teleop.yaml ──────────────────────────────────────────────────────
+# ── pantilt/pantilt_teleop.yaml ──────────────────────────────────────────────────────
 
 class TestTeleopYamlPantilt:
     def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'teleop.yaml'))
+        self.cfg = _load(os.path.join(_CFG_PANTILT, 'pantilt_teleop.yaml'))
 
     def test_pantilt_control_action_present(self):
         assert 'pantilt_control' in self.cfg['joy_teleop']['ros__parameters']
@@ -224,7 +187,7 @@ class TestTeleopYamlPantilt:
 
     def test_pantilt_shares_l1_deadman(self):
         """Pan-tilt deadman must match the base drive deadman (L1 = button 9)."""
-        base_teleop = _load(os.path.join(_CFG_BASE, 'teleop.yaml'))
+        base_teleop = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
         base_deadman = base_teleop['joy_teleop']['ros__parameters']['teleop']['deadman_buttons']
         pantilt_deadman = self.cfg['joy_teleop']['ros__parameters']['pantilt_control']['deadman_buttons']
         assert pantilt_deadman == base_deadman, \

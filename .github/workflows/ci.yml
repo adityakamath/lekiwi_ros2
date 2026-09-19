@@ -62,10 +62,16 @@ jobs:
             ros-${{ matrix.ros_distro }}-teleop-twist-keyboard \
             ros-${{ matrix.ros_distro }}-xacro
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/requirements-dev.txt
+          pip install --break-system-packages -r src/lekiwi_ros2/lekiwi_mujoco/requirements.txt
           # test_render_phrases.py imports lekiwi_audio.tts to monkeypatch Synthesizer, which
           # imports onnxruntime/kokoro_onnx/soundfile at module level even though the tests
           # themselves stub out the actual model - so these still need to be installed here.
           pip install --break-system-packages --ignore-installed -r src/lekiwi_ros2/lekiwi_audio/requirements-build.txt
+
+      - name: Install the MuJoCo plugin build dependencies
+        # For modules/mujoco_ros2_plugins (C++), which needs mujoco_ros2_control_plugins: kilted only.
+        if: matrix.ros_distro == 'kilted'
+        run: apt-get install -y --no-install-recommends build-essential cmake ros-kilted-mujoco-ros2-control-plugins ros-kilted-ament-cmake-gtest ros-kilted-ament-cmake-pytest
 
       - name: colcon build
         # --packages-ignore is required, not optional cleanup: lekiwi_bringup/lekiwi_control's
@@ -75,11 +81,21 @@ jobs:
         # their (never-built) install output unless explicitly ignored. Each has its own CI already.
         run: |
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
+          # mujoco_ros2_plugins (C++, needs mujoco_ros2_control_plugins) is built on kilted only.
+          if [ "${{ matrix.ros_distro }}" = kilted ]; then ESTOP=mujoco_ros2_plugins; SKIP=; else ESTOP=; SKIP=mujoco_ros2_plugins; fi
           colcon build --packages-select \
-            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_bringup lekiwi_audio \
-            pt_description \
+            lekiwi_control lekiwi_navigation lekiwi_description lekiwi_mujoco lekiwi_bringup lekiwi_audio \
+            pt_description pt_mujoco $ESTOP \
             --packages-ignore pt_control pt_bringup \
-              sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor
+              sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor $SKIP
+
+      - name: mujoco_ros2_plugins tests
+        if: matrix.ros_distro == 'kilted'
+        run: |
+          . /opt/ros/kilted/setup.sh
+          . install/setup.sh
+          colcon test --packages-select mujoco_ros2_plugins --event-handlers console_direct+
+          colcon test-result --verbose
 
       - name: pytest
         # lekiwi_bringup's own test (test_launch_args.py) is excluded: it launches the full
@@ -93,7 +109,9 @@ jobs:
             src/lekiwi_ros2/lekiwi_control/test \
             src/lekiwi_ros2/lekiwi_navigation/test \
             src/lekiwi_ros2/lekiwi_description/test \
-            src/lekiwi_ros2/lekiwi_audio/test
+            src/lekiwi_ros2/lekiwi_mujoco/test \
+            src/lekiwi_ros2/lekiwi_audio/test \
+            src/lekiwi_ros2/lekiwi_bringup/test/test_laser_filter.py
 
       - name: basedpyright (lekiwi_control)
         # kilted only - basedpyright needs rclpy/message packages importable (hence running
@@ -106,3 +124,26 @@ jobs:
           . install/setup.sh
           pip install --break-system-packages --ignore-installed basedpyright
           cd src/lekiwi_ros2 && basedpyright lekiwi_control/lekiwi_control
+
+  mujoco:
+    name: MuJoCo models and keyboard (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install simulation dependencies
+        run: pip install -e ./lekiwi_mujoco "pytest<8"
+      - name: Validate generated models, dynamics and URDF geometry
+        run: pytest lekiwi_mujoco/test -q

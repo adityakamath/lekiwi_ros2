@@ -1,0 +1,18 @@
+# Sim /scan_raw -> /scan. The native lidar reports "no hit" as -1; REP-117 wants +inf so
+# Nav2/slam_toolbox can clear free space and viewers can draw the scan.
+laser_scan_filter_chain:
+  ros__parameters:
+    qos_overrides:
+      scan_filtered:
+        publisher:
+          reliability: best_effort
+          depth: 5
+    filter1:
+      name: no_hit_to_inf
+      type: laser_filters/LaserScanRangeFilter
+      params:
+        use_message_range_limits: false
+        lower_threshold: 0.001
+        lower_replacement_value: .inf
+        upper_threshold: .inf
+        upper_replacement_value: .inf

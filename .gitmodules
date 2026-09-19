@@ -13,3 +13,6 @@
 [submodule "modules/ina260_battery_monitor"]
 	path = modules/ina260_battery_monitor
 	url = https://github.com/adityakamath/ina260_battery_monitor.git
+[submodule "modules/mujoco_ros2_plugins"]
+	path = modules/mujoco_ros2_plugins
+	url = https://github.com/adityakamath/mujoco_ros2_plugins.git

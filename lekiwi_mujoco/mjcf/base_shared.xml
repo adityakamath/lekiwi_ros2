@@ -1,28 +1,32 @@
 <!-- Payload-independent MJCF content shared by every base*.mjcf.xacro: compiler options,
      default classes, materials, wheel actuators, the IMU/lidar <sensor> block (sites/bodies
-     defined in base_subtree.xml), and the optional standalone-viewing scene. Must be
-     xacro:include'd, not a plain <include>, since $(arg scene) needs resolving. -->
+     defined in base_subtree.xml). World assets live separately in scenes/. -->
 <mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="lekiwi_shared">
-  <xacro:arg name="scene" default="true"/>
 
   <compiler angle="radian"/>
 
   <default>
+    <!-- Wheel joints reference class="sts3215" directly (base_subtree.xml), overriding
+         damping="0" locally - BAM's identified damping is for a small-range position-
+         controlled arm joint, not a continuously-spinning velocity-controlled wheel, and
+         measurably fights the velocity actuator at speed. armature/frictionloss are the
+         only attributes that end up mattering from this class anyway - mujoco_parameters.py's
+         sync_robot_parameters() overwrites both for every actuated joint from
+         config/mujoco.yaml's actuators.wheel block right after the MJCF is parsed. -->
+    <xacro:include filename="$(find lekiwi_mujoco)/mjcf/sts3215.mjcf.xacro"/>
     <default class="lekiwi_base">
-      <default class="wheel">
-        <!-- STS3215 dynamics, same defaults used for the pan/tilt joints in
-             pt_description/mjcf/pantilt_shared.xml (same motor family, this project-wide). -->
-        <joint type="hinge" axis="0 0 1" frictionloss="0.1" armature="0.1"/>
+      <default class="passive_roller">
+        <!-- Tangential free roller axis: traction around rim, passive slip along axle. -->
+        <joint type="hinge" axis="0 1 0" limited="false" damping="0.00002"
+               armature="0.000001" frictionloss="0"/>
       </default>
-      <default class="wheel_geom">
-        <!-- Omni-wheel roller slip isn't modeled per-axis in MuJoCo; uses low isotropic
-             friction instead and lets the controller's omni-kinematics dominate motion.
-             See README Simulation section for validated behavior/error bounds. group="3" +
-             the transparent material keep this collision primitive from visually competing
-             with the real omni_wheel_visual mesh sitting in the same place (base_visual
-             class, group="2") - same convention as pt_description/mjcf/pantilt_shared.xml's
-             "collision" class. -->
-        <geom type="cylinder" size="0.051 0.02125" friction="0.4 0.005 0.0001" group="3" material="base_transparent"/>
+      <default class="roller_geom">
+        <!-- Axisymmetric about local Y, so rotating a roller does not change radius.
+             Bit 2 prevents adjacent rollers contacting each other; normal world geoms
+             retain bit 1. Visual CAD meshes stay separate in group 2. -->
+        <geom type="ellipsoid" size="0.009 0.018 0.009"
+              contype="2" conaffinity="1" friction="1 0.001 0.00001"
+              group="3" material="base_transparent"/>
       </default>
       <default class="marker">
         <!-- Non-colliding visual meshes for laser_link/imu_link - real sensor behavior comes
@@ -34,7 +38,7 @@
       </default>
       <default class="base_visual">
         <!-- Non-colliding decimated meshes for base_link/wheels - the base_link_collision/
-             wheel_*_collision cylinder primitives (base_subtree.xml) still do the actual
+             passive wheel roller primitives (base_subtree.xml) still do the actual
              physics; these are visual-only siblings. See lekiwi_base_mujoco.stl/
              omni_wheel_mujoco.stl comments below for why decimated copies exist at all. -->
         <geom type="mesh" contype="0" conaffinity="0" group="2"/>
@@ -45,7 +49,7 @@
   <asset>
     <material name="base_light_grey" rgba="0.8 0.8 0.8 1.0"/>
     <material name="base_charcoal" rgba="0.15 0.15 0.15 1.0"/>
-    <!-- Matches pt_description/mjcf/pantilt_shared.xml's "transparent" material - same
+    <!-- Matches pt_mujoco/mjcf/pantilt_shared.xml's "transparent" material - same
          purpose, kept as a separate asset since MuJoCo assets are namespaced per-model and
          this file's own "transparent" needs to exist independently of pantilt's. -->
     <material name="base_transparent" rgba="1 0 0 0.3"/>
@@ -61,7 +65,7 @@
          edge collapse), 150k faces, ~0.03% volume delta - fast-simplification's defaults
          were noticeably worse quality at a similar face count (~5.5% delta at 100k) despite
          matching bounding-box extent. wheel: 196710 faces, ~0.15% volume delta. Visual only -
-         collision still uses the cylinder primitives below, unchanged. -->
+         collision uses the chassis cylinder and passive rollers. -->
     <mesh name="lekiwi_base_visual" file="$(find lekiwi_description)/meshes/lekiwi_base_mujoco.stl"/>
     <mesh name="omni_wheel_visual" file="$(find lekiwi_description)/meshes/omni_wheel_mujoco.stl"/>
   </asset>
@@ -449,31 +453,5 @@
     <exclude body1="base_link" body2="back_wheel_link"/>
     <exclude body1="base_link" body2="right_wheel_link"/>
   </contact>
-
-  <!-- Standalone-viewing scene dressing, gated on the scene arg. Compares $(arg scene)
-       directly rather than via a bridged <xacro:property> - xacro auto-coerces "true"/"false"
-       property values to Python bool, breaking a naive string comparison. Floor collides
-       (unlike pt_description's) since the wheels rest and roll on it. -->
-  <xacro:if value="${'$(arg scene)' == 'true'}">
-    <statistic center="0 0 0.15" extent="0.7"/>
-
-    <visual>
-      <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
-      <rgba haze="0.15 0.25 0.35 1"/>
-      <global azimuth="45" elevation="-20"/>
-    </visual>
-
-    <asset>
-      <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
-      <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
-        markrgb="0.8 0.8 0.8" width="300" height="300"/>
-      <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
-    </asset>
-
-    <worldbody>
-      <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
-      <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" friction="0.4 0.005 0.0001"/>
-    </worldbody>
-  </xacro:if>
 
 </mujoco>

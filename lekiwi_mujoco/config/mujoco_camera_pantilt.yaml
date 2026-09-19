@@ -1,0 +1,7 @@
+# Lekiwi override of pt_mujoco's CameraPlugin config (payload:=pantilt), loaded after it: only the
+# rate differs. Headless software rendering on the Pi tops out near 5 Hz, and more starves Nav2.
+/**:
+  ros__parameters:
+    mujoco_plugins:
+      mujoco_camera_plugin:
+        camera_publish_rate: 5.0

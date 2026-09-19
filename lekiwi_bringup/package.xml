@@ -2,14 +2,19 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>lekiwi_bringup</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>Launch and system startup for LeKiwi robot</description>
+  <author email="adityakamath@live.com">Aditya Kamath</author>
   <maintainer email="adityakamath@live.com">Aditya Kamath (Kamath Robotics)</maintainer>
   <license>Apache-2.0</license>
 
+  <url type="website">https://github.com/adityakamath/lekiwi_ros2</url>
+  <url type="repository">https://github.com/adityakamath/lekiwi_ros2</url>
+  <url type="bugtracker">https://github.com/adityakamath/lekiwi_ros2/issues</url>
+
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Runtime dependencies for launch files -->
+  <!-- Launch files -->
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>lekiwi_control</exec_depend>

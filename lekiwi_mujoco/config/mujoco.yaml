@@ -1,0 +1,35 @@
+# Simulation-only approximations. Not a conversion of servo EEPROM registers.
+physics:
+  timestep: 0.002
+  integrator: implicitfast
+  iterations: 60
+contact:
+  # Fixed 16-roller topology per wheel; lengths scale with configured wheel radius.
+  roller_radius_fraction: 0.17647058823529413  # 0.009 / 0.051
+  roller_half_width_fraction: 0.35294117647058826  # 0.018 / 0.051
+  roller_mass_fraction: 0.02  # fraction of URDF wheel mass PER roller
+  friction: [1.0, 0.001, 0.00001]
+  damping: 0.00002
+  armature: 0.000001
+  chassis_radius: 0.108
+  chassis_half_height: 0.0575
+  chassis_center: [0.0, 0.0, 0.05025]
+actuators:
+  wheel:
+    velocity_gain: 5.0
+    # BAM-identified STS3215 values, applied over the MJCF defaults at build time
+    armature: 0.032460
+    frictionloss: 0.195871
+command:
+  # Base speed scale [vx m/s, vy m/s, yaw rad/s] for the standalone keyboard viewer and normalized
+  # Gymnasium actions only. Independent of the robot's teleop/Nav2 limits; the ROS sim ignores it.
+  base_velocity: [0.2, 0.17, 0.68]
+lidar:
+  # Native mujoco.plugin.lidar sensor (ROS only; --lidar plugin). Rays are cast at update_rate
+  # instead of on every 2 ms step, which is what made the per-ray rangefinders cost ~9 ms/step.
+  resolution: 360   # rays over 360 degrees, one row
+  max_range: 12.0   # m
+  min_range: 0.02   # m
+  update_rate: 5.0  # Hz, matches the LD06 scan rate
+  async: false      # true (background thread) stamps each scan ~0.2 s old; slam_toolbox then stamps map->odom
+                    # behind 'now' and Nav2 aborts goals with 'extrapolation into the future'

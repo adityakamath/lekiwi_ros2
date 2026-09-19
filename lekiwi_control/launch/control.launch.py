@@ -11,6 +11,7 @@ pt_control/launch/pantilt.launch.py - see pantilt_ros2 README's "Launch-time bri
 """
 
 import subprocess
+import sys
 import tempfile
 
 import yaml
@@ -52,43 +53,51 @@ def launch_setup(context):
     imu          = _launch_arg_as_bool(context, 'imu')
     launch_joy   = _launch_arg_as_bool(context, 'joy')
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
+    enable_odom_tf = _launch_arg_as_bool(context, 'enable_odom_tf')
+    # A params file, not a dotted key: the controller reads its own base_controller.ros__parameters.
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_odom_tf_', delete=False) as f:
+        yaml.safe_dump({'base_controller': {'ros__parameters': {'enable_odom_tf': enable_odom_tf}}}, f)
+        odom_tf_params = f.name
     hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
     mujoco_model    = LaunchConfiguration('mujoco_model').perform(context)
+    mujoco_scene = LaunchConfiguration('mujoco_scene').perform(context)
     mujoco_headless = LaunchConfiguration('mujoco_headless').perform(context)
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
+    pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
+    pkg_pt_mujoco = FindPackageShare('pt_mujoco').perform(context) if payload == 'pantilt' else ''
+    pkg_pt_control = FindPackageShare('pt_control').perform(context) if payload == 'pantilt' else ''
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
 
-    # MJCF must land on disk (not stay in-memory) since its <include> is filesystem-path-based -
-    # one file per payload, unlike the urdf var above.
+    # The control plugin loads MJCF from disk. Generate one model per payload.
     if mujoco_model:
         final_mujoco_model = mujoco_model
     elif hw_type == 'mujoco':
-        if payload == 'pantilt':
-            mjcf_cmd = [xacro, f'{pkg_desc}/mjcf/base_pantilt.mjcf.xacro',
-                        f'pantilt_config:={pantilt_config}', 'scene:=true']
-        else:
-            mjcf_cmd = [xacro, f'{pkg_desc}/mjcf/base.mjcf.xacro', 'scene:=true']
-        mjcf_xml = subprocess.run(mjcf_cmd, capture_output=True, text=True, check=True).stdout
-        mjcf_file = tempfile.NamedTemporaryFile(
-            mode='w', suffix='.xml', prefix='lekiwi_mujoco_', delete=False)
-        mjcf_file.write(mjcf_xml)
-        mjcf_file.close()
-        final_mujoco_model = mjcf_file.name
+        # One compiler for committed assets, headless tests and ROS; it also
+        # resolves the pinned payload's optical frame into MuJoCo's convention.
+        with tempfile.NamedTemporaryFile(
+                suffix='.xml', prefix='lekiwi_mujoco_', delete=False) as mjcf_file:
+            final_mujoco_model = mjcf_file.name
+        subprocess.run([
+            sys.executable, '-m', 'lekiwi_mujoco.build_mujoco_models',
+            '--control-package', pkg_ctrl, '--description-package', pkg_desc,
+            '--variant', pantilt_config if payload == 'pantilt' else 'base',
+            '--output', final_mujoco_model, '--absolute', '--scene', mujoco_scene,
+            '--lidar', 'plugin',
+        ], capture_output=True, text=True, check=True)
     else:
         final_mujoco_model = ''
 
-    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/base/urdf_config.yaml'))
-    if payload:
-        _cfg.update(yaml.safe_load(open(f'{pkg_ctrl}/config/payloads/{payload}/urdf_config.yaml')))
+    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/urdf_config.yaml'))
     final_serial_port = serial_port if serial_port else _cfg['serial_port']
     final_use_mock    = use_mock if use_mock else str(_cfg['use_mock']).lower()
 
     xacro_cmd = (
         f'{xacro} {urdf}'
+        f' base_controller_config:={pkg_ctrl}/config/control.yaml'
         f' serial_port:={final_serial_port}'
         f' use_mock:={final_use_mock}'
         f' baud_rate:={_cfg["baud_rate"]}'
@@ -105,12 +114,13 @@ def launch_setup(context):
         f' imu:={str(imu).lower()}'
     )
     if payload == 'pantilt':
+        pt_cfg = yaml.safe_load(open(f'{pkg_pt_control}/config/urdf_config.yaml'))
         xacro_cmd += (
             f' pantilt_config:={pantilt_config}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
-            f' pantilt_internal_max_vel:={_cfg["pantilt_internal_max_vel"]}'
-            f' pantilt_internal_max_acc:={_cfg["pantilt_internal_max_acc"]}'
-            f' pantilt_internal_acc_coeff:={_cfg["pantilt_internal_acc_coeff"]}'
+            f' pantilt_internal_max_vel:={pt_cfg["internal_max_vel"]}'
+            f' pantilt_internal_max_acc:={pt_cfg["internal_max_acc"]}'
+            f' pantilt_internal_acc_coeff:={pt_cfg["internal_acc_coeff"]}'
         )
     if hw_type == 'mujoco':
         xacro_cmd += (
@@ -138,9 +148,9 @@ def launch_setup(context):
         executable='ros2_control_node',
         parameters=[
             robot_description,
-            f'{pkg_ctrl}/config/base/control.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
+            f'{pkg_ctrl}/config/control.yaml',
             {'use_sim_time': use_sim_time},
+            odom_tf_params,
         ],
         output='log',
         emulate_tty=True,
@@ -154,15 +164,61 @@ def launch_setup(context):
         executable='ros2_control_node',
         parameters=[
             robot_description,
-            f'{pkg_ctrl}/config/base/control.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
+            f'{pkg_ctrl}/config/control.yaml',
+            f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
+            *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
+               f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml'] if payload == 'pantilt' else []),
             {'use_sim_time': True},
+            odom_tf_params,
         ],
         output='both',
         emulate_tty=True,
     )
 
     control_node = mujoco_control_node if hw_type == 'mujoco' else controller_manager
+
+    # Sim-only extras: the plugin's raw lidar scan goes through the same laser_filters
+    # raw-to-/scan split the real LD06 uses, and the camera images need an optical frame.
+    sim_nodes = []
+    if hw_type == 'mujoco':
+        filter_file = 'mujoco_laser_filter_pantilt.yaml' if payload == 'pantilt' else 'mujoco_laser_filter.yaml'
+        sim_nodes.append(Node(
+            package='laser_filters',
+            executable='scan_to_scan_filter_chain',
+            name='laser_scan_filter_chain',
+            output='log',
+            parameters=[f'{pkg_mujoco}/config/{filter_file}', {'use_sim_time': True}],
+            remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
+        ))
+        if payload == 'pantilt':
+            # The camera plugin publishes raw only; add /oak/rgb/image_raw/compressed for viewers.
+            sim_nodes.append(Node(
+                package='image_transport',
+                executable='republish',
+                name='oak_rgb_compressor',
+                output='log',
+                parameters=[{'in_transport': 'raw', 'out_transport': 'compressed', 'use_sim_time': True}],
+                remappings=[('in', '/oak/rgb/image_raw'), ('out/compressed', '/oak/rgb/image_raw/compressed')],
+            ))
+            sim_nodes.append(Node(
+                package='depthimage_to_laserscan',
+                executable='depthimage_to_laserscan_node',
+                name='depth_to_scan',
+                output='log',
+                parameters=[f'{pkg_pt_mujoco}/config/mujoco_depth_to_scan.yaml', {'use_sim_time': True}],
+                # The simulated depth shares the RGB camera's intrinsics, and has no camera_info of its own.
+                remappings=[('depth', '/oak/stereo/image_raw'), ('depth_camera_info', '/oak/rgb/camera_info'),
+                            ('scan', '/oak/scan')],
+            ))
+            sim_nodes.append(Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name='oak_optical_frame_publisher',
+                output='log',
+                arguments=['--frame-id', 'oak_link', '--child-frame-id', 'oak_rgb_camera_optical_frame',
+                           '--roll', '-1.5707963', '--pitch', '0', '--yaw', '-1.5707963'],
+                parameters=[{'use_sim_time': True}],
+            ))
 
     teleop_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([f'{pkg_ctrl}/launch/teleop.launch.py']),
@@ -184,9 +240,9 @@ def launch_setup(context):
         executable='control_support_node',
         output='log',
         parameters=[
-            f'{pkg_ctrl}/config/base/toggles.yaml',
-            f'{pkg_ctrl}/config/base/twist_switch.yaml',
-            f'{pkg_ctrl}/config/base/collision_toggle.yaml',
+            f'{pkg_ctrl}/config/toggles.yaml',
+            f'{pkg_ctrl}/config/twist_switch.yaml',
+            f'{pkg_ctrl}/config/collision_toggle.yaml',
             {'use_sim_time': use_sim_time},
         ],
     )
@@ -207,7 +263,9 @@ def launch_setup(context):
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
                  arguments=['pantilt_controller', '-c', '/controller_manager',
-                            '--controller-manager-timeout', '30'], output='both'),
+                            '--controller-manager-timeout', '30',
+                            '--param-file', f'{pkg_pt_control}/config/pantilt_controller.yaml'],
+                 output='both'),
         )
 
     joint_state_broadcaster_spawner = Node(
@@ -244,6 +302,7 @@ def launch_setup(context):
         *controller_spawner_actions,
         teleop_include,
         control_support_node,
+        *sim_nodes,
     ]
 
     if diagnostics:
@@ -257,7 +316,7 @@ def launch_setup(context):
                     name='bno055_diagnostics',
                     output='log',
                     parameters=[
-                        f'{pkg_ctrl}/config/base/bno055_diagnostics.yaml',
+                        f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
                         {'enable_mock_mode': final_use_mock},
                     ],
                 )],
@@ -311,6 +370,13 @@ def generate_launch_description():
             description='Use /clock from a simulator instead of system time.',
         ),
         DeclareLaunchArgument(
+            'enable_odom_tf',
+            default_value='true',
+            description='Let base_controller publish the odom -> base_footprint TF from wheel odometry. '
+                        'Default true so this launch file is usable standalone; lekiwi.launch.py passes '
+                        'false because the navigation EKF (robot_localization) publishes it there.',
+        ),
+        DeclareLaunchArgument(
             'joy',
             default_value='false',
             description='Launch joy_node on this device. Set true when the joystick is connected locally; '
@@ -325,11 +391,13 @@ def generate_launch_description():
                         'base.control.xacro/base_pantilt.control.xacro - but not wired into this '
                         'launch file.',
         ),
+        DeclareLaunchArgument('mujoco_scene', default_value='flat',
+                              description='flat, none, or scene MJCF path for generated models'),
         DeclareLaunchArgument(
             'mujoco_model',
             default_value='',
-            description='Path to a pre-built MJCF file to load; empty means xacro-process '
-                        'lekiwi_description/mjcf/base.mjcf.xacro or base_pantilt.mjcf.xacro '
+            description='Path to a pre-built MJCF file to load; empty means generate with MjSpec from '
+                        'lekiwi_mujoco/mjcf/base.mjcf.xacro or base_pantilt.mjcf.xacro '
                         '(picked by payload, with pantilt_config) at launch time instead. Only '
                         'used when ros2_control_hardware_type:="mujoco".',
         ),

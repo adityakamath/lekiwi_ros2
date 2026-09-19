@@ -1,16 +1,15 @@
 <!-- base_link's direct children as an includable fragment (freejoint, chassis collision,
-     3 wheels, laser_link, imu_link), meant to be spliced inside a <body name="base_link">
+     3 wheels with passive rollers, laser_link, imu_link), meant to be spliced inside a <body name="base_link">
      opened by the includer. Not a standalone model - never loaded directly. Body
      pos/euler/quat values are ported from urdf/base/base.module.xacro + base.common.xacro. -->
 <mujoco>
   <!-- 6-DOF floating base - rests on the 3 wheels under gravity, not fixed to anything. -->
   <freejoint/>
-  <inertial pos="0 0 0" mass="2.0" diaginertia="0.01 0.01 0.02"/>
   <!-- Collision cylinder approximates the chassis footprint - the real mesh (739500
        triangles) exceeds MuJoCo's 200000-face STL loader limit, so collision keeps using
        this primitive; the decimated copy below is visual-only. group="3" + the transparent
        material keep it from visually competing with that mesh - same convention as the
-       wheels (wheel_geom class) and pt_description/mjcf/pantilt_shared.xml's "collision"
+       wheels (wheel_geom class) and pt_mujoco/mjcf/pantilt_shared.xml's "collision"
        class. -->
   <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" group="3" material="base_transparent"/>
   <!-- quat = Rz(base_offset_rz), base_offset_rz = 3*pi/2 (base.common.xacro) - given as an
@@ -24,23 +23,218 @@
        quat = q_z(mount_angle) ⊗ q_y(90°), mount_angle = pi/3 (matches base.control.xacro's
        "offset" property). -->
   <body name="left_wheel_link" pos="0.066120 0.114522 0.010360" quat="0.61237244 -0.35355339 0.61237244 0.35355339">
-    <joint name="left_wheel_joint" class="wheel"/>
-    <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-    <geom name="left_wheel_collision" class="wheel_geom"/>
+    <joint name="left_wheel_joint" type="hinge" axis="0 0 1" damping="0" class="sts3215"/>
+    <!-- Effective passive roller ring: 16 axisymmetric contact rollers.
+         Aggregate wheel mass/inertia are supplied from URDF by the generator.
+         Count, shape, friction and bearing losses are simulation approximations. -->
+    <body name="left_roller_0" pos="0.0420000000 0.0000000000 0" quat="1.0000000000 0 0 0.0000000000">
+      <joint name="left_roller_joint_0" class="passive_roller"/>
+      <geom name="left_roller_collision_0" class="roller_geom"/>
+    </body>
+    <body name="left_roller_1" pos="0.0388029404 0.0160727042 0" quat="0.9807852804 0 0 0.1950903220">
+      <joint name="left_roller_joint_1" class="passive_roller"/>
+      <geom name="left_roller_collision_1" class="roller_geom"/>
+    </body>
+    <body name="left_roller_2" pos="0.0296984848 0.0296984848 0" quat="0.9238795325 0 0 0.3826834324">
+      <joint name="left_roller_joint_2" class="passive_roller"/>
+      <geom name="left_roller_collision_2" class="roller_geom"/>
+    </body>
+    <body name="left_roller_3" pos="0.0160727042 0.0388029404 0" quat="0.8314696123 0 0 0.5555702330">
+      <joint name="left_roller_joint_3" class="passive_roller"/>
+      <geom name="left_roller_collision_3" class="roller_geom"/>
+    </body>
+    <body name="left_roller_4" pos="0.0000000000 0.0420000000 0" quat="0.7071067812 0 0 0.7071067812">
+      <joint name="left_roller_joint_4" class="passive_roller"/>
+      <geom name="left_roller_collision_4" class="roller_geom"/>
+    </body>
+    <body name="left_roller_5" pos="-0.0160727042 0.0388029404 0" quat="0.5555702330 0 0 0.8314696123">
+      <joint name="left_roller_joint_5" class="passive_roller"/>
+      <geom name="left_roller_collision_5" class="roller_geom"/>
+    </body>
+    <body name="left_roller_6" pos="-0.0296984848 0.0296984848 0" quat="0.3826834324 0 0 0.9238795325">
+      <joint name="left_roller_joint_6" class="passive_roller"/>
+      <geom name="left_roller_collision_6" class="roller_geom"/>
+    </body>
+    <body name="left_roller_7" pos="-0.0388029404 0.0160727042 0" quat="0.1950903220 0 0 0.9807852804">
+      <joint name="left_roller_joint_7" class="passive_roller"/>
+      <geom name="left_roller_collision_7" class="roller_geom"/>
+    </body>
+    <body name="left_roller_8" pos="-0.0420000000 0.0000000000 0" quat="0.0000000000 0 0 1.0000000000">
+      <joint name="left_roller_joint_8" class="passive_roller"/>
+      <geom name="left_roller_collision_8" class="roller_geom"/>
+    </body>
+    <body name="left_roller_9" pos="-0.0388029404 -0.0160727042 0" quat="-0.1950903220 0 0 0.9807852804">
+      <joint name="left_roller_joint_9" class="passive_roller"/>
+      <geom name="left_roller_collision_9" class="roller_geom"/>
+    </body>
+    <body name="left_roller_10" pos="-0.0296984848 -0.0296984848 0" quat="-0.3826834324 0 0 0.9238795325">
+      <joint name="left_roller_joint_10" class="passive_roller"/>
+      <geom name="left_roller_collision_10" class="roller_geom"/>
+    </body>
+    <body name="left_roller_11" pos="-0.0160727042 -0.0388029404 0" quat="-0.5555702330 0 0 0.8314696123">
+      <joint name="left_roller_joint_11" class="passive_roller"/>
+      <geom name="left_roller_collision_11" class="roller_geom"/>
+    </body>
+    <body name="left_roller_12" pos="-0.0000000000 -0.0420000000 0" quat="-0.7071067812 0 0 0.7071067812">
+      <joint name="left_roller_joint_12" class="passive_roller"/>
+      <geom name="left_roller_collision_12" class="roller_geom"/>
+    </body>
+    <body name="left_roller_13" pos="0.0160727042 -0.0388029404 0" quat="-0.8314696123 0 0 0.5555702330">
+      <joint name="left_roller_joint_13" class="passive_roller"/>
+      <geom name="left_roller_collision_13" class="roller_geom"/>
+    </body>
+    <body name="left_roller_14" pos="0.0296984848 -0.0296984848 0" quat="-0.9238795325 0 0 0.3826834324">
+      <joint name="left_roller_joint_14" class="passive_roller"/>
+      <geom name="left_roller_collision_14" class="roller_geom"/>
+    </body>
+    <body name="left_roller_15" pos="0.0388029404 -0.0160727042 0" quat="-0.9807852804 0 0 0.1950903220">
+      <joint name="left_roller_joint_15" class="passive_roller"/>
+      <geom name="left_roller_collision_15" class="roller_geom"/>
+    </body>
     <!-- omni_wheel.stl's own URDF origin is identity (base.module.xacro) - no quat needed,
          the body's own quat above already carries the real mount orientation. -->
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
   <body name="back_wheel_link" pos="-0.132239 0.000000 0.010360" quat="0.00000000 -0.70710678 0.00000000 0.70710678">
-    <joint name="back_wheel_joint" class="wheel"/>
-    <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-    <geom name="back_wheel_collision" class="wheel_geom"/>
+    <joint name="back_wheel_joint" type="hinge" axis="0 0 1" damping="0" class="sts3215"/>
+    <!-- Effective passive roller ring: 16 axisymmetric contact rollers.
+         Aggregate wheel mass/inertia are supplied from URDF by the generator.
+         Count, shape, friction and bearing losses are simulation approximations. -->
+    <body name="back_roller_0" pos="0.0420000000 0.0000000000 0" quat="1.0000000000 0 0 0.0000000000">
+      <joint name="back_roller_joint_0" class="passive_roller"/>
+      <geom name="back_roller_collision_0" class="roller_geom"/>
+    </body>
+    <body name="back_roller_1" pos="0.0388029404 0.0160727042 0" quat="0.9807852804 0 0 0.1950903220">
+      <joint name="back_roller_joint_1" class="passive_roller"/>
+      <geom name="back_roller_collision_1" class="roller_geom"/>
+    </body>
+    <body name="back_roller_2" pos="0.0296984848 0.0296984848 0" quat="0.9238795325 0 0 0.3826834324">
+      <joint name="back_roller_joint_2" class="passive_roller"/>
+      <geom name="back_roller_collision_2" class="roller_geom"/>
+    </body>
+    <body name="back_roller_3" pos="0.0160727042 0.0388029404 0" quat="0.8314696123 0 0 0.5555702330">
+      <joint name="back_roller_joint_3" class="passive_roller"/>
+      <geom name="back_roller_collision_3" class="roller_geom"/>
+    </body>
+    <body name="back_roller_4" pos="0.0000000000 0.0420000000 0" quat="0.7071067812 0 0 0.7071067812">
+      <joint name="back_roller_joint_4" class="passive_roller"/>
+      <geom name="back_roller_collision_4" class="roller_geom"/>
+    </body>
+    <body name="back_roller_5" pos="-0.0160727042 0.0388029404 0" quat="0.5555702330 0 0 0.8314696123">
+      <joint name="back_roller_joint_5" class="passive_roller"/>
+      <geom name="back_roller_collision_5" class="roller_geom"/>
+    </body>
+    <body name="back_roller_6" pos="-0.0296984848 0.0296984848 0" quat="0.3826834324 0 0 0.9238795325">
+      <joint name="back_roller_joint_6" class="passive_roller"/>
+      <geom name="back_roller_collision_6" class="roller_geom"/>
+    </body>
+    <body name="back_roller_7" pos="-0.0388029404 0.0160727042 0" quat="0.1950903220 0 0 0.9807852804">
+      <joint name="back_roller_joint_7" class="passive_roller"/>
+      <geom name="back_roller_collision_7" class="roller_geom"/>
+    </body>
+    <body name="back_roller_8" pos="-0.0420000000 0.0000000000 0" quat="0.0000000000 0 0 1.0000000000">
+      <joint name="back_roller_joint_8" class="passive_roller"/>
+      <geom name="back_roller_collision_8" class="roller_geom"/>
+    </body>
+    <body name="back_roller_9" pos="-0.0388029404 -0.0160727042 0" quat="-0.1950903220 0 0 0.9807852804">
+      <joint name="back_roller_joint_9" class="passive_roller"/>
+      <geom name="back_roller_collision_9" class="roller_geom"/>
+    </body>
+    <body name="back_roller_10" pos="-0.0296984848 -0.0296984848 0" quat="-0.3826834324 0 0 0.9238795325">
+      <joint name="back_roller_joint_10" class="passive_roller"/>
+      <geom name="back_roller_collision_10" class="roller_geom"/>
+    </body>
+    <body name="back_roller_11" pos="-0.0160727042 -0.0388029404 0" quat="-0.5555702330 0 0 0.8314696123">
+      <joint name="back_roller_joint_11" class="passive_roller"/>
+      <geom name="back_roller_collision_11" class="roller_geom"/>
+    </body>
+    <body name="back_roller_12" pos="-0.0000000000 -0.0420000000 0" quat="-0.7071067812 0 0 0.7071067812">
+      <joint name="back_roller_joint_12" class="passive_roller"/>
+      <geom name="back_roller_collision_12" class="roller_geom"/>
+    </body>
+    <body name="back_roller_13" pos="0.0160727042 -0.0388029404 0" quat="-0.8314696123 0 0 0.5555702330">
+      <joint name="back_roller_joint_13" class="passive_roller"/>
+      <geom name="back_roller_collision_13" class="roller_geom"/>
+    </body>
+    <body name="back_roller_14" pos="0.0296984848 -0.0296984848 0" quat="-0.9238795325 0 0 0.3826834324">
+      <joint name="back_roller_joint_14" class="passive_roller"/>
+      <geom name="back_roller_collision_14" class="roller_geom"/>
+    </body>
+    <body name="back_roller_15" pos="0.0388029404 -0.0160727042 0" quat="-0.9807852804 0 0 0.1950903220">
+      <joint name="back_roller_joint_15" class="passive_roller"/>
+      <geom name="back_roller_collision_15" class="roller_geom"/>
+    </body>
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
   <body name="right_wheel_link" pos="0.066120 -0.114522 0.010360" quat="0.61237244 0.35355339 0.61237244 -0.35355339">
-    <joint name="right_wheel_joint" class="wheel"/>
-    <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
-    <geom name="right_wheel_collision" class="wheel_geom"/>
+    <joint name="right_wheel_joint" type="hinge" axis="0 0 1" damping="0" class="sts3215"/>
+    <!-- Effective passive roller ring: 16 axisymmetric contact rollers.
+         Aggregate wheel mass/inertia are supplied from URDF by the generator.
+         Count, shape, friction and bearing losses are simulation approximations. -->
+    <body name="right_roller_0" pos="0.0420000000 0.0000000000 0" quat="1.0000000000 0 0 0.0000000000">
+      <joint name="right_roller_joint_0" class="passive_roller"/>
+      <geom name="right_roller_collision_0" class="roller_geom"/>
+    </body>
+    <body name="right_roller_1" pos="0.0388029404 0.0160727042 0" quat="0.9807852804 0 0 0.1950903220">
+      <joint name="right_roller_joint_1" class="passive_roller"/>
+      <geom name="right_roller_collision_1" class="roller_geom"/>
+    </body>
+    <body name="right_roller_2" pos="0.0296984848 0.0296984848 0" quat="0.9238795325 0 0 0.3826834324">
+      <joint name="right_roller_joint_2" class="passive_roller"/>
+      <geom name="right_roller_collision_2" class="roller_geom"/>
+    </body>
+    <body name="right_roller_3" pos="0.0160727042 0.0388029404 0" quat="0.8314696123 0 0 0.5555702330">
+      <joint name="right_roller_joint_3" class="passive_roller"/>
+      <geom name="right_roller_collision_3" class="roller_geom"/>
+    </body>
+    <body name="right_roller_4" pos="0.0000000000 0.0420000000 0" quat="0.7071067812 0 0 0.7071067812">
+      <joint name="right_roller_joint_4" class="passive_roller"/>
+      <geom name="right_roller_collision_4" class="roller_geom"/>
+    </body>
+    <body name="right_roller_5" pos="-0.0160727042 0.0388029404 0" quat="0.5555702330 0 0 0.8314696123">
+      <joint name="right_roller_joint_5" class="passive_roller"/>
+      <geom name="right_roller_collision_5" class="roller_geom"/>
+    </body>
+    <body name="right_roller_6" pos="-0.0296984848 0.0296984848 0" quat="0.3826834324 0 0 0.9238795325">
+      <joint name="right_roller_joint_6" class="passive_roller"/>
+      <geom name="right_roller_collision_6" class="roller_geom"/>
+    </body>
+    <body name="right_roller_7" pos="-0.0388029404 0.0160727042 0" quat="0.1950903220 0 0 0.9807852804">
+      <joint name="right_roller_joint_7" class="passive_roller"/>
+      <geom name="right_roller_collision_7" class="roller_geom"/>
+    </body>
+    <body name="right_roller_8" pos="-0.0420000000 0.0000000000 0" quat="0.0000000000 0 0 1.0000000000">
+      <joint name="right_roller_joint_8" class="passive_roller"/>
+      <geom name="right_roller_collision_8" class="roller_geom"/>
+    </body>
+    <body name="right_roller_9" pos="-0.0388029404 -0.0160727042 0" quat="-0.1950903220 0 0 0.9807852804">
+      <joint name="right_roller_joint_9" class="passive_roller"/>
+      <geom name="right_roller_collision_9" class="roller_geom"/>
+    </body>
+    <body name="right_roller_10" pos="-0.0296984848 -0.0296984848 0" quat="-0.3826834324 0 0 0.9238795325">
+      <joint name="right_roller_joint_10" class="passive_roller"/>
+      <geom name="right_roller_collision_10" class="roller_geom"/>
+    </body>
+    <body name="right_roller_11" pos="-0.0160727042 -0.0388029404 0" quat="-0.5555702330 0 0 0.8314696123">
+      <joint name="right_roller_joint_11" class="passive_roller"/>
+      <geom name="right_roller_collision_11" class="roller_geom"/>
+    </body>
+    <body name="right_roller_12" pos="-0.0000000000 -0.0420000000 0" quat="-0.7071067812 0 0 0.7071067812">
+      <joint name="right_roller_joint_12" class="passive_roller"/>
+      <geom name="right_roller_collision_12" class="roller_geom"/>
+    </body>
+    <body name="right_roller_13" pos="0.0160727042 -0.0388029404 0" quat="-0.8314696123 0 0 0.5555702330">
+      <joint name="right_roller_joint_13" class="passive_roller"/>
+      <geom name="right_roller_collision_13" class="roller_geom"/>
+    </body>
+    <body name="right_roller_14" pos="0.0296984848 -0.0296984848 0" quat="-0.9238795325 0 0 0.3826834324">
+      <joint name="right_roller_joint_14" class="passive_roller"/>
+      <geom name="right_roller_collision_14" class="roller_geom"/>
+    </body>
+    <body name="right_roller_15" pos="0.0388029404 -0.0160727042 0" quat="-0.9807852804 0 0 0.1950903220">
+      <joint name="right_roller_joint_15" class="passive_roller"/>
+      <geom name="right_roller_collision_15" class="roller_geom"/>
+    </body>
     <geom class="base_visual" mesh="omni_wheel_visual" material="base_charcoal"/>
   </body>
 
