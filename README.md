@@ -33,7 +33,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 - **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)** (git submodule under `modules/`): Hardware interface for Feetech STS servos
 - **[bno055_hardware_interface](https://github.com/adityakamath/bno055_hardware_interface)** (git submodule under `modules/`): Hardware interface for the BNO055 IMU
 - **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)** (git submodule under `modules/`): LD06 LiDAR driver with bug fixes
-- **[mujoco_ros2_plugins](modules/mujoco_ros2_plugins/README.md)** (`modules/`): `mujoco_ros2_control` plugin that serves `/emergency_stop` in the simulation like the real hardware interface, robot-agnostic; `sim:=true` only
+- **[mujoco_ros2_plugins](https://github.com/adityakamath/mujoco_ros2_plugins)** (`modules/`): `mujoco_ros2_control` plugins (currently one) that serves `/emergency_stop` in the simulation like the real hardware interface, robot-agnostic; `sim:=true` only
 - **[ina260_battery_monitor](https://github.com/adityakamath/ina260_battery_monitor)** (git submodule under `modules/`): INA260 battery current/voltage/power monitoring, with threshold-based SetBool event services
 - **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
 - **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation

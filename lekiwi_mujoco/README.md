@@ -12,7 +12,7 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`) generated from the URDF, plus
 - ROS sim only (Kilted): `sudo apt install ros-kilted-mujoco-ros2-control
   ros-kilted-mujoco-ros2-control-plugins ros-kilted-mujoco-3d-lidar ros-kilted-laser-filters`
   (0.1.2 or newer; older releases have no camera or native lidar plugin). The simulation's
-  `/emergency_stop` comes from `modules/mujoco_ros2_plugins`, built in the same workspace.
+  `/emergency_stop` comes from the `modules/mujoco_ros2_plugins` submodule, built in the same workspace.
 
 ## Standalone use
 
