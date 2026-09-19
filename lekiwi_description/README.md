@@ -43,7 +43,7 @@ Pass these to `xacro` as `name:=value`. `lekiwi_control` fills them in from its 
 | `sts3215_max_vel_steps` | `3400` | Servo maximum speed in steps/s |
 | `internal_max_vel`, `internal_max_acc`, `internal_acc_coeff` | `254`, `254`, `100` | Wheel servo speed profile, written to each servo at start-up |
 | `imu` | `true` | A physical BNO055 is present; `false` leaves out the IMU sensor |
-| `imu_i2c_bus`, `imu_i2c_addr`, `imu_axis_remap`, `imu_sensor_mode` | `1`, `28`, `P1`, `NDOF` | IMU I2C bus, I2C address (`28` means 0x28), mounting orientation and fusion mode |
+| `imu_i2c_bus`, `imu_i2c_addr`, `imu_axis_remap`, `imu_sensor_mode` | `1`, `28`, `P1`, `NDOF` | IMU I2C bus, I2C address (`0x28`), mounting orientation and fusion mode |
 | `ros2_control_hardware_type` | `real` | Hardware plugin: `real`, `gazebo` or `mujoco` |
 | `mujoco_model`, `mujoco_headless` | `""`, `false` | `mujoco` only: the generated MJCF and whether to skip the viewer |
 | `pantilt_config` | `pt101` | `base_pantilt` only: pan-tilt mesh variant, `pt100` or `pt101` |
