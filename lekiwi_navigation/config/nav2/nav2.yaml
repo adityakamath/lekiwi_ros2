@@ -305,7 +305,7 @@ velocity_smoother:
     smoothing_frequency: 20.0      # Hz
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.2, 0.17, 0.68]    # [vx, vy, wz] — must match the axis scales in lekiwi_control teleop.yaml
+    max_velocity: [0.2, 0.17, 0.68]    # [vx, vy, wz] — must match the axis scales in lekiwi_control base_teleop.yaml
     min_velocity: [-0.2, -0.17, -0.68]
     max_accel: [1.0, 0.85, 3.4]
     max_decel: [-1.0, -0.85, -3.4]

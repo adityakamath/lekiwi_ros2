@@ -202,7 +202,7 @@ class TestEkfOdomYaml:
 
 class TestCrossFileVelocityConsistency:
     """
-    The base's speed limits are joy_teleop's axis scales (lekiwi_control/config/base/teleop.yaml);
+    The base's speed limits are joy_teleop's axis scales (lekiwi_control/config/base/base_teleop.yaml);
     the controller enforces none, so nav2.yaml must match them. Acceleration limits live in
     nav2.yaml only.
     """
@@ -212,7 +212,7 @@ class TestCrossFileVelocityConsistency:
         # lekiwi_navigation lives at src/lekiwi_ros2/lekiwi_navigation;
         # lekiwi_control lives at src/lekiwi_ros2/lekiwi_control - same monorepo.
         teleop = _load(os.path.normpath(os.path.join(
-            _PKG_SRC, '..', 'lekiwi_control', 'config', 'base', 'teleop.yaml')))
+            _PKG_SRC, '..', 'lekiwi_control', 'config', 'base', 'base_teleop.yaml')))
         axes = teleop['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
         self.limits = [axes['twist-linear-x']['scale'], axes['twist-linear-y']['scale'],
                        axes['twist-angular-z']['scale']]

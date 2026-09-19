@@ -86,16 +86,16 @@ class TestControlYaml:
 
     def test_no_dead_limit_blocks(self):
         # omni_wheel_drive_controller declares no velocity/acceleration parameters; speed limits
-        # are the teleop axis scales (teleop.yaml) and Nav2's.
+        # are the teleop axis scales (base_teleop.yaml) and Nav2's.
         params = self.cfg['base_controller']['ros__parameters']
         assert 'linear' not in params and 'angular' not in params
 
 
-# ── teleop.yaml ──────────────────────────────────────────────────────────────
+# ── base_teleop.yaml ──────────────────────────────────────────────────────────────
 
 class TestTeleopYaml:
     def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_BASE, 'teleop.yaml'))
+        self.cfg = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
 
     def test_joy_teleop_present(self):
         assert 'joy_teleop' in self.cfg
@@ -116,7 +116,7 @@ class TestTeleopYaml:
     def test_toggle_services_present(self):
         actions = self.cfg['joy_teleop']['ros__parameters']
         for svc in ('estop_toggle', 'twist_switch_toggle'):
-            assert svc in actions, f"Missing toggle service '{svc}' in teleop.yaml"
+            assert svc in actions, f"Missing toggle service '{svc}' in base_teleop.yaml"
 
 
 # ── toggles.yaml ─────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ class TestTogglesYaml:
 
     def test_teleop_yaml_does_not_contain_bool_toggle_node(self):
         """Confirms the decoupling: bool_toggle_node config lives only in toggles.yaml."""
-        teleop_cfg = _load(os.path.join(_CFG_BASE, 'teleop.yaml'))
+        teleop_cfg = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
         assert 'bool_toggle_node' not in teleop_cfg
 
 
@@ -210,11 +210,11 @@ class TestControlYamlPantilt:
         assert iface == 'position'
 
 
-# ── pantilt/teleop.yaml ──────────────────────────────────────────────────────
+# ── pantilt/pantilt_teleop.yaml ──────────────────────────────────────────────────────
 
 class TestTeleopYamlPantilt:
     def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'teleop.yaml'))
+        self.cfg = _load(os.path.join(_CFG_PANTILT, 'pantilt_teleop.yaml'))
 
     def test_pantilt_control_action_present(self):
         assert 'pantilt_control' in self.cfg['joy_teleop']['ros__parameters']
@@ -229,7 +229,7 @@ class TestTeleopYamlPantilt:
 
     def test_pantilt_shares_l1_deadman(self):
         """Pan-tilt deadman must match the base drive deadman (L1 = button 9)."""
-        base_teleop = _load(os.path.join(_CFG_BASE, 'teleop.yaml'))
+        base_teleop = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
         base_deadman = base_teleop['joy_teleop']['ros__parameters']['teleop']['deadman_buttons']
         pantilt_deadman = self.cfg['joy_teleop']['ros__parameters']['pantilt_control']['deadman_buttons']
         assert pantilt_deadman == base_deadman, \
