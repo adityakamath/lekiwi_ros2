@@ -52,6 +52,7 @@ def launch_setup(context):
     joy                 = LaunchConfiguration('joy').perform(context)
     sts_serial_port     = LaunchConfiguration('sts_serial_port').perform(context)
     mujoco_model        = LaunchConfiguration('mujoco_model').perform(context)
+    mujoco_scene        = LaunchConfiguration('mujoco_scene').perform(context)
 
     if sim:
         # Running in MuJoCo implies sim time and mock hardware - forced here defensively
@@ -102,6 +103,7 @@ def launch_setup(context):
     if sim:
         control_args['ros2_control_hardware_type'] = 'mujoco'
         control_args['mujoco_headless'] = 'false' if mujoco_gui.lower() in ('true', '1') else 'true'
+        control_args['mujoco_scene'] = mujoco_scene
     control = include(pkg_control, 'launch/control.launch.py', control_args)
 
     nav = include(pkg_nav,     'launch/navigation.launch.py', {
@@ -307,6 +309,12 @@ def generate_launch_description():
                         'use_mock, and skips laser/audio/battery_monitor/oakd (laser is hosted '
                         'by the mujoco control node itself; the other three have no simulated '
                         'equivalent at all). Base and pantilt payload both supported.',
+        ),
+        DeclareLaunchArgument(
+            'mujoco_scene',
+            default_value='flat',
+            description='[sim only] World for the simulated robot: flat, arena (walled room with '
+                        'obstacles), none, or a scene MJCF path. Ignored unless sim:=true.',
         ),
         DeclareLaunchArgument(
             'mujoco_gui',

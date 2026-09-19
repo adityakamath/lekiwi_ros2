@@ -88,6 +88,7 @@ The most commonly used arguments for `lekiwi_bringup lekiwi.launch.py` (run with
 | `battery_monitor` | `true`   | Physical INA260 current/voltage sensor present on the base. `false` skips `ina260_battery_monitor`'s launch include entirely |
 | `pointcloud`     | `false`   | Enable RGBD point cloud output from the OAK-D camera              |
 | `sim`            | `false`   | Run in MuJoCo instead of real hardware                            |
+| `mujoco_scene`   | `flat`    | [`sim` only] World: `flat`, `arena` (walled room with obstacles), `none`, or a scene MJCF path |
 | `mujoco_gui`     | `false`   | [`sim` only] Show the MuJoCo viewer (runs fully headless otherwise, no display/GPU needed) |
 | `diagnostics`    | `false`   | Launch motor/IMU diagnostics nodes                                |
 | `joy`            | `false`   | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |

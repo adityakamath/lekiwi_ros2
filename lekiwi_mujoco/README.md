@@ -46,7 +46,7 @@ sim.step(10, action=[1., 0., 0., 0., 0.])   # normalized [vx, vy, yaw, pan, tilt
 
 ```sh
 colcon build --packages-up-to lekiwi_bringup && . install/setup.bash
-ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true            # full stack, headless
+ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=arena   # full stack, headless
 ros2 launch lekiwi_control control.launch.py ros2_control_hardware_type:=mujoco payload:=pantilt \
     mujoco_headless:=true use_sim_time:=true mujoco_scene:=arena  # control only, in the arena scene
 ```
