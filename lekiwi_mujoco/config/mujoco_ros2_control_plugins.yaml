@@ -7,7 +7,7 @@
         type: "mujoco_ros2_control_plugins/Mujoco3dLidarPlugin"
         # Keyed by the MJCF sensor name (build_mujoco_models --lidar plugin). Raw scan: the
         # plugin reports "no hit" as -1, so laser_filters turns it into /scan (see
-        # sim_laser_filter*.yaml), the same raw-to-filtered split the real LD06 uses.
+        # mujoco_laser_filter*.yaml), the same raw-to-filtered split the real LD06 uses.
         lidar:
           frame_name: laser_frame
           topic: /scan_raw

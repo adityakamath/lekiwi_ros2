@@ -6,7 +6,7 @@
     mujoco_plugins:
       mujoco_camera_plugin:
         type: "mujoco_ros2_control_plugins/CameraPlugin"
-        camera_publish_rate: 30.0
+        camera_publish_rate: 5.0  # headless software rendering on the Pi tops out near 5 Hz; more starves Nav2
         oak_rgb:
           frame_name: oak_rgb_camera_optical_frame
           info_topic: /oak/rgb/camera_info

@@ -181,7 +181,7 @@ def launch_setup(context):
     # raw-to-/scan split the real LD06 uses, and the camera images need an optical frame.
     sim_nodes = []
     if hw_type == 'mujoco':
-        filter_file = 'sim_laser_filter_pantilt.yaml' if payload == 'pantilt' else 'sim_laser_filter.yaml'
+        filter_file = 'mujoco_laser_filter_pantilt.yaml' if payload == 'pantilt' else 'mujoco_laser_filter.yaml'
         sim_nodes.append(Node(
             package='laser_filters',
             executable='scan_to_scan_filter_chain',
@@ -191,6 +191,15 @@ def launch_setup(context):
             remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
         ))
         if payload == 'pantilt':
+            # The camera plugin publishes raw only; add /oak/rgb/image_raw/compressed for viewers.
+            sim_nodes.append(Node(
+                package='image_transport',
+                executable='republish',
+                name='oak_rgb_compressor',
+                output='log',
+                parameters=[{'in_transport': 'raw', 'out_transport': 'compressed', 'use_sim_time': True}],
+                remappings=[('in', '/oak/rgb/image_raw'), ('out/compressed', '/oak/rgb/image_raw/compressed')],
+            ))
             sim_nodes.append(Node(
                 package='tf2_ros',
                 executable='static_transform_publisher',

@@ -38,4 +38,5 @@ lidar:
   max_range: 12.0   # m
   min_range: 0.02   # m
   update_rate: 5.0  # Hz, matches the LD06 scan rate
-  async: true       # cast in a background thread (scan lags by one update)
+  async: false      # true (background thread) stamps each scan ~0.2 s old; slam_toolbox then stamps map->odom
+                    # behind 'now' and Nav2 aborts goals with 'extrapolation into the future'

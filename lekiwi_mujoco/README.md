@@ -56,8 +56,8 @@ audio are not simulated. Sensors come from plugins configured in `config/`:
 
 | Topic | Source |
 |---|---|
-| `/scan` | Native `mujoco.plugin.lidar` (360 rays, 5 Hz) publishes `/scan_raw`; `laser_filters` (`config/sim_laser_filter*.yaml`) turns no-hit into `inf` and masks the pan-tilt into `/scan` |
-| `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | `CameraPlugin`, headless EGL; frame `oak_rgb_camera_optical_frame`; image is upside down like the real, inverted OAK-D mount |
+| `/scan` | Native `mujoco.plugin.lidar` (360 rays, 5 Hz) publishes `/scan_raw`; `laser_filters` (`config/mujoco_laser_filter*.yaml`) turns no-hit into `inf` and masks the pan-tilt into `/scan` |
+| `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | `CameraPlugin`, headless EGL, 5 Hz; frame `oak_rgb_camera_optical_frame`; image is upside down like the real, inverted OAK-D mount |
 | `/free_joint_state_publisher/free_joint_states` | Ground-truth base pose and velocity |
 | `/joint_states`, `/imu_sensor_broadcaster/imu`, `/base_controller/odom` | ros2_control on the simulated hardware |
 
