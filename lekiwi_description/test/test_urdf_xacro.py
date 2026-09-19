@@ -8,6 +8,7 @@ hardware arguments so no physical device is required.
 
 import os
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -40,6 +41,15 @@ _PANTILT_ARGS = _BASE_ARGS + [
 # Motor IDs, step-centering, and joint limits are not passed here - they're
 # pt_description's own physical-calibration constants, baked into
 # pantilt.joints.xacro's macro defaults (single source of truth).
+
+
+_PT_MESHES_URL = 'https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/'
+
+
+def _portable(xml):
+    """Pre-built URDFs point at the local meshes by relative path and at the pan-tilt meshes by GitHub URL."""
+    xml = xml.replace('package://lekiwi_description/meshes/', '../../meshes/')
+    return xml.replace('package://pt_description/meshes/', _PT_MESHES_URL)
 
 
 def _xacro(xacro_file, args):
@@ -280,8 +290,8 @@ class TestPrebuiltUrdfConsistency:
         with open(prebuilt) as f:
             existing = f.read()
         # Normalize both to ignore path-comment differences.
-        assert self._strip_comments(generated) == self._strip_comments(existing), \
-            "base.urdf is stale — regenerate with: xacro base.urdf.xacro ... > base.urdf"
+        assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
+            'base.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
     def test_base_pantilt_urdf_not_stale(self):
         prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt.urdf')
@@ -291,8 +301,8 @@ class TestPrebuiltUrdfConsistency:
         assert rc == 0
         with open(prebuilt) as f:
             existing = f.read()
-        assert self._strip_comments(generated) == self._strip_comments(existing), \
-            "base_pantilt.urdf is stale — regenerate with: xacro base_pantilt.urdf.xacro ... > base_pantilt.urdf"
+        assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
+            'base_pantilt.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
 
 # ── EEPROM tuning that reaches each motor on the shared bus ─────────────────────
@@ -337,3 +347,11 @@ class TestBasePantiltUrdfVariants:
         args.append(f'pantilt_config:={variant}')
         _, stderr, rc = _xacro(_URDF_PANTILT, args)
         assert rc == 0, f"xacro failed for pantilt_config:={variant}:\n{stderr}"
+
+
+if __name__ == '__main__' and '--write' in sys.argv:
+    for folder, name, args in (('base', 'base', _BASE_ARGS), ('base_pantilt', 'base_pantilt', _PANTILT_ARGS)):
+        result = subprocess.run(['xacro', f'{folder}/{name}.urdf.xacro'] + args, cwd=os.path.join(_PKG_SRC, 'urdf'),
+                                capture_output=True, text=True, check=True)
+        with open(os.path.join(_PKG_SRC, 'urdf', folder, f'{name}.urdf'), 'w') as out:
+            out.write(_portable(result.stdout))

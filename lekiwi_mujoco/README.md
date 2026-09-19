@@ -93,6 +93,4 @@ sim from a laptop, run `foxglove_bridge` on the Pi and connect Foxglove to `ws:/
 
 ## Tests
 
-`pytest lekiwi_mujoco/test -q` (about 3 minutes on a Raspberry Pi). `test_without_ros.py` runs the
-tools with ROS imports blocked and needs `mujoco` and `xacro` pip-installed. CI runs the suite in
-the ROS container and on Linux, macOS and Windows.
+`pytest lekiwi_mujoco/test -q` (about 3 minutes on a Raspberry Pi).
