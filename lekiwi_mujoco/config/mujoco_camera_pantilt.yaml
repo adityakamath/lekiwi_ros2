@@ -1,14 +1,7 @@
-# CameraPlugin config for the OAK-D on payload:=pantilt. Topic names match the real
-# depthai_ros_driver. The image frame is an optical frame (z forward) so viewers such as
-# Foxglove draw the frustum correctly; control.launch.py publishes its static TF from oak_link.
+# Lekiwi override of pt_mujoco's CameraPlugin config (payload:=pantilt), loaded after it: only the
+# rate differs. Headless software rendering on the Pi tops out near 5 Hz, and more starves Nav2.
 /**:
   ros__parameters:
     mujoco_plugins:
       mujoco_camera_plugin:
-        type: "mujoco_ros2_control_plugins/CameraPlugin"
-        camera_publish_rate: 5.0  # headless software rendering on the Pi tops out near 5 Hz; more starves Nav2
-        oak_rgb:
-          frame_name: oak_rgb_camera_optical_frame
-          info_topic: /oak/rgb/camera_info
-          image_topic: /oak/rgb/image_raw
-          depth_topic: /oak/stereo/image_raw
+        camera_publish_rate: 5.0

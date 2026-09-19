@@ -1,13 +1,12 @@
 <?xml version="1.0"?>
-<!-- LeKiwi base-only MJCF entry point (mujoco_ros2_control equivalent of
-     urdf/base/base.urdf.xacro). One file per payload combination - see
-     base_pantilt.mjcf.xacro for base+payload, add base_<payload>.mjcf.xacro for new payloads
-     rather than an arg-driven branch here. Geometry lives in base_shared.xml/base_subtree.xml.
-
-     Generate runnable models with scripts/build_mujoco_models.py.
-     control.launch.py uses this MjSpec generator and passes the result as
-     mujoco_model. Uses $(find package), not relative paths - relative paths resolve against
-     the output file's location at launch time, not this file's own directory. -->
+<!-- LeKiwi base MJCF entry point (mujoco_ros2_control equivalent of urdf/base/base.urdf.xacro).
+     Geometry lives in base_shared.xml/base_subtree.xml. Payloads are not described here:
+     build_mujoco_models.py attaches pt_mujoco's payload at the URDF's mount joint, so a new
+     payload needs a package like pt_mujoco, not another entry file. Generate runnable models with
+     `python3 -m lekiwi_mujoco.build_mujoco_models`; control.launch.py uses that same MjSpec
+     generator and passes the result as mujoco_model. Uses $(find package), not relative paths -
+     relative paths resolve against the output file's location at launch time, not this file's
+     own directory. -->
 <mujoco xmlns:xacro="http://www.ros.org/wiki/xacro" model="lekiwi">
 
   <!-- Robot assets only; build_mujoco_models.py composes a separate scene. -->

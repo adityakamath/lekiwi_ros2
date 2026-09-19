@@ -22,11 +22,6 @@ actuators:
     # time, so this is the value that actually takes effect, not the MJCF class alone.
     armature: 0.032460
     frictionloss: 0.195871
-  pantilt:
-    position_gain: 50.0
-    damping_ratio: 1.5
-    armature: 0.1
-    frictionloss: 0.1
 command:
   # Base speed scale [vx m/s, vy m/s, yaw rad/s] for the standalone keyboard viewer and normalized
   # Gymnasium actions only. Independent of the robot's teleop/Nav2 limits; the ROS sim ignores it.

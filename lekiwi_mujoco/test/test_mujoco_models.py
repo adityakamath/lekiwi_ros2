@@ -456,3 +456,70 @@ def test_payload_mass_changes_and_new_camera_inertia(parameter_workspace):
     model = build_robot_spec('pt101', pt_package=payload).compile()
     assert model.body('pantilt_base_link').mass[0] == pytest.approx(1.3)
     assert model.body('oak_link_model_origin').mass[0] == pytest.approx(.2)
+
+
+def test_payload_is_mounted_from_pt_mujoco_at_the_urdf_mount(parameter_workspace):
+    from lekiwi_mujoco.build_mujoco_models import build_robot_spec
+    spec = build_robot_spec('pt101', pt_package=PACKAGE.parent / 'payloads/pantilt_ros2/pt_description')
+    assert spec.body('pantilt_mount') is None
+    assert 'pantilt_mount' in [frame.name for frame in spec.frames]
+    model = spec.compile()
+    urdf = ET.fromstring(_expanded_urdf('pt101'))
+    mount = urdf.find("joint[@name='pantilt_mount_joint']")
+    base = model.body('pantilt_base_link')
+    assert mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, base.parentid[0]) == mount.find('parent').get('link')
+    assert np.allclose(base.pos, np.fromstring(mount.find('origin').get('xyz'), sep=' '))
+    assert model.body('pantilt_base_link').mass[0] == pytest.approx(1.0)
+
+
+def _expanded_urdf(variant):
+    from lekiwi_mujoco.build_mujoco_models import expand_urdf, package_paths
+    packages = {'lekiwi_description': DESCRIPTION, 'pt_description': PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'}
+    urdf, _, _ = expand_urdf(variant, packages, PACKAGE.parent / 'lekiwi_control')
+    return ET.tostring(urdf)
+
+
+def test_payload_servo_parameters_come_from_pt_mujoco_not_lekiwi(parameter_workspace, tmp_path, monkeypatch):
+    import shutil
+    import yaml
+    from lekiwi_mujoco.build_mujoco_models import build_robot_spec
+    assert 'pantilt' not in yaml.safe_load((PACKAGE / 'config/mujoco.yaml').read_text())['actuators']
+    payload_package = PACKAGE.parent / 'payloads/pantilt_ros2/pt_mujoco'
+    copy = tmp_path / 'pt_mujoco'
+    for folder in ('mjcf', 'config'):
+        shutil.copytree(payload_package / folder, copy / folder)
+    config = copy / 'config/mujoco.yaml'
+    settings = yaml.safe_load(config.read_text())
+    settings['actuators']['pantilt'].update(armature=.07, frictionloss=.03)
+    config.write_text(yaml.safe_dump(settings))
+    from pt_mujoco import build_mujoco_models as payload_builder
+    monkeypatch.setattr(payload_builder, 'SIM_PACKAGE', copy)
+    model = build_robot_spec('pt101', pt_package=PACKAGE.parent / 'payloads/pantilt_ros2/pt_description').compile()
+    for name in ('shoulder_pan_joint', 'tilt_joint'):
+        assert model.joint(name).armature[0] == pytest.approx(.07)
+        assert model.joint(name).frictionloss[0] == pytest.approx(.03)
+    # The wheels keep lekiwi's own BAM-identified values.
+    assert model.joint('left_wheel_joint').armature[0] == pytest.approx(.032460)
+
+
+def test_payload_joint_names_are_shared_with_pt_mujoco():
+    from lekiwi_mujoco import simulation
+    from pt_mujoco import simulation as payload
+    assert simulation.PAYLOAD == payload.PAYLOAD == ('shoulder_pan_joint', 'tilt_joint')
+
+
+def test_pantilt_camera_rate_overrides_pt_mujoco_only_in_rate():
+    import yaml
+    payload = yaml.safe_load((PACKAGE.parent / 'payloads/pantilt_ros2/pt_mujoco/config/mujoco_ros2_control_plugins.yaml').read_text())
+    override = yaml.safe_load((PACKAGE / 'config/mujoco_camera_pantilt.yaml').read_text())
+    camera = payload['/**']['ros__parameters']['mujoco_plugins']['mujoco_camera_plugin']
+    changed = override['/**']['ros__parameters']['mujoco_plugins']['mujoco_camera_plugin']
+    assert camera['camera_publish_rate'] == 30.0 and changed == {'camera_publish_rate': 5.0}
+    assert camera['type'] == 'mujoco_ros2_control_plugins/CameraPlugin'
+
+
+def test_missing_mount_joint_is_rejected(parameter_workspace):
+    from lekiwi_mujoco.build_mujoco_models import attach_payload
+    import mujoco as mj
+    with pytest.raises(ValueError):
+        attach_payload(mj.MjSpec(), 'pt101', ET.fromstring('<robot/>'), {}, {'pt_description': None})

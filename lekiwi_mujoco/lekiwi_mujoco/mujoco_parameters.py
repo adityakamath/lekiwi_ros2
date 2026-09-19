@@ -171,19 +171,15 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
     chassis.pos = contact['chassis_center']
     for actuator in spec.actuators:
         name = actuator.target
+        # Payload servos are configured by the payload's own package (pt_mujoco) when attached.
+        if not name.endswith('wheel_joint'):
+            continue
         joint = spec.joint(name)
-        settings = simulation['actuators']['wheel' if name.endswith('wheel_joint') else 'pantilt']
+        settings = simulation['actuators']['wheel']
         joint.armature = positive(settings['armature'], name + ' armature', True)
         joint.frictionloss = positive(settings['frictionloss'], name + ' frictionloss', True)
         effort = positive(urdf.find(f"joint[@name='{name}']/limit").get('effort'), name + ' effort')
         actuator.forcelimited = True
         actuator.forcerange = [-effort, effort]
-        if name.endswith('wheel_joint'):
-            gain = positive(settings['velocity_gain'], 'velocity_gain')
-            actuator.gainprm[0], actuator.biasprm[2] = gain, -gain
-        else:
-            gain = positive(settings['position_gain'], 'position_gain')
-            actuator.gainprm[0], actuator.biasprm[1] = gain, -gain
-            # MjSpec position shortcut stores a positive bias[2] as dampratio
-            # until compilation resolves it against the effective joint inertia.
-            actuator.biasprm[2] = positive(settings['damping_ratio'], 'damping_ratio')
+        gain = positive(settings['velocity_gain'], 'velocity_gain')
+        actuator.gainprm[0], actuator.biasprm[2] = gain, -gain

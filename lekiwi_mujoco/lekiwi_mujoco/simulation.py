@@ -5,8 +5,12 @@ from types import MappingProxyType
 import mujoco
 import numpy as np
 
+from lekiwi_mujoco.paths import payload_package
+
+payload_package()
+from pt_mujoco.simulation import PAYLOAD  # noqa: E402
+
 WHEELS = ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint')
-PAYLOAD = ('shoulder_pan_joint', 'tilt_joint')
 
 
 def finite_vector(value, size, label):

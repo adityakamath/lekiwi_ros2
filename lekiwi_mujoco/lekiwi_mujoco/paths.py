@@ -20,3 +20,11 @@ def package_share(name):
         if (path / 'package.xml').is_file():
             return path.resolve()
     raise FileNotFoundError(f'Cannot locate {name}; set {name.upper()}_SHARE to its source/share directory')
+
+
+def payload_package():
+    """Make pt_mujoco importable: from an install or, without one, from the source checkout."""
+    try:
+        import pt_mujoco  # noqa: F401
+    except ImportError:
+        sys.path.insert(0, str(package_share('pt_mujoco')))

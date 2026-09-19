@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate portable base/PT100/PT101 MJCFs from shared xacro + pinned payload.
+"""Generate portable base/PT100/PT101 MJCFs from shared xacro + the pan-tilt payload from pt_mujoco.
 
 Also used by ROS launch: --absolute keeps mesh paths valid in temporary files.
-Native MjSpec parsing resolves XML includes; payload integration fixes are applied
-consistently, without modifying the pinned pantilt_ros2 dependency.
+Native MjSpec parsing resolves XML includes; the payload is built by pt_mujoco from this robot's
+URDF and attached at the URDF's mount, without modifying the pinned pantilt_ros2 dependency.
 
 Standalone, no install needed: `python3 -m lekiwi_mujoco.build_mujoco_models --variant pt101
 --output /tmp/robot.xml`, run from this package's root dir (-m puts the cwd on sys.path).
@@ -23,7 +23,7 @@ import yaml
 import xacro
 import xacro.substitution_args
 
-from lekiwi_mujoco.paths import package_share
+from lekiwi_mujoco.paths import package_share, payload_package
 
 PACKAGE = None  # Optional description override; resolve lazily so explicit paths work.
 SIM_PACKAGE = package_share('lekiwi_mujoco')
@@ -55,53 +55,8 @@ def set_origin(element, origin):
     element.quat = quat
 
 
-def sync_payload_geometry(spec, packages, variant, control):
-    """Use the robot's URDF as the single source for payload frames and mesh origins.
-
-    The pinned payload MJCF has a stale tilt-joint Z (0.1025 vs URDF 0.0541441).
-    Reconcile the whole payload chain instead of maintaining another copied offset.
-    Empty controller paths avoid requiring control packages for geometry generation.
-    """
-    with package_paths(packages):
-        doc = xacro.process_file(
-            str(packages['lekiwi_description'] / 'urdf/base_pantilt/base_pantilt.urdf.xacro'),
-            mappings={'pantilt_config': variant, 'use_mock': 'true',
-                      'base_controller_config': str(control / 'config/base/control.yaml'),
-                      'simulation_controllers': '', 'payload_simulation_controllers': ''})
-    urdf = ET.fromstring(doc.toxml())
-    joints = [('pantilt_mount_joint', 'pantilt_mount'),
-              ('shoulder_pan_joint', 'shoulder_link'), ('tilt_joint', 'tilt_link'),
-              ('oak_link_center_joint', 'oak_link'),
-              ('oak_link_model_origin_joint', 'oak_link_model_origin')]
-    for joint_name, body_name in joints:
-        joint = urdf.find(f"joint[@name='{joint_name}']")
-        body = spec.body(body_name)
-        if joint is None or body is None:
-            raise ValueError(f'Missing payload frame: {joint_name} / {body_name}')
-        set_origin(body, joint.find('origin'))
-        mj_joint = spec.joint(joint_name)
-        if mj_joint is not None:
-            mj_joint.axis = list(map(float, joint.find('axis').get('xyz').split()))
-            limit = joint.find('limit')
-            mj_joint.range = [float(limit.get('lower')), float(limit.get('upper'))]
-    meshes = {mesh.name: Path(mesh.file).name for mesh in spec.meshes if mesh.file}
-    for name in ('pantilt_base_link', 'shoulder_link', 'tilt_link', 'oak_link_model_origin'):
-        body = spec.body(name)
-        link = urdf.find(f"link[@name='{name}']")
-        for geom in body.geoms:
-            filename = meshes.get(geom.meshname)
-            role = 'collision' if geom.classname.name == 'collision' else 'visual'
-            matches = [entry for entry in link.findall(role)
-                       if entry.find('geometry/mesh') is not None
-                       and Path(entry.find('geometry/mesh').get('filename')).name == filename]
-            if len(matches) != 1:
-                raise ValueError(f'Ambiguous or missing URDF {role}: {name}/{filename}')
-            set_origin(geom, matches[0].find('origin'))
-            spec.mesh(geom.meshname).scale = list(map(float, matches[0].find('geometry/mesh').get('scale', '1 1 1').split()))
-
-
-def sync_velocity_limits(spec, packages, variant, control):
-    """Embed configured command limits so the viewer needs only the generated XML."""
+def expand_urdf(variant, packages, control):
+    """The robot URDF in mock mode, plus the controller geometry and payload joint limits it is built from."""
     config = yaml.safe_load((control / 'config/base/control.yaml').read_text())['base_controller']['ros__parameters']
     motor = yaml.safe_load((control / 'config/base/urdf_config.yaml').read_text())
     payload_limits = {}
@@ -115,7 +70,33 @@ def sync_velocity_limits(spec, packages, variant, control):
             'base_controller_config': str(control / 'config/base/control.yaml'),
             **{key: str(value).lower() if isinstance(value, bool) else str(value) for key, value in motor.items()},
             'simulation_controllers': '', 'payload_simulation_controllers': ''})
-    urdf = ET.fromstring(doc.toxml())
+    return ET.fromstring(doc.toxml()), config, payload_limits
+
+
+def attach_payload(spec, variant, urdf, payload_limits, packages):
+    """Mount the pan-tilt payload at the URDF's mount joint.
+
+    pt_mujoco builds the payload (frames, inertias, limits, servo parameters, camera) from this
+    robot's own URDF; the base spec only owns where it is mounted.
+    """
+    joint = urdf.find("joint[@name='pantilt_mount_joint']")
+    if joint is None:
+        raise ValueError('Missing payload mount: pantilt_mount_joint')
+    parent = spec.body(joint.find('parent').get('link'))
+    if parent is None:
+        raise ValueError(f"Missing payload mount body: {joint.find('parent').get('link')}")
+    payload_package()
+    from pt_mujoco.build_mujoco_models import build_payload_spec
+    payload = build_payload_spec(variant, urdf, payload_limits, packages['pt_description'])
+    frame = parent.add_frame(name='pantilt_mount')
+    set_origin(frame, joint.find('origin'))
+    # A named root default stays valid when serialized below the robot's default.
+    payload.default.name = 'pt_payload'
+    spec.attach(payload, prefix='', frame=frame)
+
+
+def sync_velocity_limits(spec, urdf, config):
+    """Embed the wheel command limits and metadata so the viewer needs only the generated XML."""
     simulation = yaml.safe_load((SIM_PACKAGE / 'config/mujoco.yaml').read_text())
     sync_robot_parameters(spec, urdf, config, simulation, set_origin)
     def numeric(name, values, positive=True):
@@ -129,38 +110,12 @@ def sync_velocity_limits(spec, packages, variant, control):
     numeric('wheel_kinematics', [config['wheel_radius'], config['robot_radius'], config['wheel_offset']], positive=False)
     for actuator in spec.actuators:
         name = actuator.target
+        # The payload's limits are synced by pt_mujoco when it is attached.
         if name in ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint'):
             limit = float(urdf.find(f"joint[@name='{name}']/limit").get('velocity'))
             actuator.ctrllimited = True
             actuator.ctrlrange = [-limit, limit]
-        else:
-            # Real-mode URDF <limit velocity> is deliberately 1e6; use the
-            # hardware's actual max_velocity parameter, not that sentinel.
-            param = urdf.find(f".//ros2_control/joint[@name='{name}']/param[@name='max_velocity']")
-            if param is None:
-                raise ValueError(f'Missing hardware velocity limit for {name}')
-            hardware_limit = float(param.text)
-            urdf_limit = float(urdf.find(f"joint[@name='{name}']/limit").get('velocity'))
-            limit = min(hardware_limit, urdf_limit)
-            configured = payload_limits.get(name, {})
-            if configured.get('has_velocity_limits', False):
-                limit = min(limit, float(configured['max_velocity']))
-            joint_limit = urdf.find(f"joint[@name='{name}']/limit")
-            hardware_joint = urdf.find(f".//ros2_control/joint[@name='{name}']")
-            low = max(float(joint_limit.get('lower')),
-                      float(hardware_joint.find("param[@name='min_position']").text))
-            high = min(float(joint_limit.get('upper')),
-                       float(hardware_joint.find("param[@name='max_position']").text))
-            if configured.get('has_position_limits', False):
-                low = max(low, float(configured['min_position']))
-                high = min(high, float(configured['max_position']))
-            if not math.isfinite(low) or not math.isfinite(high) or low >= high:
-                raise ValueError(f'Invalid position limits for {name}: {low}, {high}')
-            spec.joint(name).range = [low, high]
-            actuator.inheritrange = 0
-            actuator.ctrllimited = True
-            actuator.ctrlrange = [low, high]
-        numeric('velocity_limit_' + name, [limit])
+            numeric('velocity_limit_' + name, [limit])
 
 
 def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_dir=None):
@@ -171,22 +126,14 @@ def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_
     packages = {'lekiwi_description': Path(description_dir).resolve() if description_dir else (PACKAGE or package_share('lekiwi_description'))}
     if variant != 'base':
         packages['pt_description'] = Path(pt_package).resolve() if pt_package else package_share('pt_description')
-        packages['pt_mujoco'] = package_share('pt_mujoco')
-    source = SIM_PACKAGE / 'mjcf' / ('base.mjcf.xacro' if variant == 'base' else 'base_pantilt.mjcf.xacro')
     with package_paths(packages):
-        doc = xacro.process_file(str(source), mappings={
-            'pantilt_config': variant, 'standalone': 'false'})
+        doc = xacro.process_file(str(SIM_PACKAGE / 'mjcf/base.mjcf.xacro'))
     # MuJoCo parses includes and maintains model references; no custom XML assembly.
     spec = mujoco.MjSpec.from_string(doc.toxml())
+    urdf, config, payload_limits = expand_urdf(variant, packages, control)
     if variant != 'base':
-        sync_payload_geometry(spec, packages, variant, control)
-    sync_velocity_limits(spec, packages, variant, control)
-    camera = spec.camera('oak_rgb')
-    if camera is not None:
-        # The OAK-D is mounted upside down: the camera axes follow the oak_link frame (right = its
-        # -Y, up = its +Z), which is rolled 180 degrees, so the image is upside down like the real one.
-        camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_XYAXES
-        camera.alt.xyaxes = [0, -1, 0, 0, 0, 1]
+        attach_payload(spec, variant, urdf, payload_limits, packages)
+    sync_velocity_limits(spec, urdf, config)
     configure_physics(spec)
     return spec
 

@@ -66,6 +66,7 @@ def launch_setup(context):
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
     pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
+    pkg_pt_mujoco = FindPackageShare('pt_mujoco').perform(context) if payload == 'pantilt' else ''
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
@@ -167,7 +168,8 @@ def launch_setup(context):
             f'{pkg_ctrl}/config/base/control.yaml',
             *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
             f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
-            *([f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml'] if payload == 'pantilt' else []),
+            *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
+               f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml'] if payload == 'pantilt' else []),
             {'use_sim_time': True},
             odom_tf_params,
         ],
