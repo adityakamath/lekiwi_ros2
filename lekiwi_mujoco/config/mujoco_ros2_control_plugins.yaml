@@ -16,3 +16,10 @@
         type: "mujoco_ros2_control_plugins/FreeJointStatePublisherPlugin"
         frame_id: ""
         publish_rate: 30.0
+      # /emergency_stop for the simulation (the real one is served by sts_hardware_interface):
+      # stops the wheels and holds the pan-tilt while enabled. Package: modules/estop_mujoco_plugin.
+      emergency_stop_plugin:
+        type: "estop_mujoco_plugin/EmergencyStopPlugin"
+      # Push a body for a test (service apply_wrench): shove the robot to try Nav2's recoveries.
+      external_wrench_plugin:
+        type: "mujoco_ros2_control_plugins/ExternalWrenchPlugin"

@@ -33,6 +33,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 - **[sts_hardware_interface](https://github.com/adityakamath/sts_hardware_interface)** (git submodule under `modules/`): Hardware interface for Feetech STS servos
 - **[bno055_hardware_interface](https://github.com/adityakamath/bno055_hardware_interface)** (git submodule under `modules/`): Hardware interface for the BNO055 IMU
 - **[ldlidar_ros2](https://github.com/adityakamath/ldlidar_ros2)** (git submodule under `modules/`): LD06 LiDAR driver with bug fixes
+- **[estop_mujoco_plugin](modules/estop_mujoco_plugin/README.md)** (`modules/`): `mujoco_ros2_control` plugin that serves `/emergency_stop` in the simulation like the real hardware interface, robot-agnostic; `sim:=true` only
 - **[ina260_battery_monitor](https://github.com/adityakamath/ina260_battery_monitor)** (git submodule under `modules/`): INA260 battery current/voltage/power monitoring, with threshold-based SetBool event services
 - **[laser_filters](https://github.com/ros-perception/laser_filters)**, **[Nav2](https://docs.nav2.org/)**, **[slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)**, **[robot_localization](https://github.com/cra-ros-pkg/robot_localization)**: Laser filtering, navigation/SLAM, and EKF sensor fusion (`lekiwi_navigation`)
 - **[joy](https://github.com/ros-drivers/joystick_drivers)** / **[joy_teleop](https://index.ros.org/p/joy_teleop/)**: Joystick teleoperation
@@ -99,7 +100,7 @@ The base runs on its own (`payload:=""`). Optional payloads, each in its own rep
 
 1. **Registered** in `_VALID_PAYLOADS` in `lekiwi_bringup/launch/lekiwi.launch.py`, which forwards `payload` to the control launch (which also starts teleop) and the laser launch.
 2. **Description:** the payload repository provides a URDF module with a fixed mount joint; `lekiwi_description/urdf/base_<name>/` combines it with the base.
-3. **Control and teleop:** `lekiwi_control` loads the payload's overlays from `config/payloads/<name>/` (`urdf_config.yaml`, `control.yaml`, `<name>_teleop.yaml`) on top of the base's, so one `controller_manager` drives the base and the payload.
+3. **Control and teleop:** the payload's own control package supplies its controller (`pantilt_controller.yaml`, which `lekiwi_control` gives to the spawner with `--param-file`) and its servo profile, so nothing is copied into lekiwi and one `controller_manager` still drives the base and the payload. `lekiwi_control` keeps only what depends on the host, the joystick layout in `config/payloads/<name>/<name>_teleop.yaml`, loaded on top of `base_teleop.yaml`.
 4. **Sensors:** a payload that blocks part of the LiDAR's view adds `lekiwi_bringup/config/<name>_laser_filter.yaml`, which `laser.launch.py` applies automatically.
 5. **Simulation:** the payload's MuJoCo package builds its model from the robot's URDF (for `pantilt`, `pt_mujoco`'s `build_payload_spec`), and `lekiwi_mujoco` attaches it at the URDF's mount joint.
 
@@ -154,6 +155,7 @@ lekiwi_ros2/
 ├── lekiwi_bringup/      # System integration launch files
 ├── lekiwi_audio/        # Spoken status announcements (e-stop, mode switching, waypoints)
 ├── modules/
+│   ├── estop_mujoco_plugin/        # Simulated /emergency_stop for mujoco_ros2_control (any robot)
 │   ├── sts_hardware_interface/     # Feetech STS servo hardware interface (git submodule)
 │   ├── bno055_hardware_interface/  # BNO055 IMU hardware interface (git submodule)
 │   ├── ldlidar_ros2/               # LD06 LiDAR driver (git submodule)

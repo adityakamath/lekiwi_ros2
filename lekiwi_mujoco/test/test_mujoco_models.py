@@ -225,7 +225,7 @@ def test_limits_regenerate_from_edited_configuration_and_urdf(tmp_path, monkeypa
     assert root.find("actuator/general[@name='left_wheel_joint']").get('ctrlrange') == '-0.9 0.9'
 
 
-def test_payload_config_overrides_velocity_and_position_limits(tmp_path, monkeypatch):
+def test_payload_control_package_overrides_velocity_and_position_limits(tmp_path, monkeypatch):
     import shutil
     import yaml
     from lekiwi_mujoco import build_mujoco_models as builder
@@ -237,13 +237,17 @@ def test_payload_config_overrides_velocity_and_position_limits(tmp_path, monkeyp
         shutil.copytree(PACKAGE / folder, simulation / folder)
     control = tmp_path / 'lekiwi_control/config'
     shutil.copytree(PACKAGE.parent / 'lekiwi_control/config', control)
-    config = control / 'payloads/pantilt/control.yaml'
+    # The payload's limit overrides live in its own control package (pt_control), not in lekiwi.
+    payload_control = tmp_path / 'pt_control'
+    shutil.copytree(PACKAGE.parent / 'payloads/pantilt_ros2/pt_control/config', payload_control / 'config')
+    config = payload_control / 'config/pantilt_config.yaml'
     settings = yaml.safe_load(config.read_text())
-    limits = settings['controller_manager']['ros__parameters']['joint_limits']
+    limits = settings['controller_manager']['ros__parameters'].setdefault('joint_limits', {})
     for name, speed, low, high in [('shoulder_pan_joint', .7, -.4, .5), ('tilt_joint', .9, -.6, .3)]:
-        limits[name].update(has_velocity_limits=True, max_velocity=speed,
-                            min_position=low, max_position=high)
+        limits.setdefault(name, {}).update(has_velocity_limits=True, max_velocity=speed,
+                                           has_position_limits=True, min_position=low, max_position=high)
     config.write_text(yaml.safe_dump(settings))
+    monkeypatch.setenv('PT_CONTROL_SHARE', str(payload_control))
     monkeypatch.setattr(builder, 'PACKAGE', description)
     monkeypatch.setattr(builder, 'SIM_PACKAGE', simulation)
     monkeypatch.setattr(builder, 'control_package', lambda: tmp_path / 'lekiwi_control')

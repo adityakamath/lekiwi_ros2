@@ -61,7 +61,10 @@ def expand_urdf(variant, packages, control):
     motor = yaml.safe_load((control / 'config/base/urdf_config.yaml').read_text())
     payload_limits = {}
     if variant != 'base':
-        payload_limits = yaml.safe_load((control / 'config/payloads/pantilt/control.yaml').read_text())['controller_manager']['ros__parameters'].get('joint_limits', {})
+        # Optional limit overrides come from the payload's own control package, like the real robot's.
+        payload_package()
+        from pt_mujoco.build_mujoco_models import joint_limits
+        payload_limits = joint_limits(package_share('pt_control'))
     source = 'base/base.urdf.xacro' if variant == 'base' else 'base_pantilt/base_pantilt.urdf.xacro'
     with package_paths(packages):
         doc = xacro.process_file(str(packages['lekiwi_description'] / 'urdf' / source), mappings={

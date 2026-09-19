@@ -168,32 +168,6 @@ class TestCollisionToggleYaml:
         assert node == '/collision_monitor'
 
 
-# ── pantilt/control.yaml ─────────────────────────────────────────────────────
-
-class TestControlYamlPantilt:
-    def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'control.yaml'))
-
-    def test_pantilt_controller_registered(self):
-        types = self.cfg['controller_manager']['ros__parameters']
-        assert 'pantilt_controller' in types, \
-            "pantilt/control.yaml must register pantilt_controller in controller_manager"
-
-    def test_pantilt_controller_type(self):
-        ct = self.cfg['controller_manager']['ros__parameters']['pantilt_controller']['type']
-        assert 'ForwardCommandController' in ct
-
-    def test_pan_tilt_joint_limits_valid(self):
-        limits = self.cfg['controller_manager']['ros__parameters']['joint_limits']
-        for joint in ('shoulder_pan_joint', 'tilt_joint'):
-            assert joint in limits, f"Missing joint_limits entry for '{joint}'"
-            assert limits[joint]['min_position'] < limits[joint]['max_position']
-
-    def test_pantilt_controller_uses_position_interface(self):
-        iface = self.cfg['pantilt_controller']['ros__parameters']['interface_name']
-        assert iface == 'position'
-
-
 # ── pantilt/pantilt_teleop.yaml ──────────────────────────────────────────────────────
 
 class TestTeleopYamlPantilt:

@@ -34,7 +34,7 @@
       </default>
       <default class="pt_payload">
         <default class="pt_sts3215">
-          <joint armature="0.03246" damping="1.05784" frictionloss="0.195871"/>
+          <joint solreflimit="0.004" solimplimit="0.99 0.999" armature="0.03246" damping="1.05784" frictionloss="0.195871"/>
           <general forcerange="-8.53772 8.53772" biastype="affine" gainprm="42.9119" biasprm="0 -42.9119"/>
         </default>
         <default class="pantilt">

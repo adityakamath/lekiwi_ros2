@@ -11,7 +11,8 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`) generated from the URDF, plus
 - Payload submodule: `git submodule update --init payloads/pantilt_ros2` (provides `pt_description` and `pt_mujoco`, which builds the pan-tilt model from the robot's URDF; it is found in the checkout when not installed).
 - ROS sim only (Kilted): `sudo apt install ros-kilted-mujoco-ros2-control
   ros-kilted-mujoco-ros2-control-plugins ros-kilted-mujoco-3d-lidar ros-kilted-laser-filters`
-  (0.1.2 or newer; older releases have no camera or native lidar plugin).
+  (0.1.2 or newer; older releases have no camera or native lidar plugin). The simulation's
+  `/emergency_stop` comes from `modules/estop_mujoco_plugin`, built in the same workspace.
 
 ## Standalone use
 
@@ -58,7 +59,11 @@ audio are not simulated. Sensors come from plugins configured in `config/`:
 |---|---|
 | `/scan` | Native `mujoco.plugin.lidar` (360 rays, 5 Hz) publishes `/scan_raw`; `laser_filters` (`config/mujoco_laser_filter*.yaml`) turns no-hit into `inf` and masks the pan-tilt into `/scan` |
 | `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | `CameraPlugin` (configured by `pt_mujoco`, rate lowered to 5 Hz here), headless EGL; frame `oak_rgb_camera_optical_frame`; image is upside down like the real, inverted OAK-D mount |
+| `/oak/scan` | With the pan-tilt: `depthimage_to_laserscan` slices the simulated depth image, as the real bringup does (`pt_mujoco/config/mujoco_depth_to_scan.yaml`) |
 | `/free_joint_state_publisher/free_joint_states` | Ground-truth base pose and velocity |
+| `/emergency_stop` (`std_srvs/SetBool`) | [`estop_mujoco_plugin`](../modules/estop_mujoco_plugin/README.md): the service `sts_hardware_interface` provides on the real robot. While enabled it commands the wheels to zero and holds the pan-tilt where it was; releasing it hands the commands back |
+| `/external_wrench_plugin/apply_wrench` | `ExternalWrenchPlugin`: pushes a body for a test, e.g. to trigger Nav2 recoveries |
+| `/mujoco_ros2_control_node/{reset_world,set_free_joint_state,set_pause,step_simulation}` | Core services: reset, teleport the base, pause and single-step the simulation |
 | `/joint_states`, `/imu_sensor_broadcaster/imu`, `/base_controller/odom` | ros2_control on the simulated hardware |
 
 Notes for control-only runs: `control.launch.py` publishes `odom -> base_footprint` from wheel
@@ -72,7 +77,7 @@ loads in ROS's MuJoCo, so standalone tools use per-ray rangefinders.
 | File | Controls |
 |---|---|
 | `config/mujoco.yaml` | Timestep/solver, contact and roller parameters, wheel actuator gains, wheel servo armature/friction (BAM-identified STS3215), native lidar, standalone base speed |
-| `config/mujoco_ros2_control_plugins.yaml`, `mujoco_camera_pantilt.yaml` | ROS plugins (lidar, ground-truth pose); the camera plugin config comes from `pt_mujoco` and the second file only lowers its rate for the Pi |
+| `config/mujoco_ros2_control_plugins.yaml`, `mujoco_camera_pantilt.yaml` | ROS plugins (lidar, ground-truth pose, emergency stop); the camera plugin config comes from `pt_mujoco` and the second file only lowers its rate for the Pi |
 | `mjcf/base_shared.xml`, `base_subtree.xml`, `sts3215.mjcf.xacro` | Shared MJCF (16 contact rollers per wheel; wheel joint damping forced to 0); geometry, masses and limits are overwritten from the URDF at build time; the pan-tilt payload is not here, `pt_mujoco` builds it and it is attached at the URDF's `pantilt_mount_joint` |
 | `mjcf/scenes/flat.xml`, `arena.xml` | Floor only; 6 x 6 m walled room with obstacles |
 

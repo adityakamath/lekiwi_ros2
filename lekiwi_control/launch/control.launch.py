@@ -67,6 +67,7 @@ def launch_setup(context):
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
     pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
     pkg_pt_mujoco = FindPackageShare('pt_mujoco').perform(context) if payload == 'pantilt' else ''
+    pkg_pt_control = FindPackageShare('pt_control').perform(context) if payload == 'pantilt' else ''
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
@@ -113,7 +114,7 @@ def launch_setup(context):
         f' imu:={str(imu).lower()}'
     )
     if payload == 'pantilt':
-        pt_cfg = yaml.safe_load(open(f'{FindPackageShare("pt_control").perform(context)}/config/urdf_config.yaml'))
+        pt_cfg = yaml.safe_load(open(f'{pkg_pt_control}/config/urdf_config.yaml'))
         xacro_cmd += (
             f' pantilt_config:={pantilt_config}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
@@ -148,7 +149,6 @@ def launch_setup(context):
         parameters=[
             robot_description,
             f'{pkg_ctrl}/config/base/control.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
             {'use_sim_time': use_sim_time},
             odom_tf_params,
         ],
@@ -165,7 +165,6 @@ def launch_setup(context):
         parameters=[
             robot_description,
             f'{pkg_ctrl}/config/base/control.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
             f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
             *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
                f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml'] if payload == 'pantilt' else []),
@@ -200,6 +199,16 @@ def launch_setup(context):
                 output='log',
                 parameters=[{'in_transport': 'raw', 'out_transport': 'compressed', 'use_sim_time': True}],
                 remappings=[('in', '/oak/rgb/image_raw'), ('out/compressed', '/oak/rgb/image_raw/compressed')],
+            ))
+            sim_nodes.append(Node(
+                package='depthimage_to_laserscan',
+                executable='depthimage_to_laserscan_node',
+                name='depth_to_scan',
+                output='log',
+                parameters=[f'{pkg_pt_mujoco}/config/mujoco_depth_to_scan.yaml', {'use_sim_time': True}],
+                # The simulated depth shares the RGB camera's intrinsics, and has no camera_info of its own.
+                remappings=[('depth', '/oak/stereo/image_raw'), ('depth_camera_info', '/oak/rgb/camera_info'),
+                            ('scan', '/oak/scan')],
             ))
             sim_nodes.append(Node(
                 package='tf2_ros',
@@ -254,7 +263,9 @@ def launch_setup(context):
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
                  arguments=['pantilt_controller', '-c', '/controller_manager',
-                            '--controller-manager-timeout', '30'], output='both'),
+                            '--controller-manager-timeout', '30',
+                            '--param-file', f'{pkg_pt_control}/config/pantilt_controller.yaml'],
+                 output='both'),
         )
 
     joint_state_broadcaster_spawner = Node(

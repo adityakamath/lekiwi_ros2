@@ -19,8 +19,8 @@
   <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
        both $(arg simulation_controllers) (base) and $(arg payload_simulation_controllers)
        (pantilt) - gz_ros2_control's <parameters> tag can be given multiple times and
-       controller_manager merges them, same as the real robot's standalone
-       ros2_control_node merges base/control.yaml + payloads/pantilt/control.yaml.
+       controller_manager merges them. (On the real robot the pan-tilt controller is not merged
+       into the manager's parameters: it is spawned with pt_control's pantilt_controller.yaml.)
        Inert (ignored) outside Gazebo, so this is safe to leave in place regardless of
        ros2_control_hardware_type. -->
   <gazebo>
