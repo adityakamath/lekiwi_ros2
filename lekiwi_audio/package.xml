@@ -4,8 +4,13 @@
   <name>lekiwi_audio</name>
   <version>0.1.0</version>
   <description>Spoken status announcements (e-stop, mode switching, waypoints) for LeKiwi robot</description>
+  <author email="adityakamath@live.com">Aditya Kamath</author>
   <maintainer email="adityakamath@live.com">Aditya Kamath (Kamath Robotics)</maintainer>
   <license>Apache-2.0</license>
+
+  <url type="website">https://github.com/adityakamath/lekiwi_ros2</url>
+  <url type="repository">https://github.com/adityakamath/lekiwi_ros2</url>
+  <url type="bugtracker">https://github.com/adityakamath/lekiwi_ros2/issues</url>
 
   <buildtool_depend>ament_python</buildtool_depend>
 
@@ -13,6 +18,7 @@
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>service_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>

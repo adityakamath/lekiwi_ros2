@@ -4,21 +4,24 @@
   <name>lekiwi_control</name>
   <version>0.1.0</version>
   <description>High-level control nodes and diagnostics for LeKiwi robot</description>
+  <author email="adityakamath@live.com">Aditya Kamath</author>
   <maintainer email="adityakamath@live.com">Aditya Kamath (Kamath Robotics)</maintainer>
   <license>Apache-2.0</license>
 
+  <url type="website">https://github.com/adityakamath/lekiwi_ros2</url>
+  <url type="repository">https://github.com/adityakamath/lekiwi_ros2</url>
+  <url type="bugtracker">https://github.com/adityakamath/lekiwi_ros2/issues</url>
+
   <buildtool_depend>ament_python</buildtool_depend>
 
-  <!-- ros2_control framework -->
   <exec_depend>ros2_control</exec_depend>
   <exec_depend>ros2_controllers</exec_depend>
 
-  <!-- Runtime dependencies for launch files -->
+  <!-- Launch files -->
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>lekiwi_description</exec_depend>
   <exec_depend>lekiwi_mujoco</exec_depend>
-  <exec_depend>pt_description</exec_depend>
   <exec_depend>pt_control</exec_depend>
   <exec_depend>pt_mujoco</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
@@ -30,12 +33,9 @@
   <exec_depend>imu_sensor_broadcaster</exec_depend>
   <exec_depend>sts_hardware_interface</exec_depend>
   <exec_depend>bno055_hardware_interface</exec_depend>
-  <!-- ros2_control_hardware_type:="mujoco" only - this package starts
-       mujoco_ros2_control's own ros2_control_node directly, which also hosts the MuJoCo
-       simulation itself, with its lidar, camera and ground-truth pose published by plugins. -->
+  <!-- Simulation only (sim:=true) -->
   <exec_depend>mujoco_ros2_control</exec_depend>
-  <!-- plugins loaded via lekiwi_mujoco/config/mujoco_ros2_control_plugins.yaml (native lidar, camera,
-       ground-truth pose); scan_to_scan_filter_chain and the camera optical-frame TF in sim -->
+  <!-- Plugins and filters used in simulation -->
   <exec_depend>mujoco_ros2_control_plugins</exec_depend>
   <exec_depend>mujoco_3d_lidar</exec_depend>
   <exec_depend>laser_filters</exec_depend>
@@ -49,7 +49,6 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>service_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
-  <!-- collision_toggle_node: watches /joy, calls SetParameters on collision_monitor -->
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>rcl_interfaces</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
