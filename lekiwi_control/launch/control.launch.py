@@ -53,6 +53,11 @@ def launch_setup(context):
     imu          = _launch_arg_as_bool(context, 'imu')
     launch_joy   = _launch_arg_as_bool(context, 'joy')
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
+    enable_odom_tf = _launch_arg_as_bool(context, 'enable_odom_tf')
+    # A params file, not a dotted key: the controller reads its own base_controller.ros__parameters.
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_odom_tf_', delete=False) as f:
+        yaml.safe_dump({'base_controller': {'ros__parameters': {'enable_odom_tf': enable_odom_tf}}}, f)
+        odom_tf_params = f.name
     hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
     mujoco_model    = LaunchConfiguration('mujoco_model').perform(context)
     mujoco_scene = LaunchConfiguration('mujoco_scene').perform(context)
@@ -60,6 +65,7 @@ def launch_setup(context):
 
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
+    pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
     xacro    = FindExecutable(name='xacro').perform(context)
 
     urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
@@ -78,6 +84,7 @@ def launch_setup(context):
             '--control-package', pkg_ctrl, '--description-package', pkg_desc,
             '--variant', pantilt_config if payload == 'pantilt' else 'base',
             '--output', final_mujoco_model, '--absolute', '--scene', mujoco_scene,
+            '--lidar', 'plugin',
         ], capture_output=True, text=True, check=True)
     else:
         final_mujoco_model = ''
@@ -143,6 +150,7 @@ def launch_setup(context):
             f'{pkg_ctrl}/config/base/control.yaml',
             *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
             {'use_sim_time': use_sim_time},
+            odom_tf_params,
         ],
         output='log',
         emulate_tty=True,
@@ -158,13 +166,40 @@ def launch_setup(context):
             robot_description,
             f'{pkg_ctrl}/config/base/control.yaml',
             *([] if not payload else [f'{pkg_ctrl}/config/payloads/{payload}/control.yaml']),
+            f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
+            *([f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml'] if payload == 'pantilt' else []),
             {'use_sim_time': True},
+            odom_tf_params,
         ],
         output='both',
         emulate_tty=True,
     )
 
     control_node = mujoco_control_node if hw_type == 'mujoco' else controller_manager
+
+    # Sim-only extras: the plugin's raw lidar scan goes through the same laser_filters
+    # raw-to-/scan split the real LD06 uses, and the camera images need an optical frame.
+    sim_nodes = []
+    if hw_type == 'mujoco':
+        filter_file = 'sim_laser_filter_pantilt.yaml' if payload == 'pantilt' else 'sim_laser_filter.yaml'
+        sim_nodes.append(Node(
+            package='laser_filters',
+            executable='scan_to_scan_filter_chain',
+            name='laser_scan_filter_chain',
+            output='log',
+            parameters=[f'{pkg_mujoco}/config/{filter_file}', {'use_sim_time': True}],
+            remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
+        ))
+        if payload == 'pantilt':
+            sim_nodes.append(Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name='oak_optical_frame_publisher',
+                output='log',
+                arguments=['--frame-id', 'oak_link', '--child-frame-id', 'oak_rgb_camera_optical_frame',
+                           '--roll', '-1.5707963', '--pitch', '0', '--yaw', '-1.5707963'],
+                parameters=[{'use_sim_time': True}],
+            ))
 
     teleop_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([f'{pkg_ctrl}/launch/teleop.launch.py']),
@@ -246,6 +281,7 @@ def launch_setup(context):
         *controller_spawner_actions,
         teleop_include,
         control_support_node,
+        *sim_nodes,
     ]
 
     if diagnostics:
@@ -311,6 +347,13 @@ def generate_launch_description():
             'use_sim_time',
             default_value='false',
             description='Use /clock from a simulator instead of system time.',
+        ),
+        DeclareLaunchArgument(
+            'enable_odom_tf',
+            default_value='true',
+            description='Let base_controller publish the odom -> base_footprint TF from wheel odometry. '
+                        'Default true so this launch file is usable standalone; lekiwi.launch.py passes '
+                        'false because the navigation EKF (robot_localization) publishes it there.',
         ),
         DeclareLaunchArgument(
             'joy',

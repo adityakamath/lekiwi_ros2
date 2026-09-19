@@ -68,6 +68,9 @@ def test_pan_tilt_and_optical_axes(filename):
     model, data = runtime.model, runtime.data
     camera = model.camera('oak_rgb').id
     assert np.dot(-data.cam_xmat[camera].reshape(3, 3)[:, 2], [1, 0, 0]) > .999
+    # The physical camera is mounted upside down: image up is world -Z, right is world +Y.
+    assert np.dot(data.cam_xmat[camera].reshape(3, 3)[:, 1], [0, 0, -1]) > .999
+    assert np.dot(data.cam_xmat[camera].reshape(3, 3)[:, 0], [0, 1, 0]) > .999
     for name, goal in [('shoulder_pan_joint', .6), ('tilt_joint', .3)]:
         data.ctrl[model.actuator(name).id] = goal
     runtime.step(2000)
@@ -201,12 +204,9 @@ def test_limits_regenerate_from_edited_configuration_and_urdf(tmp_path, monkeypa
         shutil.copytree(PACKAGE / folder, simulation / folder)
     control = tmp_path / 'lekiwi_control/config/base'
     shutil.copytree(PACKAGE.parent / 'lekiwi_control/config/base', control)
-    config = control / 'control.yaml'
+    config = simulation / 'config/mujoco.yaml'
     config_data = yaml.safe_load(config.read_text())
-    base = config_data['base_controller']['ros__parameters']
-    base['linear']['x']['max_velocity'] = .08
-    base['linear']['y']['max_velocity'] = .06
-    base['angular']['z']['max_velocity'] = .25
+    config_data['command']['base_velocity'] = [.08, .06, .25]
     config.write_text(yaml.safe_dump(config_data))
     motors = control / 'urdf_config.yaml'
     motor_data = yaml.safe_load(motors.read_text())

@@ -221,15 +221,16 @@ class TestBaseUrdfMujocoImu:
         rc = root.find('ros2_control[@name="lekiwi_base"]')
         assert rc.find('.//sensor[@name="bno055"]') is not None, \
             "mujoco lekiwi_base block should contain a bno055 sensor when imu:=true"
-        assert rc.find('.//sensor[@name="lidar"]') is not None, "lidar sensor should still be present"
+        assert rc.find('.//sensor[@name="lidar"]') is None, \
+            "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
 
     def test_mujoco_bno055_sensor_absent_when_imu_false(self):
         root = self._render('false')
         rc = root.find('ros2_control[@name="lekiwi_base"]')
         assert rc.find('.//sensor[@name="bno055"]') is None, \
             "mujoco lekiwi_base block should omit the bno055 sensor when imu:=false"
-        assert rc.find('.//sensor[@name="lidar"]') is not None, \
-            "lidar sensor should still be present when imu:=false"
+        assert rc.find('.//sensor[@name="lidar"]') is None, \
+            "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
 
 
 class TestBasePantiltUrdfInterfaces:

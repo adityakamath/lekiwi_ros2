@@ -1,0 +1,14 @@
+# CameraPlugin config for the OAK-D on payload:=pantilt. Topic names match the real
+# depthai_ros_driver. The image frame is an optical frame (z forward) so viewers such as
+# Foxglove draw the frustum correctly; control.launch.py publishes its static TF from oak_link.
+/**:
+  ros__parameters:
+    mujoco_plugins:
+      mujoco_camera_plugin:
+        type: "mujoco_ros2_control_plugins/CameraPlugin"
+        camera_publish_rate: 30.0
+        oak_rgb:
+          frame_name: oak_rgb_camera_optical_frame
+          info_topic: /oak/rgb/camera_info
+          image_topic: /oak/rgb/image_raw
+          depth_topic: /oak/stereo/image_raw

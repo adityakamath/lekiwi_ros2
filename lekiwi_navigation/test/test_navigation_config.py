@@ -202,42 +202,29 @@ class TestEkfOdomYaml:
 
 class TestCrossFileVelocityConsistency:
     """
-    nav2.yaml comments state several limits must match base_controller values in
-    lekiwi_control/config/base/control.yaml. This test enforces that contract.
+    The base's speed limits are joy_teleop's axis scales (lekiwi_control/config/base/teleop.yaml);
+    the controller enforces none, so nav2.yaml must match them. Acceleration limits live in
+    nav2.yaml only.
     """
 
     def setup_method(self):
         self.nav2 = _load(os.path.join(_CFG_NAV2, 'nav2.yaml'))
         # lekiwi_navigation lives at src/lekiwi_ros2/lekiwi_navigation;
-        # lekiwi_control lives at src/lekiwi_ros2/lekiwi_control — same monorepo.
-        ctrl_path = os.path.normpath(os.path.join(
-            _PKG_SRC, '..', 'lekiwi_control', 'config', 'base', 'control.yaml'
-        ))
-        self.ctrl = _load(ctrl_path)
+        # lekiwi_control lives at src/lekiwi_ros2/lekiwi_control - same monorepo.
+        teleop = _load(os.path.normpath(os.path.join(
+            _PKG_SRC, '..', 'lekiwi_control', 'config', 'base', 'teleop.yaml')))
+        axes = teleop['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+        self.limits = [axes['twist-linear-x']['scale'], axes['twist-linear-y']['scale'],
+                       axes['twist-angular-z']['scale']]
 
-    def _ctrl_linear(self, axis):
-        return self.ctrl['base_controller']['ros__parameters']['linear'][axis]
-
-    def _ctrl_angular(self):
-        return self.ctrl['base_controller']['ros__parameters']['angular']['z']
-
-    def test_behavior_server_backup_limits_match_controller(self):
+    def test_behavior_server_rotation_limit_matches_teleop(self):
         bs = self.nav2['behavior_server']['ros__parameters']
-        assert bs['backup']['acceleration_limit'] == self._ctrl_linear('x')['max_acceleration']
-        assert bs['backup']['deceleration_limit'] == -self._ctrl_linear('x')['max_acceleration']
+        assert bs['max_rotational_vel'] == self.limits[2]
 
-    def test_behavior_server_rotation_limits_match_controller(self):
-        bs = self.nav2['behavior_server']['ros__parameters']
-        assert bs['max_rotational_vel'] == self._ctrl_angular()['max_velocity']
-        assert bs['rotational_acc_lim'] == self._ctrl_angular()['max_acceleration']
-
-    def test_velocity_smoother_limits_match_controller(self):
+    def test_velocity_smoother_limits_match_teleop(self):
         vs = self.nav2['velocity_smoother']['ros__parameters']
-        assert vs['max_velocity'][0] == self._ctrl_linear('x')['max_velocity']
-        assert vs['max_velocity'][1] == self._ctrl_linear('y')['max_velocity']
-        assert vs['max_velocity'][2] == self._ctrl_angular()['max_velocity']
-        assert vs['max_accel'][0] == self._ctrl_linear('x')['max_acceleration']
-        assert vs['max_accel'][1] == self._ctrl_linear('y')['max_acceleration']
+        assert list(vs['max_velocity']) == self.limits
+        assert list(vs['min_velocity']) == [-v for v in self.limits]
 
 
 # ── map_saver.yaml, waypoint_recorder.yaml ────────────────────────────────────

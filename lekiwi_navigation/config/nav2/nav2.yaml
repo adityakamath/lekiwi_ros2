@@ -285,8 +285,8 @@ behavior_server:
       plugin: "nav2_behaviors::Spin"
     backup:
       plugin: "nav2_behaviors::BackUp"
-      acceleration_limit: 1.0      # must match base_controller ax_max (control.yaml)
-      deceleration_limit: -1.0     # must match base_controller ax_min (control.yaml)
+      acceleration_limit: 1.0      # nav2-only (the controller enforces no acceleration limit)
+      deceleration_limit: -1.0     # nav2-only
       minimum_speed: 0.10
     wait:
       plugin: "nav2_behaviors::Wait"
@@ -305,7 +305,7 @@ velocity_smoother:
     smoothing_frequency: 20.0      # Hz
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.2, 0.17, 0.68]    # [vx, vy, wz] — must match base_controller
+    max_velocity: [0.2, 0.17, 0.68]    # [vx, vy, wz] — must match the axis scales in lekiwi_control teleop.yaml
     min_velocity: [-0.2, -0.17, -0.68]
     max_accel: [1.0, 0.85, 3.4]
     max_decel: [-1.0, -0.85, -3.4]

@@ -21,7 +21,7 @@ Omnidirectional mobile robot platform built with ROS 2 and ros2_control. Feature
 
 - **lekiwi_bringup** — Top-level launch files that bring up the full system (control, navigation, sensors, payload) based on `payload`/`sim`/`mission` and other arguments.
 - **lekiwi_description** — URDF robot models, meshes, and visualization launch files.
-- **lekiwi_mujoco** — MuJoCo models for the base and pan-tilt variants, generated from the URDF and controller config, plus a standalone (no ROS) viewer, Gymnasium adapter and benchmark. See its [README](lekiwi_mujoco/README.md).
+- **lekiwi_mujoco** — MuJoCo models for the base and pan-tilt variants, generated from the URDF and controller config, plus a standalone (no ROS) viewer and benchmark. See its [README](lekiwi_mujoco/README.md).
 - **lekiwi_control** — ros2_control hardware interfaces, controller configs, and launch files (real, mock, or MuJoCo).
 - **lekiwi_navigation** — SLAM (slam_toolbox), localization (AMCL), Nav2, EKF sensor fusion, and map storage.
 - **lekiwi_audio** — Spoken status announcements for e-stop, mode switching, waypoint actions, and battery threshold events.
@@ -126,7 +126,7 @@ Nav2 no-go and speed-limited zones are supported. Zone masks live under `lekiwi_
 
 `sim:=true` runs against MuJoCo instead of real hardware. Verified working end-to-end for both `payload:=""` and `payload:=pantilt`: wheel and pan-tilt commands drive real simulated physics, `imu_sensor_broadcaster` publishes real IMU data (including gravity), and odometry/TF update correctly — a single `payload:=pantilt` `controller_manager` was confirmed driving wheels and pan-tilt concurrently without interference, matching the shared-bus design (see [pantilt_ros2 README](payloads/pantilt_ros2/README.md#launch-time-bring-up-on-a-shared-bus)). Not validated for fidelity against real hardware behavior — only that the `ros2_control` integration itself works.
 
-`sim:=true` runs headless by default (`mujoco_gui:=true` opens the MuJoCo viewer and needs a display). The model is generated at launch from the URDF and controller config by [`lekiwi_mujoco`](lekiwi_mujoco/README.md), which also documents standalone use without ROS, the model and its uncalibrated approximations, and the open simulation work.
+`sim:=true` runs headless by default (`mujoco_gui:=true` opens the MuJoCo viewer and needs a display). The model is generated at launch from the URDF and controller config by [`lekiwi_mujoco`](lekiwi_mujoco/README.md). The simulated hardware covers the wheels, pan-tilt, IMU, lidar (`/scan`) and the OAK-D camera (`/oak/rgb/image_raw`, `/oak/stereo/image_raw`); the battery monitor and audio are not simulated and stay skipped. The `lekiwi_mujoco` README documents how each sensor is produced, the walled `arena` scene (`mujoco_scene:=arena` on `control.launch.py`), standalone use without ROS, the model's uncalibrated approximations, and the open simulation work.
 
 ## Structure
 
@@ -134,7 +134,7 @@ Nav2 no-go and speed-limited zones are supported. Zone masks live under `lekiwi_
 lekiwi_ros2/
 ├── lekiwi_control/      # Control, diagnostics, launch files
 ├── lekiwi_description/  # URDF models and meshes
-├── lekiwi_mujoco/       # MuJoCo models, standalone viewer, Gymnasium adapter
+├── lekiwi_mujoco/       # MuJoCo models and standalone viewer
 ├── lekiwi_navigation/   # SLAM, localization, EKF sensor fusion, maps
 ├── lekiwi_bringup/      # System integration launch files
 ├── lekiwi_audio/        # Spoken status announcements (e-stop, mode switching, waypoints)

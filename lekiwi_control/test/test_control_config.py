@@ -84,11 +84,11 @@ class TestControlYaml:
     def test_base_controller_present(self):
         assert 'base_controller' in self.cfg
 
-    def test_velocity_limits_consistent(self):
+    def test_no_dead_limit_blocks(self):
+        # omni_wheel_drive_controller declares no velocity/acceleration parameters; speed limits
+        # are the teleop axis scales (teleop.yaml) and Nav2's.
         params = self.cfg['base_controller']['ros__parameters']
-        assert params['linear']['x']['max_velocity'] > 0
-        assert params['linear']['y']['max_velocity'] > 0
-        assert params['angular']['z']['max_velocity'] > 0
+        assert 'linear' not in params and 'angular' not in params
 
 
 # ── teleop.yaml ──────────────────────────────────────────────────────────────
@@ -103,6 +103,11 @@ class TestTeleopYaml:
     def test_drive_action_present(self):
         actions = self.cfg['joy_teleop']['ros__parameters']
         assert 'teleop' in actions, "Missing 'teleop' drive action"
+
+    def test_axis_scales_are_positive_speed_limits(self):
+        axes = self.cfg['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+        for name in ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'):
+            assert axes[name]['scale'] > 0
 
     def test_deadman_button_defined(self):
         teleop = self.cfg['joy_teleop']['ros__parameters']['teleop']

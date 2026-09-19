@@ -123,9 +123,9 @@ def sync_velocity_limits(spec, packages, variant, control):
         if not all(math.isfinite(v) and (not positive or v > 0) for v in values):
             raise ValueError(f'Invalid command limits: {name}')
         spec.add_numeric(name=name, data=values)
-    numeric('base_velocity_limits', [config['linear']['x']['max_velocity'],
-                                    config['linear']['y']['max_velocity'],
-                                    config['angular']['z']['max_velocity']])
+    # Speed scale for the standalone keyboard viewer, owned by this package. The ROS
+    # sim reads none of it: it follows the commands it receives (teleop and Nav2 set the speeds).
+    numeric('base_velocity_limits', simulation['command']['base_velocity'])
     numeric('wheel_kinematics', [config['wheel_radius'], config['robot_radius'], config['wheel_offset']], positive=False)
     for actuator in spec.actuators:
         name = actuator.target
@@ -182,6 +182,8 @@ def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_
     sync_velocity_limits(spec, packages, variant, control)
     camera = spec.camera('oak_rgb')
     if camera is not None:
+        # The OAK-D is mounted upside down: the camera axes follow the oak_link frame (right = its
+        # -Y, up = its +Z), which is rolled 180 degrees, so the image is upside down like the real one.
         camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_XYAXES
         camera.alt.xyaxes = [0, -1, 0, 0, 0, 1]
     configure_physics(spec)
@@ -229,10 +231,10 @@ def compose_scene(robot, scene='flat'):
     no_scene = scene is False or scene is None or scene == 'none'
     if no_scene:
         return robot
-    if scene is True or scene == 'flat':
-        path = SIM_PACKAGE / 'mjcf/scenes/flat.xml'
-    else:
-        path = Path(scene).expanduser().resolve()
+    if scene is True:
+        scene = 'flat'
+    bundled = SIM_PACKAGE / 'mjcf/scenes' / f'{scene}.xml'
+    path = bundled if bundled.is_file() else Path(scene).expanduser().resolve()
     world = mujoco.MjSpec.from_file(str(path))
     resolve_assets(world)
     configure_physics(world)
@@ -246,7 +248,45 @@ def build_spec(variant, pt_package=None, scene='flat', *, control_dir=None, desc
     return compose_scene(build_robot_spec(variant, pt_package, control_dir=control_dir, description_dir=description_dir), scene)
 
 
-def build(variant, output, absolute=False, pt_package=None, scene=True, *, control_dir=None, description_dir=None):
+def use_native_lidar(xml):
+    """Swap the per-ray rangefinders for one native mujoco.plugin.lidar sensor.
+
+    The rangefinders cast every ray on every physics step (about 99% of step time on a Pi
+    for a 5 Hz scan); the plugin casts at its own update_rate. Applied to the written XML
+    because the plugin library (mujoco_3d_lidar) is only registered inside the ROS
+    mujoco_vendor MuJoCo, not the Python one, so the spec cannot compile it here.
+    """
+    lidar = yaml.safe_load((SIM_PACKAGE / 'config/mujoco.yaml').read_text())['lidar']
+    root = ET.fromstring(xml)
+    for sensor in root.iter('sensor'):
+        for ray in [e for e in sensor if e.tag == 'rangefinder']:
+            sensor.remove(ray)
+    parents = {child: parent for parent in root.iter() for child in parent}
+    for site in [e for e in root.iter('site') if e.get('name', '').startswith('lidar-')]:
+        parents[site].remove(site)
+    frame = next(e for e in root.iter('body') if e.get('name') == 'laser_frame')
+    # The plugin excludes no body from its rays (the rangefinders excluded their own), so the
+    # visual LD06 mesh around the site would be hit at zero range and blank the whole scan.
+    for geom in [e for e in frame if e.tag == 'geom']:
+        frame.remove(geom)
+    ET.SubElement(frame, 'site', name='lidar', pos='0 0 0', group='4')
+    plugin = ET.Element('plugin', plugin='mujoco.plugin.lidar')
+    instance = ET.SubElement(plugin, 'instance', name='lidar')
+    for key, value in {
+            'resolution': f"{lidar['resolution']} 1", 'azimuth_range': '-3.1415926 3.1415926',
+            'elevation_range': '0 0', 'max_range': lidar['max_range'],
+            'min_range': lidar['min_range'], 'update_rate': lidar['update_rate'],
+            'async': int(lidar['async'])}.items():
+        ET.SubElement(instance, 'config', key=key, value=str(value))
+    extension = ET.Element('extension')
+    extension.append(plugin)
+    root.insert(0, extension)
+    sensor = next(root.iter('sensor'))
+    ET.SubElement(sensor, 'plugin', name='lidar', instance='lidar', objtype='site', objname='lidar')
+    return ET.tostring(root, encoding='unicode')
+
+
+def build(variant, output, absolute=False, pt_package=None, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder'):
     output = Path(output).resolve()
     spec = build_spec(variant, pt_package=pt_package, scene=scene, control_dir=control_dir, description_dir=description_dir)
     for mesh in [*spec.meshes, *spec.textures]:
@@ -268,7 +308,12 @@ def build(variant, output, absolute=False, pt_package=None, scene=True, *, contr
     output.parent.mkdir(parents=True, exist_ok=True)
     spec.compile()
     content = '<!-- Generated by lekiwi_mujoco.build_mujoco_models using MjSpec; edit sources, not this file. -->\n'
-    output.write_text(content + spec.to_xml())
+    xml = spec.to_xml()
+    if lidar == 'plugin':
+        xml = use_native_lidar(xml)
+    elif lidar != 'rangefinder':
+        raise ValueError("lidar must be 'rangefinder' or 'plugin'")
+    output.write_text(content + xml)
     return output
 
 
@@ -280,12 +325,14 @@ def main():
     parser.add_argument('--pt-package', type=Path)
     parser.add_argument('--control-package', type=Path, help='Directory containing control config/ (data only)')
     parser.add_argument('--description-package', type=Path, help='Robot description source/share directory')
-    parser.add_argument('--scene', default='flat', help='flat, none, or a scene MJCF path')
+    parser.add_argument('--scene', default='flat', help='flat, arena, none, or a scene MJCF path')
+    parser.add_argument('--lidar', choices=['rangefinder', 'plugin'], default='rangefinder',
+                        help='plugin: one native mujoco.plugin.lidar sensor (ROS/mujoco_vendor only)')
     args = parser.parse_args()
     if bool(args.variant) != bool(args.output):
         parser.error('--variant and --output must be used together')
     if args.variant:
-        build(args.variant, args.output, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package)
+        build(args.variant, args.output, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar)
     else:
         for variant in ('base', 'pt100', 'pt101'):
             filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_oakd_s2.xml'

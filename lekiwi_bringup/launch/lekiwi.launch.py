@@ -97,6 +97,7 @@ def launch_setup(context):
         'joy':              joy,
         'sts_serial_port':  sts_serial_port,
         'mujoco_model':     mujoco_model,
+        'enable_odom_tf':   'false',  # the navigation EKF publishes odom -> base_footprint
     }
     if sim:
         control_args['ros2_control_hardware_type'] = 'mujoco'

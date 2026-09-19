@@ -204,16 +204,10 @@
           <state_interface name="linear_acceleration.z"/>
         </sensor>
       </xacro:if>
-      <!-- Matched to base_subtree.xml's MJCF sensors by name ("lidar") - see base.control.xacro. -->
-      <sensor name="lidar">
-        <param name="frame_name">laser_frame</param>
-        <param name="min_angle">0.0</param>
-        <param name="max_angle">6.274458660919615</param>
-        <param name="angle_increment">0.017453292519943295</param>
-        <param name="range_min">0.02</param>
-        <param name="range_max">12.0</param>
-        <param name="laserscan_topic">/scan</param>
-      </sensor>
+      <!-- No <sensor name="lidar"> here: that legacy rangefinder path is deprecated and costs
+           ~9 ms per physics step. The lidar is a native mujoco.plugin.lidar sensor (see
+           lekiwi_mujoco build option lidar=plugin) published by Mujoco3dLidarPlugin as /scan, configured in
+           lekiwi_mujoco/config/mujoco_ros2_control_plugins.yaml. -->
     </xacro:if>
   </ros2_control>
 
