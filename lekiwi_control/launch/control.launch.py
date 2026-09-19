@@ -91,8 +91,6 @@ def launch_setup(context):
         final_mujoco_model = ''
 
     _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/base/urdf_config.yaml'))
-    if payload:
-        _cfg.update(yaml.safe_load(open(f'{pkg_ctrl}/config/payloads/{payload}/urdf_config.yaml')))
     final_serial_port = serial_port if serial_port else _cfg['serial_port']
     final_use_mock    = use_mock if use_mock else str(_cfg['use_mock']).lower()
 
@@ -115,12 +113,13 @@ def launch_setup(context):
         f' imu:={str(imu).lower()}'
     )
     if payload == 'pantilt':
+        pt_cfg = yaml.safe_load(open(f'{FindPackageShare("pt_control").perform(context)}/config/urdf_config.yaml'))
         xacro_cmd += (
             f' pantilt_config:={pantilt_config}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
-            f' pantilt_internal_max_vel:={_cfg["pantilt_internal_max_vel"]}'
-            f' pantilt_internal_max_acc:={_cfg["pantilt_internal_max_acc"]}'
-            f' pantilt_internal_acc_coeff:={_cfg["pantilt_internal_acc_coeff"]}'
+            f' pantilt_internal_max_vel:={pt_cfg["internal_max_vel"]}'
+            f' pantilt_internal_max_acc:={pt_cfg["internal_max_acc"]}'
+            f' pantilt_internal_acc_coeff:={pt_cfg["internal_acc_coeff"]}'
         )
     if hw_type == 'mujoco':
         xacro_cmd += (

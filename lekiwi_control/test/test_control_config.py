@@ -39,7 +39,7 @@ class TestUrdfConfig:
     def test_required_keys_present(self):
         for key in ('serial_port', 'baud_rate', 'use_mock', 'use_sync_write',
                     'left_motor_id', 'back_motor_id', 'right_motor_id',
-                    'sts3215_max_vel_steps', 'proportional_acc_max',
+                    'sts3215_max_vel_steps', 'proportional_acc_max', 'proportional_vel_max',
                     'internal_max_vel', 'internal_max_acc', 'internal_acc_coeff',
                     'internal_control_period'):
             assert key in self.cfg, f"Missing key '{key}' in urdf_config.yaml"
@@ -50,22 +50,6 @@ class TestUrdfConfig:
     def test_motor_ids_are_distinct(self):
         ids = [self.cfg['left_motor_id'], self.cfg['back_motor_id'], self.cfg['right_motor_id']]
         assert len(ids) == len(set(ids)), "Motor IDs must be distinct"
-
-
-class TestUrdfConfigPantilt:
-    """Motor IDs, step-centering, and joint limits are NOT in this file - they're
-    pt_description's own physical-calibration constants, baked into pantilt.joints.xacro's
-    macro defaults (single source of truth). See test_urdf_xacro.py (pt_description) for
-    coverage of those values."""
-
-    def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'urdf_config.yaml'))
-
-    def test_required_keys_present(self):
-        for key in ('proportional_vel_max',
-                    'pantilt_internal_max_vel', 'pantilt_internal_max_acc',
-                    'pantilt_internal_acc_coeff'):
-            assert key in self.cfg, f"Missing key '{key}' in pantilt/urdf_config.yaml"
 
 
 # ── control.yaml ─────────────────────────────────────────────────────────────

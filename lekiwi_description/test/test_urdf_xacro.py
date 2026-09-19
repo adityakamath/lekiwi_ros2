@@ -295,6 +295,37 @@ class TestPrebuiltUrdfConsistency:
             "base_pantilt.urdf is stale — regenerate with: xacro base_pantilt.urdf.xacro ... > base_pantilt.urdf"
 
 
+# ── EEPROM tuning that reaches each motor on the shared bus ─────────────────────
+
+class TestSharedBusTuning:
+    """One hardware block owns the bus: wheels keep the aggressive tuning, the pan-tilt keeps its own."""
+
+    def setup_method(self):
+        stdout, _, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
+        assert rc == 0
+        self.rc = ET.fromstring(stdout).find('ros2_control[@name="lekiwi_base"]')
+
+    def _params(self, joint):
+        return {p.get('name'): p.text.strip() for p in self.rc.find(f'joint[@name="{joint}"]').findall('param')}
+
+    def test_wheels_use_the_aggressive_tuning_and_ids_7_8_9(self):
+        for joint, motor in (('left_wheel_joint', '7'), ('back_wheel_joint', '8'), ('right_wheel_joint', '9')):
+            params = self._params(joint)
+            assert params['motor_id'] == motor
+            assert (params['internal_max_vel'], params['internal_max_acc'], params['internal_acc_coeff']) == ('254', '254', '100')
+
+    def test_pantilt_joints_use_the_modules_own_tuning_and_ids_1_2(self):
+        for joint, motor in (('shoulder_pan_joint', '1'), ('tilt_joint', '2')):
+            params = self._params(joint)
+            assert params['motor_id'] == motor
+            assert (params['internal_max_vel'], params['internal_max_acc'], params['internal_acc_coeff']) == ('65', '50', '0')
+
+    def test_bus_level_settings_stay_in_the_one_hardware_block(self):
+        hardware = {p.get('name'): p.text.strip() for p in self.rc.find('hardware').findall('param')}
+        assert hardware['serial_port'] == '/dev/ttySERVO' and hardware['proportional_vel_max'] == '0'
+        assert len(self.rc.findall('hardware')) == 1
+
+
 # ── pantilt_config variant ────────────────────────────────────────────────────
 
 class TestBasePantiltUrdfVariants:

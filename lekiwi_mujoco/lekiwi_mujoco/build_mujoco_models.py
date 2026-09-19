@@ -61,7 +61,6 @@ def expand_urdf(variant, packages, control):
     motor = yaml.safe_load((control / 'config/base/urdf_config.yaml').read_text())
     payload_limits = {}
     if variant != 'base':
-        motor.update(yaml.safe_load((control / 'config/payloads/pantilt/urdf_config.yaml').read_text()))
         payload_limits = yaml.safe_load((control / 'config/payloads/pantilt/control.yaml').read_text())['controller_manager']['ros__parameters'].get('joint_limits', {})
     source = 'base/base.urdf.xacro' if variant == 'base' else 'base_pantilt/base_pantilt.urdf.xacro'
     with package_paths(packages):
