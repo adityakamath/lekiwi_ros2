@@ -65,6 +65,7 @@ class KeyboardControl:
         self.kinematics = self.control.kinematics
         self.payload_limits = self.control.payload_limits
         self.active = False
+        self.estop = False
 
     def enforce_limits(self, data, dt):
         self.control.apply(data, data.ctrl.copy(), dt)
@@ -76,7 +77,18 @@ class KeyboardControl:
         data.ctrl[self.wheels] = 0
         self.active = False
 
+    def set_estop(self, data, active):
+        """Match the real robot's emergency stop: wheels forced to zero every tick while
+        active, payload holds whatever position it had (frozen, not zeroed) since
+        integrate_payload() is simply never called for it below."""
+        self.estop = active
+        if active:
+            self.stop(data)
+
     def update(self, data, held, dt):
+        if self.estop:
+            data.ctrl[self.wheels] = 0
+            return
         held = {ord(chr(k).upper()) if 97 <= k <= 122 else k for k in held}
         alt = bool(held & {glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT})
         shift = bool(held & {glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT})
@@ -102,7 +114,7 @@ class HeldKeys:
     """
     BOUND = {glfw.KEY_UP, glfw.KEY_DOWN, glfw.KEY_LEFT, glfw.KEY_RIGHT,
              glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT, glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT,
-             *map(ord, 'XP')}
+             *map(ord, 'XPE')}
 
     def __init__(self):
         self.lock = Lock()
@@ -148,7 +160,7 @@ class HeldKeys:
                 self.held.discard(key)
             elif action == glfw.PRESS:
                 self.held.add(key)
-        if action == glfw.PRESS and key in (ord('P'), ord('X')):
+        if action == glfw.PRESS and key in (ord('P'), ord('X'), ord('E')):
             self.events.put(key)
 
     def on_key(self, window, key, scancode, action, mods):
@@ -165,8 +177,13 @@ class HeldKeys:
             self.previous_focus(window, focused)
 
 
-CONTROLS = ('Up/Down: forward/back | Left/Right: strafe | Shift+Left/Right: rotate\n'
-            'Alt/Option+Left/Right: pan | Alt/Option+Up/Down: tilt | X: reset | P: pause')
+# Two label/value columns, like MuJoCo's own built-in Info overlay - set_texts' 3rd/4th tuple
+# fields render as left/right-aligned columns, not one run-on wrapped line.
+CONTROL_LABELS_BASE = 'Drive\nStrafe\nRotate\nE-Stop\nReset\nPause'
+CONTROL_VALUES_BASE = 'Up/Down\nLeft/Right\nShift + Left/Right\nE\nX\nP'
+CONTROL_LABELS_PAYLOAD = 'Drive\nStrafe\nRotate\nPan\nTilt\nE-Stop\nReset\nPause'
+CONTROL_VALUES_PAYLOAD = 'Up/Down\nLeft/Right\nShift + Left/Right\nAlt + Left/Right\nAlt + Up/Down\nE\nX\nP'
+STATUS_LABELS = 'Model\nTime\nStatus'
 
 
 def main():
@@ -195,6 +212,9 @@ def main():
     trail = Trail()
     paused = False
     frames = 0
+    control_labels, control_values = ((CONTROL_LABELS_PAYLOAD, CONTROL_VALUES_PAYLOAD)
+                                       if simulation.robot.payload else
+                                       (CONTROL_LABELS_BASE, CONTROL_VALUES_BASE))
     if args.telemetry:
         args.telemetry.parent.mkdir(parents=True, exist_ok=True)
     with mujoco.viewer.launch_passive(model, data, key_callback=keys.bootstrap) as viewer:
@@ -204,9 +224,12 @@ def main():
             viewer.cam.azimuth = 135
             viewer.cam.elevation = -22
             viewer.opt.geomgroup[3] = 0  # Hide collision proxies, keep CAD visuals.
-            viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = False
+            # The payload's blind arc is baked out of the model itself (mask_payload_lidar,
+            # applied at build time), so MuJoCo's own native rendering is already correct.
+            viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = True
         print(f'Native viewer ready: {path}', flush=True)
-        print(CONTROLS, flush=True)
+        for label, value in zip(control_labels.split('\n'), control_values.split('\n')):
+            print(f'{label}: {value}', flush=True)
         steps = max(1, round(1 / (60 * model.opt.timestep)))
         period = steps * model.opt.timestep
         while viewer.is_running():
@@ -222,11 +245,15 @@ def main():
                         keyboard.stop(data)
                         simulation.stop()
                     elif key in (ord('X'), ord('x')):
+                        keyboard.set_estop(data, False)  # a reset relatches the e-stop, like real hardware
                         keyboard.stop(data)
                         simulation.stop()
                         keys.clear()
                         simulation.reset()
                         trail.clear()
+                    elif key in (ord('E'), ord('e')):
+                        keyboard.set_estop(data, not keyboard.estop)
+                        keys.clear()
                     elif key == 'focus_lost':
                         keyboard.stop(data)
                         simulation.stop()
@@ -237,17 +264,22 @@ def main():
                         simulation.step()
                 trail.draw(viewer.user_scn, data.xpos[simulation.robot.base])
                 info = simulation.info()
+                scan = simulation.scan()
                 state = {'model': str(path), 'sim_time': info['sim_time'],
-                         'paused': paused, 'contacts': info['contacts'],
+                         'paused': paused, 'estop': keyboard.estop, 'contacts': info['contacts'],
                          'island_colors': bool(viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_ISLAND]),
                          'warnings': info['warning_count'],
                          'held_keys': sorted(keys.snapshot()),
                          'actuators': {model.actuator(i).name: float(data.ctrl[i])
-                                       for i in range(model.nu)}}
-            viewer.set_texts([(mujoco.mjtFontScale.mjFONTSCALE_100,
-                               mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
-                               f'{path.stem} | {data.time:.2f} s | {"PAUSED" if paused else "RUNNING"}\n'
-                               + CONTROLS, '')])
+                                       for i in range(model.nu)},
+                         'scan': None if scan is None else scan.tolist()}
+                status = 'E-STOP' if keyboard.estop else ('Paused' if paused else 'Running')
+            viewer.set_texts([
+                (mujoco.mjtFontScale.mjFONTSCALE_150, mujoco.mjtGridPos.mjGRID_TOPLEFT,
+                 STATUS_LABELS, f'{path.stem}\n{data.time:.1f} s\n{status}'),
+                (mujoco.mjtFontScale.mjFONTSCALE_150, mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
+                 control_labels, control_values),
+            ])
             viewer.sync()
             if args.telemetry and frames % 30 == 0:
                 args.telemetry.write_text(json.dumps(state, indent=2))

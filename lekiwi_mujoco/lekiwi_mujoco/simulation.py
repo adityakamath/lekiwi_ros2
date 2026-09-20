@@ -4,10 +4,50 @@ from types import MappingProxyType
 
 import mujoco
 import numpy as np
+import yaml
 
-from lekiwi_mujoco.paths import payload_package
+from lekiwi_mujoco.paths import package_share, payload_package
 
 WHEELS = ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint')
+
+
+def _laser_filter_params(has_payload):
+    """Read the same filter chain the real robot's laser_filters node applies
+    (lekiwi_mujoco/config/mujoco_laser_filter[_pantilt].yaml), so the standalone sim's
+    lidar_scan() matches what /scan looks like on hardware or in the ROS sim - without
+    duplicating the threshold/mask numbers here and letting them drift out of sync."""
+    name = 'mujoco_laser_filter_pantilt.yaml' if has_payload else 'mujoco_laser_filter.yaml'
+    filters = yaml.safe_load((package_share('lekiwi_mujoco') / 'config' / name).read_text())
+    filters = filters['laser_scan_filter_chain']['ros__parameters']
+    no_hit_threshold, mask = None, None
+    for value in filters.values():
+        if not isinstance(value, dict) or 'type' not in value:
+            continue
+        if value['type'] == 'laser_filters/LaserScanRangeFilter':
+            no_hit_threshold = float(value['params']['lower_threshold'])
+        elif value['type'] == 'laser_filters/LaserScanAngularBoundsFilterInPlace':
+            mask = (float(value['params']['lower_angle']), float(value['params']['upper_angle']))
+    if no_hit_threshold is None:
+        raise ValueError(f'{name}: no LaserScanRangeFilter (no_hit_to_inf) entry found')
+    return no_hit_threshold, mask
+
+
+def lidar_scan(bindings, sensordata):
+    """Filtered LD06 ranges, or None if this model has no lidar.
+
+    Mirrors the real robot's laser_filters chain: MuJoCo's -1 'no hit' sentinel becomes
+    +inf per REP-117 (bindings.lidar_filter's no_hit_to_inf threshold). The payload's blind
+    arc needs no masking here - when a payload is mounted, build_mujoco_models's
+    mask_payload_lidar() already removed those rangefinders from the model entirely (see
+    its docstring), so MuJoCo's own native rangefinder visualization is correct un-aided,
+    and bindings.lidar_adr simply doesn't include them.
+    """
+    if bindings.lidar_filter is None:
+        return None
+    no_hit_threshold, _mask = bindings.lidar_filter
+    ranges = sensordata[bindings.lidar_adr].copy()
+    ranges[ranges < no_hit_threshold] = np.inf
+    return ranges
 
 
 def payload_names():
@@ -56,6 +96,12 @@ class RobotBindings:
                 raise ValueError(f'Actuator/joint mismatch: {name}')
         self.sensor_ids = self._named_ids(mujoco.mjtObj.mjOBJ_SENSOR, model.nsensor)
         self.camera_ids = self._named_ids(mujoco.mjtObj.mjOBJ_CAMERA, model.ncam)
+        # lidar-0..lidar-N-1, one rangefinder per degree CCW from +X (base_shared.xml);
+        # sensor_adr (not the sensor id) indexes sensordata, matching base_subtree.xml's comment.
+        lidar = sorted(((int(name.rsplit('-', 1)[1]), i) for name, i in self.sensor_ids.items()
+                       if name.startswith('lidar-')))
+        self.lidar_adr = np.array([model.sensor_adr[i] for _, i in lidar], dtype=int)
+        self.lidar_filter = _laser_filter_params(bool(self.payload)) if lidar else None
 
     def _named_ids(self, kind, count):
         return MappingProxyType({name: i for i in range(count)
@@ -208,9 +254,13 @@ class Simulation:
         rotation = self.data.xmat[self.robot.base].reshape(3, 3)
         return np.r_[self.data.xpos[self.robot.base, :2], math.atan2(rotation[1, 0], rotation[0, 0])]
 
+    def scan(self):
+        """Filtered LD06 ranges (see lidar_scan()), or None if this model has no lidar."""
+        return lidar_scan(self.robot, self.data.sensordata)
+
     def observation(self):
         return {'qpos': self.data.qpos.copy(), 'qvel': self.data.qvel.copy(),
-                'sensors': self.data.sensordata.copy()}
+                'sensors': self.data.sensordata.copy(), 'scan': self.scan()}
 
     def info(self):
         return {'sim_time': float(self.data.time), 'actuator_commands': self.data.ctrl.copy(),

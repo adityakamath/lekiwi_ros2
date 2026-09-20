@@ -29,15 +29,29 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`), generated from the URDF and 
 
 ### Standalone
 
-Run these from this directory (`mjpython` instead of `python3` on macOS for the viewer):
+Run these from this directory. `mujoco_preview` opens a GUI window, so on macOS run it with
+`mjpython`; everything else (including `mujoco_preview` on Linux) runs with plain `python3`.
 
 ```sh
-python3 -m lekiwi_mujoco.mujoco_preview --variant pt101      # native viewer
+# macOS
+mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101      # native viewer
+
+# Linux
+python3 -m lekiwi_mujoco.mujoco_preview --variant pt101       # native viewer
+
+# Any platform
 python3 -m lekiwi_mujoco.build_mujoco_models --variant pt101 --output /tmp/robot.xml --absolute
 python3 -m lekiwi_mujoco.benchmark_mujoco --output motion.json
 ```
 
-In the viewer, click the window first, then use the arrow keys to translate, Shift+Left/Right to rotate, Alt/Option+arrows to pan and tilt, X to reset and P to pause. A cyan trail shows the path travelled; X clears it. The same tools are installed as commands (`ros2 run lekiwi_mujoco <tool>` or `pip install -e .`).
+In the viewer, click the window first, then use the arrow keys to translate, Shift+Left/Right to
+rotate, Alt/Option+arrows to pan and tilt (pt100/pt101 only), E to toggle the emergency stop
+(wheels lock, payload holds its position), X to reset and P to pause. A cyan trail shows the path
+travelled; X clears it. The on-screen panel lists the exact controls available for the loaded
+variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco <tool>` or
+`pip install -e .`) - `build_mujoco_models` and `benchmark_mujoco` work fine that way on any
+platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
+as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
 Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after any change to the URDF, the config or the MJCF.
 

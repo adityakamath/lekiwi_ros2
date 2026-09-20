@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 
 import mujoco
 from lekiwi_mujoco.mujoco_parameters import positive, sync_robot_parameters
+from lekiwi_mujoco.simulation import _laser_filter_params
 import yaml
 import xacro
 import xacro.substitution_args
@@ -236,6 +237,35 @@ def use_native_lidar(xml):
     return ET.tostring(root, encoding='unicode')
 
 
+def mask_payload_lidar(xml, mask):
+    """Remove the rangefinders (and their sites) in the payload's blind arc.
+
+    Matches what the real robot's laser_filters payload_mask discards (see
+    config/mujoco_laser_filter_pantilt.yaml) - by removing them from the model instead of
+    filtering sensordata at runtime, MuJoCo's own native rangefinder visualization already
+    only shows the unblocked arc, with no extra Python-side drawing needed downstream. Each
+    site's quat sweeps local +Z CCW about laser_frame's Z starting at +X (base_subtree.xml),
+    so rangefinder lidar-i sits at angle i * 2*pi / (ray count).
+    """
+    lower, upper = mask
+    root = ET.fromstring(xml)
+    sensor = next(root.iter('sensor'))
+    rays = [e for e in sensor if e.tag == 'rangefinder' and e.get('name', '').startswith('lidar-')]
+    step = 2 * math.pi / len(rays)
+    masked_names = set()
+    for ray in rays:
+        angle = int(ray.get('name').rsplit('-', 1)[1]) * step
+        if angle > math.pi:
+            angle -= 2 * math.pi
+        if lower <= angle <= upper:
+            masked_names.add(ray.get('name'))
+            sensor.remove(ray)
+    parents = {child: parent for parent in root.iter() for child in parent}
+    for site in [e for e in root.iter('site') if e.get('name') in masked_names]:
+        parents[site].remove(site)
+    return ET.tostring(root, encoding='unicode')
+
+
 def build(variant, output, absolute=False, pt_package=None, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder'):
     output = Path(output).resolve()
     spec = build_spec(variant, pt_package=pt_package, scene=scene, control_dir=control_dir, description_dir=description_dir)
@@ -263,6 +293,10 @@ def build(variant, output, absolute=False, pt_package=None, scene=True, *, contr
         xml = use_native_lidar(xml)
     elif lidar != 'rangefinder':
         raise ValueError("lidar must be 'rangefinder' or 'plugin'")
+    elif variant != 'base':
+        _, mask = _laser_filter_params(has_payload=True)
+        if mask is not None:
+            xml = mask_payload_lidar(xml, mask)
     output.write_text(content + xml)
     return output
 
