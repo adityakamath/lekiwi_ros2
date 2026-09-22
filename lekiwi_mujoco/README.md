@@ -53,7 +53,7 @@ variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco 
 platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
 as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
-Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after any change to the URDF, the config or the MJCF.
+Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after any change to the URDF, the config or the MJCF.
 
 From Python:
 
