@@ -64,12 +64,12 @@
     <mesh name="respeaker_flex_mic" file="../../lekiwi_description/meshes/respeaker_flex_mic.stl" />
     <mesh name="lekiwi_base_visual" file="../../lekiwi_description/meshes/lekiwi_base_mujoco.stl" />
     <mesh name="omni_wheel_visual" file="../../lekiwi_description/meshes/omni_wheel_mujoco.stl" />
-    <mesh name="pan_motor" file="../../payloads/pantilt_ros2/pt_description/meshes/pan_motor.stl" />
-    <mesh name="tilt_motor" file="../../payloads/pantilt_ros2/pt_description/meshes/tilt_motor.stl" />
-    <mesh name="tilt_joint_oakd_s2" file="../../payloads/pantilt_ros2/pt_description/meshes/tilt_joint_oakd_s2.stl" />
-    <mesh name="oakd_s2" file="../../payloads/pantilt_ros2/pt_description/meshes/oakd_s2.stl" />
-    <mesh name="pantilt_base_link_mesh" file="../../payloads/pantilt_ros2/pt_description/meshes/pantilt_base_101.stl" />
-    <mesh name="shoulder_link_mesh" file="../../payloads/pantilt_ros2/pt_description/meshes/pan_joint_101.stl" />
+    <mesh name="pan_motor" file="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/pan_motor.stl" />
+    <mesh name="tilt_motor" file="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/tilt_motor.stl" />
+    <mesh name="tilt_joint_oakd_s2" file="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/tilt_joint_oakd_s2.stl" />
+    <mesh name="oakd_s2" file="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/oakd_s2.stl" />
+    <mesh name="pantilt_base_link_mesh" file="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/pantilt_base_101.stl" />
+    <mesh name="shoulder_link_mesh" file="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/pan_joint_101.stl" />
   </asset>
 
   <worldbody>
