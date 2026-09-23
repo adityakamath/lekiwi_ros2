@@ -46,7 +46,8 @@ def test_models_settle_and_preserve_interfaces_and_wheel_mass(filename):
         hub = model.body(prefix + '_wheel_link').id
         children = [i for i in range(model.nbody) if model.body_parentid[i] == hub]
         assert model.body_mass[hub] + model.body_mass[children].sum() == pytest.approx(masses[prefix + '_wheel_link'])
-    assert model.sensor('lidar-359').id >= 0
+    # lidar-180 sits opposite the payload mount, outside mask_payload_lidar's masked arc (unlike lidar-359).
+    assert model.sensor('lidar-180').id >= 0
     assert model.sensor('bno055_quat').id >= 0
 
 
