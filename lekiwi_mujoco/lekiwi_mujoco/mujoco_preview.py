@@ -114,7 +114,7 @@ class HeldKeys:
     """
     BOUND = {glfw.KEY_UP, glfw.KEY_DOWN, glfw.KEY_LEFT, glfw.KEY_RIGHT,
              glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT, glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT,
-             *map(ord, 'XPE')}
+             glfw.KEY_SPACE, *map(ord, 'XP')}
 
     def __init__(self):
         self.lock = Lock()
@@ -160,7 +160,7 @@ class HeldKeys:
                 self.held.discard(key)
             elif action == glfw.PRESS:
                 self.held.add(key)
-        if action == glfw.PRESS and key in (ord('P'), ord('X'), ord('E')):
+        if action == glfw.PRESS and key in (ord('P'), ord('X'), glfw.KEY_SPACE):
             self.events.put(key)
 
     def on_key(self, window, key, scancode, action, mods):
@@ -180,9 +180,9 @@ class HeldKeys:
 # Two label/value columns, like MuJoCo's own built-in Info overlay - set_texts' 3rd/4th tuple
 # fields render as left/right-aligned columns, not one run-on wrapped line.
 CONTROL_LABELS_BASE = 'Drive\nStrafe\nRotate\nE-Stop\nReset\nPause'
-CONTROL_VALUES_BASE = 'Up/Down\nLeft/Right\nShift + Left/Right\nE\nX\nP'
+CONTROL_VALUES_BASE = 'Up/Down\nLeft/Right\nShift + Left/Right\nSpace\nX\nP'
 CONTROL_LABELS_PAYLOAD = 'Drive\nStrafe\nRotate\nPan\nTilt\nE-Stop\nReset\nPause'
-CONTROL_VALUES_PAYLOAD = 'Up/Down\nLeft/Right\nShift + Left/Right\nAlt + Left/Right\nAlt + Up/Down\nE\nX\nP'
+CONTROL_VALUES_PAYLOAD = 'Up/Down\nLeft/Right\nShift + Left/Right\nAlt + Left/Right\nAlt + Up/Down\nSpace\nX\nP'
 STATUS_LABELS = 'Model\nTime\nStatus'
 
 
@@ -251,7 +251,7 @@ def main():
                         keys.clear()
                         simulation.reset()
                         trail.clear()
-                    elif key in (ord('E'), ord('e')):
+                    elif key == glfw.KEY_SPACE:
                         keyboard.set_estop(data, not keyboard.estop)
                         keys.clear()
                     elif key == 'focus_lost':
