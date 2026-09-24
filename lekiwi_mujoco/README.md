@@ -84,7 +84,7 @@ ros2 launch lekiwi_control control.launch.py ros2_control_hardware_type:=mujoco 
 | `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | Simulated camera from `pt_mujoco` (rate lowered to 5 Hz here), in frame `oak_rgb_camera_optical_frame`; the image is upside down like the real, inverted mount |
 | `/oak/scan` | With the pan-tilt: a laser scan sliced from the depth image, as on the real robot |
 | `/free_joint_state_publisher/free_joint_states` | Ground-truth base pose and velocity |
-| `/emergency_stop` (`std_srvs/SetBool`) | Wheels commanded to zero and the pan-tilt held while enabled; releasing hands control back |
+| `/emergency_stop` (`std_srvs/SetBool`) | Disables torque on every motor while enabled, matching the real robot's `sts_hardware_interface`; joints coast/drift freely, not held or braked; releasing hands control back |
 | `/external_wrench_plugin/apply_wrench` | Push a body for a test, for example to trigger Nav2 recoveries |
 | `/mujoco_ros2_control_node/{reset_world,set_free_joint_state,set_pause,step_simulation}` | Reset, teleport the base, pause and single-step the simulation |
 | `/joint_states`, `/imu_sensor_broadcaster/imu`, `/base_controller/odom` | From ros2_control on the simulated hardware |
