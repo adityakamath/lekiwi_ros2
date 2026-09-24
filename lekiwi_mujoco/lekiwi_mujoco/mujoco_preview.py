@@ -78,17 +78,17 @@ class KeyboardControl:
         self.active = False
 
     def set_estop(self, data, active):
-        """Match the real robot's emergency stop: wheels forced to zero every tick while
-        active, payload holds whatever position it had (frozen, not zeroed) since
-        integrate_payload() is simply never called for it below."""
+        """Match the real robot's emergency stop: torque disabled on every motor via
+        mjDSBL_ACTUATION, same as sts_hardware_interface's real EnableTorque(motor, 0)
+        and mujoco_ros2_plugins/EmergencyStopPlugin. Wheels and payload drift/coast
+        freely rather than locking or holding."""
         self.estop = active
         if active:
-            self.stop(data)
+            self.model.opt.disableflags |= mujoco.mjtDisableBit.mjDSBL_ACTUATION
+        else:
+            self.model.opt.disableflags &= ~int(mujoco.mjtDisableBit.mjDSBL_ACTUATION)
 
     def update(self, data, held, dt):
-        if self.estop:
-            data.ctrl[self.wheels] = 0
-            return
         held = {ord(chr(k).upper()) if 97 <= k <= 122 else k for k in held}
         alt = bool(held & {glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT})
         shift = bool(held & {glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT})
@@ -245,7 +245,7 @@ def main():
                         keyboard.stop(data)
                         simulation.stop()
                     elif key in (ord('X'), ord('x')):
-                        keyboard.set_estop(data, False)  # a reset relatches the e-stop, like real hardware
+                        keyboard.set_estop(data, False)  # release first, or reset()'s settle step can't move the joints
                         keyboard.stop(data)
                         simulation.stop()
                         keys.clear()

@@ -45,8 +45,9 @@ python3 -m lekiwi_mujoco.benchmark_mujoco --output motion.json
 ```
 
 In the viewer, click the window first, then use the arrow keys to translate, Shift+Left/Right to
-rotate, Alt/Option+arrows to pan and tilt (pt100/pt101 only), E to toggle the emergency stop
-(wheels lock, payload holds its position), X to reset and P to pause. A cyan trail shows the path
+rotate, Alt/Option+arrows to pan and tilt (pt100/pt101 only), Space to toggle the emergency stop
+(disables torque on every motor; wheels and payload drift/coast freely rather than locking or
+holding), X to reset and P to pause. A cyan trail shows the path
 travelled; X clears it. The on-screen panel lists the exact controls available for the loaded
 variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco <tool>` or
 `pip install -e .`) - `build_mujoco_models` and `benchmark_mujoco` work fine that way on any
