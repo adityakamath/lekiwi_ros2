@@ -19,8 +19,8 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`), generated from the URDF and 
 
 ## Requirements
 
-- Python packages, installed into the interpreter that ROS and colcon use: `pip install -r requirements.txt` (`mujoco`, `numpy`, `xacro`, `PyYAML`). Add `pytest<8` to run the tests.
-- The payload submodule for the pan-tilt models: `git submodule update --init payloads/pantilt_ros2`. It provides `pt_description` and `pt_mujoco`.
+- Python packages installed into your active Python environment (for ROS simulation, use the interpreter that ROS and colcon use): `pip install -r requirements.txt` (`mujoco`, `numpy`, `xacro`, `PyYAML`). Add `pytest<8` to run the tests.
+- The payload submodule for the pan-tilt models: run `git submodule update --init payloads/pantilt_ros2` from the `lekiwi_ros2` repository root. It provides `pt_description` and `pt_mujoco`.
 - For the ROS simulation only, on Kilted:
   - `sudo apt install ros-kilted-mujoco-ros2-control ros-kilted-mujoco-ros2-control-plugins ros-kilted-mujoco-3d-lidar ros-kilted-laser-filters` (0.1.2 or newer; older releases have no camera or native lidar plugin)
   - [mujoco_ros2_plugins](../modules/mujoco_ros2_plugins/README.md), from the `modules/` submodule, built in the same workspace. It provides the simulated `/emergency_stop`.
@@ -31,6 +31,12 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`), generated from the URDF and 
 
 Run these from this directory. `mujoco_preview` opens a GUI window, so on macOS run it with
 `mjpython`; everything else (including `mujoco_preview` on Linux) runs with plain `python3`.
+
+Activate the environment containing MuJoCo first; `mjpython` is installed with
+MuJoCo. If your shell reports `command not found: mjpython`, check that this
+environment is active. In a Pixi workspace, run `pixi shell` from the directory
+containing `pixi.toml`, then return to `lekiwi_mujoco` before running these commands.
+Standalone use does not require a ROS launch or sourcing a ROS workspace.
 
 ```sh
 # macOS
@@ -54,7 +60,11 @@ variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco 
 platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
 as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
-Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after any change to the URDF, the config or the MJCF.
+Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
+
+The viewer draws native LiDAR rays only when they hit geometry. In open space
+(such as outside the maze entrance), missing yellow rays represent no-hit readings,
+not disabled sensors. The same payload blind-sector mask applies in every scene.
 
 From Python:
 
@@ -73,8 +83,12 @@ sim.step(10, action=[1., 0., 0., 0., 0.])   # normalized [vx, vy, yaw, pan, tilt
 `arena` is a 4 × 4 m robot test course with a clear 1.3 × 1.3 m central maneuvering
 area. Along the perimeter are three north gates (0.6, 0.8 and 1.0 m clear width,
 marked with one, two and three blue floor ticks), an east slalom, a southwest
-docking pocket with a 1 m opening, and a southern pushing area with a 180 g box
+docking pocket with a flared entrance and a 1 m inner width, and a southern pushing area with a 180 g box
 and 60 g ball. The docking pocket opens east. All other obstacles are fixed.
+The dock has a centerline, a robot-center stop line, and a contrasting back-wall
+target. Push the box east into the orange floor target, then reposition south of
+it and push north into the blue target. The lane behind the gates is 0.70 m wide;
+the outer slalom lane has at least 0.60 m clearance.
 Reset restores both movable objects. Prop masses and friction are illustrative.
 
 Warm walls, colored landmarks, and a bounded sand-colored floor distinguish the
@@ -113,7 +127,8 @@ mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene home
 dead ends, and two 2 × 2-cell clearings (2.32 m clear width). The robot starts
 outside the blue west entrance at `(0, 0)`. Follow the east-pointing entry
 chevrons; the orange exit is on the east boundary at `(9.2, 7.2)`.
-The maze floor finish extends 0.5 m beyond the outer walls; the standard blue
+The maze uses warm off-white walls and the home scene’s wood-colored floor finish.
+This finish extends 0.5 m beyond the outer walls; the standard blue
 checkerboard floor continues elsewhere. Clearings use the same floor as corridors.
 All cells are reachable, with a continuous route through the maze. No route is
 painted on the floor. `maze_top` and `maze_overview` provide fixed camera views.
@@ -154,7 +169,8 @@ Notes for control-only runs: `control.launch.py` publishes `odom -> base_footpri
 | `config/mujoco_ros2_control_plugins.yaml` | ROS plugins: LiDAR, ground-truth pose, emergency stop and external wrench |
 | `config/mujoco_camera_pantilt.yaml` | Lowers the pan-tilt camera rate for the Raspberry Pi |
 | `config/mujoco_laser_filter*.yaml` | Laser filter chain, with and without the pan-tilt mask |
-| `mjcf/` | The MJCF sources (base, 16 contact rollers per wheel, servo defaults) and the scenes: `flat.xml` (floor only) and `home.xml` (8 × 8 m furnished apartment with pushable props). Geometry, masses and limits in them are overwritten from the URDF at build time |
+| `mjcf/` | Robot MJCF sources and generated models. Robot geometry, masses and limits are derived from the URDF at build time |
+| `mjcf/scenes/` | `flat.xml` (standard floor), `arena.xml` (4 × 4 m test course), `home.xml` (8 × 8 m apartment), and `maze.xml` (7 × 7 cells). Scene geometry is authored in these files |
 
 Changes to `config/mujoco.yaml` are applied when the model is built, so rebuild or relaunch to see them. If the package cannot find its files, point it at them with `LEKIWI_MUJOCO_SHARE`, `LEKIWI_DESCRIPTION_SHARE`, `PT_DESCRIPTION_SHARE`, `PT_MUJOCO_SHARE` or `LEKIWI_CONTROL_SHARE`, or with the builder's `--control-package`, `--description-package` and `--pt-package`.
 
@@ -169,5 +185,16 @@ The payload's own package builds its model from the robot's URDF (for the pan-ti
 ## Tests
 
 ```sh
-pytest lekiwi_mujoco/test -q       # about 3 minutes on a Raspberry Pi
+# From this package directory
+python3 -m pytest test -q
+
+# Scene checks: pushing/reset behavior and maze connectivity/clearance
+python3 -m pytest test/test_arena.py test/test_home.py test/test_maze.py -q
+```
+
+If unrelated ROS pytest plugins fail during collection, disable automatic plugin
+loading for these standalone tests:
+
+```sh
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test -q
 ```
