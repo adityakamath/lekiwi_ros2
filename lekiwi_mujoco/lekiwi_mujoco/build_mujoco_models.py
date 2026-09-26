@@ -309,7 +309,7 @@ def main():
     parser.add_argument('--pt-package', type=Path)
     parser.add_argument('--control-package', type=Path, help='Directory containing control config/ (data only)')
     parser.add_argument('--description-package', type=Path, help='Robot description source/share directory')
-    parser.add_argument('--scene', default='flat', help='flat, arena, none, or a scene MJCF path')
+    parser.add_argument('--scene', default='flat', help='flat, arena, home, maze, none, or a scene MJCF path')
     parser.add_argument('--lidar', choices=['rangefinder', 'plugin'], default='rangefinder',
                         help='plugin: one native mujoco.plugin.lidar sensor (ROS/mujoco_vendor only)')
     args = parser.parse_args()

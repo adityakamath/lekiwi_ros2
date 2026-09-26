@@ -54,7 +54,7 @@ variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco 
 platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
 as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
-Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after any change to the URDF, the config or the MJCF.
+Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after any change to the URDF, the config or the MJCF.
 
 From Python:
 
@@ -68,13 +68,67 @@ sim.reset()
 sim.step(10, action=[1., 0., 0., 0., 0.])   # normalized [vx, vy, yaw, pan, tilt] rates
 ```
 
+### Test arena
+
+`arena` is a 4 × 4 m robot test course with a clear 1.3 × 1.3 m central maneuvering
+area. Along the perimeter are three north gates (0.6, 0.8 and 1.0 m clear width,
+marked with one, two and three blue floor ticks), an east slalom, a southwest
+docking pocket with a 1 m opening, and a southern pushing area with a 180 g box
+and 60 g ball. The docking pocket opens east. All other obstacles are fixed.
+Reset restores both movable objects. Prop masses and friction are illustrative.
+
+Warm walls, colored landmarks, and a bounded sand-colored floor distinguish the
+course; the standard blue checkerboard continues outside. Floor markings are
+visual only. Select `arena_top` or `arena_overview` for a view of the entire course.
+
+```sh
+mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene arena
+```
+
+### Home scene
+
+Use `--scene home` with the standalone viewer or `mujoco_scene:=home` with ROS.
+The 8 × 8 m apartment has a living room, kitchen and dining area, an enlarged bedroom, and
+a 2.8 × 2.8 m room in the northwest corner with glass partitions and a 1 m doorway.
+The glass partitions are translucent, solid collision geometry. Low cutaway walls expose the layout from above; doorways, table legs,
+and furniture provide navigation obstacles. The robot starts in the clear central
+hall. `home_overview` and `home_top` are fixed cameras available in the viewer.
+
+Three objects have free joints and can be pushed: a 180 g cardboard box east of
+spawn, an 80 g foam block northwest of spawn, and a 60 g toy ball near the dining
+area. They use low friction; furniture stays fixed. Reset restores the objects as
+well as the robot. The apartment flooring stops at the outer walls, with the standard blue MuJoCo
+checkerboard outside. Rugs and floor finishes are visual only, so they introduce no
+steps or changes in wheel traction. Prop masses and friction are illustrative,
+not calibrated to physical household objects.
+
+```sh
+# macOS standalone apartment
+mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene home
+```
+
+### Maze scene
+
+`--scene maze` opens a 7 × 7-cell maze with 1.12 m clear corridors, multiple
+dead ends, and two 2 × 2-cell clearings (2.32 m clear width). The robot starts
+outside the blue west entrance at `(0, 0)`. Follow the east-pointing entry
+chevrons; the orange exit is on the east boundary at `(9.2, 7.2)`.
+The maze floor finish extends 0.5 m beyond the outer walls; the standard blue
+checkerboard floor continues elsewhere. Clearings use the same floor as corridors.
+All cells are reachable, with a continuous route through the maze. No route is
+painted on the floor. `maze_top` and `maze_overview` provide fixed camera views.
+
+```sh
+mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene maze
+```
+
 ### ROS simulation
 
 ```sh
 colcon build --packages-up-to lekiwi_bringup && . install/setup.bash
-ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=arena   # full stack, headless
+ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=home   # full stack, headless
 ros2 launch lekiwi_control control.launch.py ros2_control_hardware_type:=mujoco payload:=pantilt \
-    mujoco_headless:=true use_sim_time:=true mujoco_scene:=arena            # control only
+    mujoco_headless:=true use_sim_time:=true mujoco_scene:=home            # control only
 ```
 
 `sim:=true` needs no display; `mujoco_gui:=true` opens the MuJoCo viewer. To watch a headless run from another machine, start `foxglove_bridge` and connect Foxglove to `ws://<host>:8765`. The battery monitor and audio are not simulated. The sensors and services come from plugins configured in `config/`:
@@ -100,7 +154,7 @@ Notes for control-only runs: `control.launch.py` publishes `odom -> base_footpri
 | `config/mujoco_ros2_control_plugins.yaml` | ROS plugins: LiDAR, ground-truth pose, emergency stop and external wrench |
 | `config/mujoco_camera_pantilt.yaml` | Lowers the pan-tilt camera rate for the Raspberry Pi |
 | `config/mujoco_laser_filter*.yaml` | Laser filter chain, with and without the pan-tilt mask |
-| `mjcf/` | The MJCF sources (base, 16 contact rollers per wheel, servo defaults) and the scenes: `flat.xml` (floor only) and `arena.xml` (6 x 6 m walled room with obstacles). Geometry, masses and limits in them are overwritten from the URDF at build time |
+| `mjcf/` | The MJCF sources (base, 16 contact rollers per wheel, servo defaults) and the scenes: `flat.xml` (floor only) and `home.xml` (8 × 8 m furnished apartment with pushable props). Geometry, masses and limits in them are overwritten from the URDF at build time |
 
 Changes to `config/mujoco.yaml` are applied when the model is built, so rebuild or relaunch to see them. If the package cannot find its files, point it at them with `LEKIWI_MUJOCO_SHARE`, `LEKIWI_DESCRIPTION_SHARE`, `PT_DESCRIPTION_SHARE`, `PT_MUJOCO_SHARE` or `LEKIWI_CONTROL_SHARE`, or with the builder's `--control-package`, `--description-package` and `--pt-package`.
 

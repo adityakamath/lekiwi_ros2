@@ -1,0 +1,161 @@
+<mujoco model="lekiwi_maze">
+  <!--7 x 7 cells, 1.2 m pitch, 0.08 m walls. Entry west at y=0; exit east at y=7.2. Robot spawns outside at (0,0). Two 2 x 2 cell clearings.-->
+  <statistic center="5 3.6 .3" extent="7" />
+  <visual>
+    <headlight diffuse=".65 .65 .65" ambient=".35 .35 .35" />
+    <global azimuth="135" elevation="-65" offwidth="1440" offheight="1080" />
+  </visual>
+  <asset>
+    <material name="maze_wall" rgba=".85 .83 .77 1" />
+    <material name="maze_cap" rgba=".85 .83 .77 1" />
+    <material name="maze_entry" rgba=".12 .4 .95 1" />
+    <material name="maze_exit" rgba=".95 .57 .15 1" />
+    <texture name="maze_tiles" type="2d" builtin="checker" rgb1=".53 .43 .32" rgb2=".58 .48 .36" width="512" height="512" />
+    <material name="maze_floor" texture="maze_tiles" texrepeat="2 .5" texuniform="true" reflectance=".03" />
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
+  </asset>
+  <worldbody>
+    <light pos="2 1 8" dir="0 0 -1" directional="true" />
+    <camera name="maze_top" pos="5 3.6 16" xyaxes="1 0 0 0 1 0" />
+    <camera name="maze_overview" pos="14 -9 15" xyaxes=".8137 .5813 0 -.4336 .6071 .6659" />
+    <geom name="floor" type="plane" size="0 0 .05" material="groundplane" friction=".4 .005 .0001" />
+    <!--Visual-only maze finish ends 0.5 m beyond the outer wall faces; infinite standard floor supplies all contacts.-->
+    <geom name="maze_floor_finish" type="box" pos="5 3.6 0" size="4.74 4.74 .001" material="maze_floor" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_0_1" type="box" pos="0.8 1.1999999999999997 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_0_1_cap" type="box" pos="0.8 1.1999999999999997 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_0_2" type="box" pos="0.8 2.4 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_0_2_cap" type="box" pos="0.8 2.4 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_0_3" type="box" pos="0.8 3.6 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_0_3_cap" type="box" pos="0.8 3.6 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_0_4" type="box" pos="0.8 4.8 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_0_4_cap" type="box" pos="0.8 4.8 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_0_5" type="box" pos="0.8 6.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_0_5_cap" type="box" pos="0.8 6.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_0_6" type="box" pos="0.8 7.2 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_0_6_cap" type="box" pos="0.8 7.2 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_1_0" type="box" pos="2.0 0.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_1_0_cap" type="box" pos="2.0 0.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_1_5" type="box" pos="2.0 6.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_1_5_cap" type="box" pos="2.0 6.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_2_3" type="box" pos="3.2 3.6 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_2_3_cap" type="box" pos="3.2 3.6 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_2_4" type="box" pos="3.2 4.8 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_2_4_cap" type="box" pos="3.2 4.8 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_3_2" type="box" pos="4.3999999999999995 2.4 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_3_2_cap" type="box" pos="4.3999999999999995 2.4 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_3_5" type="box" pos="4.3999999999999995 6.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_3_5_cap" type="box" pos="4.3999999999999995 6.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_3_6" type="box" pos="4.3999999999999995 7.2 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_3_6_cap" type="box" pos="4.3999999999999995 7.2 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_4_3" type="box" pos="5.6 3.6 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_4_3_cap" type="box" pos="5.6 3.6 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_4_5" type="box" pos="5.6 6.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_4_5_cap" type="box" pos="5.6 6.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_6_1" type="box" pos="7.999999999999999 1.1999999999999997 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_6_1_cap" type="box" pos="7.999999999999999 1.1999999999999997 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_6_2" type="box" pos="7.999999999999999 2.4 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_6_2_cap" type="box" pos="7.999999999999999 2.4 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_6_6" type="box" pos="7.999999999999999 7.2 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_6_6_cap" type="box" pos="7.999999999999999 7.2 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_7_0" type="box" pos="9.200000000000001 0.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_7_0_cap" type="box" pos="9.200000000000001 0.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_7_1" type="box" pos="9.200000000000001 1.1999999999999997 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_7_1_cap" type="box" pos="9.200000000000001 1.1999999999999997 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_7_2" type="box" pos="9.200000000000001 2.4 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_7_2_cap" type="box" pos="9.200000000000001 2.4 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_7_3" type="box" pos="9.200000000000001 3.6 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_7_3_cap" type="box" pos="9.200000000000001 3.6 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_7_4" type="box" pos="9.200000000000001 4.8 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_7_4_cap" type="box" pos="9.200000000000001 4.8 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_v_7_5" type="box" pos="9.200000000000001 6.0 0.5" size="0.04 0.64 0.5" material="maze_wall" />
+    <geom name="maze_wall_v_7_5_cap" type="box" pos="9.200000000000001 6.0 1.01" size="0.04 0.64 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_0_0" type="box" pos="1.4 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_0_0_cap" type="box" pos="1.4 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_1_0" type="box" pos="2.5999999999999996 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_1_0_cap" type="box" pos="2.5999999999999996 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_2_0" type="box" pos="3.8 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_2_0_cap" type="box" pos="3.8 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_3_0" type="box" pos="5.0 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_3_0_cap" type="box" pos="5.0 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_4_0" type="box" pos="6.199999999999999 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_4_0_cap" type="box" pos="6.199999999999999 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_5_0" type="box" pos="7.3999999999999995 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_5_0_cap" type="box" pos="7.3999999999999995 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_6_0" type="box" pos="8.6 -0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_6_0_cap" type="box" pos="8.6 -0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_1_1" type="box" pos="2.5999999999999996 0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_1_1_cap" type="box" pos="2.5999999999999996 0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_2_1" type="box" pos="3.8 0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_2_1_cap" type="box" pos="3.8 0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_3_1" type="box" pos="5.0 0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_3_1_cap" type="box" pos="5.0 0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_4_1" type="box" pos="6.199999999999999 0.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_4_1_cap" type="box" pos="6.199999999999999 0.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_0_2" type="box" pos="1.4 1.7999999999999998 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_0_2_cap" type="box" pos="1.4 1.7999999999999998 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_3_2" type="box" pos="5.0 1.7999999999999998 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_3_2_cap" type="box" pos="5.0 1.7999999999999998 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_4_2" type="box" pos="6.199999999999999 1.7999999999999998 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_4_2_cap" type="box" pos="6.199999999999999 1.7999999999999998 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_5_2" type="box" pos="7.3999999999999995 1.7999999999999998 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_5_2_cap" type="box" pos="7.3999999999999995 1.7999999999999998 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_1_3" type="box" pos="2.5999999999999996 2.9999999999999996 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_1_3_cap" type="box" pos="2.5999999999999996 2.9999999999999996 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_5_3" type="box" pos="7.3999999999999995 2.9999999999999996 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_5_3_cap" type="box" pos="7.3999999999999995 2.9999999999999996 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_0_4" type="box" pos="1.4 4.2 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_0_4_cap" type="box" pos="1.4 4.2 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_2_4" type="box" pos="3.8 4.2 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_2_4_cap" type="box" pos="3.8 4.2 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_3_4" type="box" pos="5.0 4.2 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_3_4_cap" type="box" pos="5.0 4.2 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_4_4" type="box" pos="6.199999999999999 4.2 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_4_4_cap" type="box" pos="6.199999999999999 4.2 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_5_4" type="box" pos="7.3999999999999995 4.2 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_5_4_cap" type="box" pos="7.3999999999999995 4.2 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_6_4" type="box" pos="8.6 4.2 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_6_4_cap" type="box" pos="8.6 4.2 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_1_5" type="box" pos="2.5999999999999996 5.4 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_1_5_cap" type="box" pos="2.5999999999999996 5.4 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_3_5" type="box" pos="5.0 5.4 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_3_5_cap" type="box" pos="5.0 5.4 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_1_6" type="box" pos="2.5999999999999996 6.6 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_1_6_cap" type="box" pos="2.5999999999999996 6.6 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_0_7" type="box" pos="1.4 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_0_7_cap" type="box" pos="1.4 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_1_7" type="box" pos="2.5999999999999996 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_1_7_cap" type="box" pos="2.5999999999999996 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_2_7" type="box" pos="3.8 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_2_7_cap" type="box" pos="3.8 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_3_7" type="box" pos="5.0 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_3_7_cap" type="box" pos="5.0 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_4_7" type="box" pos="6.199999999999999 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_4_7_cap" type="box" pos="6.199999999999999 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_5_7" type="box" pos="7.3999999999999995 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_5_7_cap" type="box" pos="7.3999999999999995 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_wall_h_6_7" type="box" pos="8.6 7.800000000000001 0.5" size="0.64 0.04 0.5" material="maze_wall" />
+    <geom name="maze_wall_h_6_7_cap" type="box" pos="8.6 7.800000000000001 1.01" size="0.64 0.04 0.01" material="maze_cap" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_entry_threshold" type="box" pos="0.8 0 0.002" size="0.25 0.5 0.001" material="maze_entry" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_entry_post_-0.57" type="box" pos="0.8 -0.57 0.6" size="0.07 0.03 0.6" material="maze_entry" />
+    <geom name="maze_entry_post_0.57" type="box" pos="0.8 0.57 0.6" size="0.07 0.03 0.6" material="maze_entry" />
+    <geom name="maze_entry_arrow_0_-1" type="box" pos="0.36 -0.065 .003" size=".08 .015 .001" material="maze_entry" contype="0" conaffinity="0" group="2" euler="0 0 40" />
+    <geom name="maze_entry_arrow_0_1" type="box" pos="0.36 0.065 .003" size=".08 .015 .001" material="maze_entry" contype="0" conaffinity="0" group="2" euler="0 0 -40" />
+    <geom name="maze_entry_arrow_1_-1" type="box" pos="0.51 -0.065 .003" size=".08 .015 .001" material="maze_entry" contype="0" conaffinity="0" group="2" euler="0 0 40" />
+    <geom name="maze_entry_arrow_1_1" type="box" pos="0.51 0.065 .003" size=".08 .015 .001" material="maze_entry" contype="0" conaffinity="0" group="2" euler="0 0 -40" />
+    <geom name="maze_entry_arrow_2_-1" type="box" pos="0.6599999999999999 -0.065 .003" size=".08 .015 .001" material="maze_entry" contype="0" conaffinity="0" group="2" euler="0 0 40" />
+    <geom name="maze_entry_arrow_2_1" type="box" pos="0.6599999999999999 0.065 .003" size=".08 .015 .001" material="maze_entry" contype="0" conaffinity="0" group="2" euler="0 0 -40" />
+    <geom name="maze_exit_threshold" type="box" pos="9.2 7.2 0.002" size="0.25 0.5 0.001" material="maze_exit" contype="0" conaffinity="0" group="2" />
+    <geom name="maze_exit_post_6.63" type="box" pos="9.2 6.63 0.6" size="0.07 0.03 0.6" material="maze_exit" />
+    <geom name="maze_exit_post_7.7700000000000005" type="box" pos="9.2 7.7700000000000005 0.6" size="0.07 0.03 0.6" material="maze_exit" />
+    <geom name="maze_exit_arrow_0_-1" type="box" pos="9.34 7.135 .003" size=".08 .015 .001" material="maze_exit" contype="0" conaffinity="0" group="2" euler="0 0 40" />
+    <geom name="maze_exit_arrow_0_1" type="box" pos="9.34 7.265000000000001 .003" size=".08 .015 .001" material="maze_exit" contype="0" conaffinity="0" group="2" euler="0 0 -40" />
+    <geom name="maze_exit_arrow_1_-1" type="box" pos="9.49 7.135 .003" size=".08 .015 .001" material="maze_exit" contype="0" conaffinity="0" group="2" euler="0 0 40" />
+    <geom name="maze_exit_arrow_1_1" type="box" pos="9.49 7.265000000000001 .003" size=".08 .015 .001" material="maze_exit" contype="0" conaffinity="0" group="2" euler="0 0 -40" />
+    <geom name="maze_exit_arrow_2_-1" type="box" pos="9.64 7.135 .003" size=".08 .015 .001" material="maze_exit" contype="0" conaffinity="0" group="2" euler="0 0 40" />
+    <geom name="maze_exit_arrow_2_1" type="box" pos="9.64 7.265000000000001 .003" size=".08 .015 .001" material="maze_exit" contype="0" conaffinity="0" group="2" euler="0 0 -40" />
+    <site name="maze_entry" pos=".8 0 .02" size=".02" rgba="0 0 0 0" />
+    <site name="maze_exit" pos="9.2 7.2 .02" size=".02" rgba="0 0 0 0" />
+  </worldbody>
+</mujoco>

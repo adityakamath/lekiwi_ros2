@@ -25,7 +25,7 @@ ros2 launch lekiwi_bringup lekiwi.launch.py                                     
 ros2 launch lekiwi_bringup lekiwi.launch.py payload:=""                           # base only
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=map                          # SLAM mapping
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=amcl map_name:=livingroom1   # localize on a saved map
-ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=arena         # MuJoCo simulation
+ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=home         # MuJoCo simulation
 ros2 launch lekiwi_bringup laser.launch.py                                        # LiDAR alone
 ```
 

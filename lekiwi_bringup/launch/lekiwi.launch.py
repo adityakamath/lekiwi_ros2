@@ -313,8 +313,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'mujoco_scene',
             default_value='flat',
-            description='[sim only] World for the simulated robot: flat, arena (walled room with '
-                        'obstacles), none, or a scene MJCF path. Ignored unless sim:=true.',
+            description='[sim only] World for the simulated robot: flat, arena, home (apartment with pushable '
+                        'obstacles), maze, none, or a scene MJCF path. Ignored unless sim:=true.',
         ),
         DeclareLaunchArgument(
             'mujoco_gui',

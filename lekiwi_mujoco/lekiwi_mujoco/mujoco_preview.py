@@ -192,7 +192,7 @@ def main():
     parser.add_argument('--control-package', type=Path)
     parser.add_argument('--description-package', type=Path)
     parser.add_argument('--pt-package', type=Path)
-    parser.add_argument('--scene', default='flat', help='flat, none, or scene MJCF path')
+    parser.add_argument('--scene', default='flat', help='flat, arena, home (apartment), maze, none, or scene MJCF path')
     parser.add_argument('--model', type=Path, help='Use an explicit prebuilt XML and its embedded limits instead of regenerating')
     parser.add_argument('--island-colors', action='store_true', help='Debug constraint islands instead of displaying robot materials')
     parser.add_argument('--telemetry', type=Path, help='Optional live model-state JSON')

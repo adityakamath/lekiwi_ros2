@@ -104,7 +104,7 @@ ros2 launch lekiwi_bringup lekiwi.launch.py                                   # 
 ros2 launch lekiwi_bringup lekiwi.launch.py payload:=""                       # base only
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=map                      # SLAM mapping
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=amcl map_name:=livingroom1   # localize on a saved map
-ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=arena     # MuJoCo simulation
+ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=home     # MuJoCo simulation
 ```
 
 ### Launch arguments
@@ -123,7 +123,7 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 | `audio` | `true` | A physical reSpeaker is present; `false` skips `lekiwi_audio` |
 | `battery_monitor` | `true` | A physical INA260 is present; `false` skips the battery monitor |
 | `sim` | `false` | Run in MuJoCo instead of on hardware |
-| `mujoco_scene` | `flat` | `sim` only: `flat`, `arena` (walled room with obstacles), `none` or a scene file |
+| `mujoco_scene` | `flat` | `sim` only: `flat`, `arena`, `home` (furnished apartment with pushable props), `maze`, `none` or a scene file |
 | `mujoco_gui` | `false` | `sim` only: show the MuJoCo viewer (headless otherwise, no display or GPU needed) |
 | `diagnostics` | `false` | Launch the motor and IMU diagnostics nodes |
 | `joy` | `false` | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |

@@ -1,32 +1,101 @@
 <mujoco model="lekiwi_arena">
-    <!-- Flat floor inside a 6 x 6 m walled room with a few obstacles, for navigation tests. -->
-    <statistic center="0 0 0.15" extent="0.7"/>
-
-    <visual>
-      <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
-      <rgba haze="0.15 0.25 0.35 1"/>
-      <global azimuth="135" elevation="-25" offwidth="1280" offheight="720"/>
-    </visual>
-
-    <asset>
-      <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
-      <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
-        markrgb="0.8 0.8 0.8" width="300" height="300"/>
-      <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
-      <material name="wall" rgba="0.75 0.72 0.65 1"/>
-      <material name="obstacle" rgba="0.85 0.45 0.2 1"/>
-    </asset>
-
-    <worldbody>
-      <light pos="0 0 2.5" dir="0 0 -1" directional="true"/>
-      <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" friction="0.4 0.005 0.0001"/>
-      <geom name="wall_north" type="box" size="3 0.05 0.4" pos="0 3 0.4" material="wall"/>
-      <geom name="wall_south" type="box" size="3 0.05 0.4" pos="0 -3 0.4" material="wall"/>
-      <geom name="wall_east" type="box" size="0.05 3 0.4" pos="3 0 0.4" material="wall"/>
-      <geom name="wall_west" type="box" size="0.05 3 0.4" pos="-3 0 0.4" material="wall"/>
-      <geom name="box_a" type="box" size="0.3 0.3 0.25" pos="1.5 0.8 0.25" material="obstacle"/>
-      <geom name="box_b" type="box" size="0.2 0.5 0.25" pos="-1.2 -1.0 0.25" material="obstacle"/>
-      <geom name="pillar" type="cylinder" size="0.2 0.4" pos="0.5 -1.8 0.4" material="obstacle"/>
-    </worldbody>
-
+  <statistic center="0 0 .4" extent="3.2" />
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <rgba haze="0.15 0.25 0.35 1" />
+    <global azimuth="135" elevation="-48" offwidth="1280" offheight="720" />
+  </visual>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
+    <material name="arena_wall" rgba=".85 .83 .77 1" />
+    <material name="arena_floor" rgba=".68 .60 .47 1" />
+    <material name="arena_blue" rgba=".15 .42 .7 1" />
+    <material name="arena_teal" rgba=".16 .61 .48 1" />
+    <material name="arena_orange" rgba=".95 .56 .18 1" />
+    <material name="arena_white" rgba=".92 .92 .86 1" />
+    <material name="arena_dark" rgba=".24 .29 .31 1" />
+    <material name="arena_box" rgba=".74 .53 .30 1" />
+  </asset>
+  <worldbody>
+    <light pos="-2 -2 6" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" friction="0.4 0.005 0.0001" />
+    <camera name="arena_top" pos="0 0 7" xyaxes="1 0 0 0 1 0" />
+    <camera name="arena_overview" pos="4 -5 5.5" xyaxes=".7809 .6247 0 -.4154 .5192 .7461" />
+    <!--4 x 4 m course. Standard infinite floor handles contacts; bounded finish is visual only.-->
+    <geom name="arena_floor_finish" type="box" pos="0 0 0" size="2.08 2.08 0.001" material="arena_floor" contype="0" conaffinity="0" group="2" />
+    <geom name="wall_north" type="box" pos="0 2 0.5" size="2.08 0.08 0.5" material="arena_wall" />
+    <geom name="wall_south" type="box" pos="0 -2 0.5" size="2.08 0.08 0.5" material="arena_wall" />
+    <geom name="wall_east" type="box" pos="2 0 0.5" size="0.08 2 0.5" material="arena_wall" />
+    <geom name="wall_west" type="box" pos="-2 0 0.5" size="0.08 2 0.5" material="arena_wall" />
+    <!--Central 1.3 x 1.3 m maneuvering area stays clear; corner marks do not affect wheel contact.-->
+    <geom name="arena_center_mark_x_0" type="box" pos="-0.65 -0.65 0.002" size="0.12 0.012 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_y_0" type="box" pos="-0.65 -0.65 0.002" size="0.012 0.12 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_x_1" type="box" pos="-0.65 0.65 0.002" size="0.12 0.012 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_y_1" type="box" pos="-0.65 0.65 0.002" size="0.012 0.12 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_x_2" type="box" pos="0.65 -0.65 0.002" size="0.12 0.012 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_y_2" type="box" pos="0.65 -0.65 0.002" size="0.012 0.12 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_x_3" type="box" pos="0.65 0.65 0.002" size="0.12 0.012 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_center_mark_y_3" type="box" pos="0.65 0.65 0.002" size="0.012 0.12 0.001" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <!--North: 0.6, 0.8, 1.0 m gates; 0.70 m circulation lane behind them.-->
+    <geom name="arena_gate_0_left" type="box" pos="-1.61 1.12 0.45" size="0.06 0.1 0.45" material="arena_blue" />
+    <geom name="arena_gate_0_right" type="box" pos="-0.89 1.12 0.45" size="0.06 0.1 0.45" material="arena_blue" />
+    <geom name="arena_gate_0_threshold" type="box" pos="-1.25 1.12 0.002" size="0.3 0.035 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_0_tick_0" type="box" pos="-1.25 0.86 0.002" size="0.035 0.09 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_1_left" type="box" pos="-0.56 1.12 0.45" size="0.06 0.1 0.45" material="arena_blue" />
+    <geom name="arena_gate_1_right" type="box" pos="0.36 1.12 0.45" size="0.06 0.1 0.45" material="arena_blue" />
+    <geom name="arena_gate_1_threshold" type="box" pos="-0.1 1.12 0.002" size="0.4 0.035 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_1_tick_0" type="box" pos="-0.16 0.86 0.002" size="0.035 0.09 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_1_tick_1" type="box" pos="-0.04 0.86 0.002" size="0.035 0.09 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_2_left" type="box" pos="0.59 1.12 0.45" size="0.06 0.1 0.45" material="arena_blue" />
+    <geom name="arena_gate_2_right" type="box" pos="1.71 1.12 0.45" size="0.06 0.1 0.45" material="arena_blue" />
+    <geom name="arena_gate_2_threshold" type="box" pos="1.15 1.12 0.002" size="0.5 0.035 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_2_tick_0" type="box" pos="1.03 0.86 0.002" size="0.035 0.09 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_2_tick_1" type="box" pos="1.15 0.86 0.002" size="0.035 0.09 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_gate_2_tick_2" type="box" pos="1.27 0.86 0.002" size="0.035 0.09 0.001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <!--East: staggered slalom; at least 0.60 m between bollards and east wall.-->
+    <geom name="arena_slalom_0" type="cylinder" pos="0.95 -1.2 0.35" size="0.12 0.35" material="arena_orange" />
+    <geom name="arena_slalom_band_0" type="cylinder" pos="0.95 -1.2 0.56" size="0.121 0.05" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_slalom_1" type="cylinder" pos="1.2 -0.4 0.35" size="0.12 0.35" material="arena_orange" />
+    <geom name="arena_slalom_band_1" type="cylinder" pos="1.2 -0.4 0.56" size="0.121 0.05" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_slalom_2" type="cylinder" pos="0.95 0.4 0.35" size="0.12 0.35" material="arena_orange" />
+    <geom name="arena_slalom_band_2" type="cylinder" pos="0.95 0.4 0.56" size="0.121 0.05" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <!--Southwest: docking pocket with 1 m inner width, approached from the east.-->
+    <geom name="arena_dock_back" type="box" pos="-1.78 -0.95 0.22" size="0.06 0.58 0.22" material="arena_teal" />
+    <geom name="arena_dock_side_0" type="box" pos="-1.54 -1.53 .18" size=".24 .08 .18" material="arena_dark" />
+    <geom name="arena_dock_side_1" type="box" pos="-1.54 -0.37 .18" size=".24 .08 .18" material="arena_dark" />
+    <geom name="arena_dock_stop" type="box" pos="-1.39 -.95 .002" size="0.02 0.45 0.001" material="arena_teal" contype="0" conaffinity="0" group="2" />
+    <!--South: lightweight pushable objects in an open practice area.-->
+    <body name="arena_push_box" pos="-.2 -1.25 .145">
+      <freejoint name="arena_push_box_free" />
+      <geom name="arena_push_box_geom" type="box" size=".17 .14 .14" mass=".18" material="arena_box" friction=".22 .002 .0001" condim="4" />
+    </body>
+    <body name="arena_push_ball" pos="-.1 -1.72 .105">
+      <freejoint name="arena_push_ball_free" />
+      <geom name="arena_push_ball_geom" type="sphere" size=".10" mass=".06" material="arena_orange" friction=".22 .002 .0001" condim="4" />
+    </body>
+    <!--West wall landmarks distinguish orientation without obstructing the open center.-->
+    <geom name="arena_landmark_0" type="box" pos="-1.912 -0.2 0.64" size="0.004 0.2 0.23" material="arena_orange" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_landmark_1" type="box" pos="-1.912 0.45 0.64" size="0.004 0.2 0.23" material="arena_teal" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_landmark_2" type="box" pos="-1.912 1.1 0.64" size="0.004 0.2 0.23" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <!--Visual-only pushing target: 0.50 x 0.44 m, center (0.4,-1.25). Push east from box spawn.-->
+    <geom name="arena_push_target_north" type="box" pos=".4 -1.03 .002" size=".26 .01 .001" material="arena_orange" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_push_target_south" type="box" pos=".4 -1.47 .002" size=".26 .01 .001" material="arena_orange" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_push_target_west" type="box" pos=".15 -1.25 .002" size=".01 .22 .001" material="arena_orange" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_push_target_east" type="box" pos=".65 -1.25 .002" size=".01 .22 .001" material="arena_orange" contype="0" conaffinity="0" group="2" />
+    <!--Dock stop line marks robot center, 0.33 m from the back face. Centerline extends into approach.-->
+    <geom name="arena_dock_centerline" type="box" pos="-.995 -.95 .002" size=".395 .012 .001" material="arena_teal" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_dock_back_target" type="box" pos="-1.718 -.95 .28" size=".001 .18 .13" material="arena_white" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_dock_back_target_vertical" type="box" pos="-1.715 -.95 .28" size=".001 .015 .11" material="arena_dark" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_dock_back_target_horizontal" type="box" pos="-1.714 -.95 .28" size=".001 .15 .015" material="arena_dark" contype="0" conaffinity="0" group="2" />
+    <!--Flared dock mouth: angled contact guides taper into the original 1 m-wide pocket.-->
+    <geom name="arena_dock_flare_0" type="box" pos="-1.19 -1.6 .18" size="0.14764823 .08 .18" euler="0 0 -28.30075577" material="arena_teal" />
+    <geom name="arena_dock_flare_1" type="box" pos="-1.19 -0.3 .18" size="0.14764823 .08 .18" euler="0 0 28.30075577" material="arena_teal" />
+    <!--Second target at (0.4,-0.45): push east to the orange target, reposition south, then push north to blue.-->
+    <geom name="arena_push_target_2_north" type="box" pos=".4 -.23 .002" size=".26 .01 .001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_push_target_2_south" type="box" pos=".4 -.67 .002" size=".26 .01 .001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_push_target_2_west" type="box" pos=".15 -.45 .002" size=".01 .22 .001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+    <geom name="arena_push_target_2_east" type="box" pos=".65 -.45 .002" size=".01 .22 .001" material="arena_blue" contype="0" conaffinity="0" group="2" />
+  </worldbody>
 </mujoco>

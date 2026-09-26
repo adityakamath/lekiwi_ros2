@@ -48,7 +48,7 @@ ros2 launch lekiwi_control teleop.launch.py                                    #
 | `joy` | `false` | Start `joy_node` on this device |
 | `use_sim_time` | `false` | Use `/clock` instead of system time |
 | `ros2_control_hardware_type` | `real` | `real` or `mujoco` |
-| `mujoco_scene`, `mujoco_model`, `mujoco_headless` | `flat`, `""`, `false` | `mujoco` only: scene (`flat`, `arena`, `none` or a file), a pre-built MJCF (empty generates one at launch), and whether to skip the viewer |
+| `mujoco_scene`, `mujoco_model`, `mujoco_headless` | `flat`, `""`, `false` | `mujoco` only: scene (`flat`, `arena`, `home`, `maze`, `none` or a file), a pre-built MJCF (empty generates one at launch), and whether to skip the viewer |
 
 `teleop.launch.py` takes `payload`, `use_sim_time` and `joy`.
 
