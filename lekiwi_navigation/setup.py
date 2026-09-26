@@ -25,6 +25,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'nav2_target_node = lekiwi_navigation.nav2_target_node:main',
             'map_saver_node = lekiwi_navigation.map_saver_node:main',
             'waypoint_recorder_node = lekiwi_navigation.waypoint_recorder_node:main',
         ],

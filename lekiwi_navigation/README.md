@@ -83,3 +83,65 @@ pytest test -q
 ```
 
 The tests check the Nav2, EKF and SLAM configuration (including the speed limits against `lekiwi_control`), the launch arguments, and the two nodes.
+
+## Nav2 target tracker (phase one)
+
+The optional `nav2_target_node` edits and displays a planar target. This first phase
+**does not send navigation goals** and does not provide a commit service yet.
+It does not change the joystick configuration or the robot's velocity routing.
+
+Start the existing robot stack, then run:
+
+```bash
+ros2 launch lekiwi_navigation nav2_target.launch.py
+# For simulation, add use_sim_time:=true.
+```
+
+Configuration is in `config/nav2/nav2_target.yaml`; override it with `params_file`.
+The standalone launch is deliberately not enabled in normal bringup yet.
+
+In teleop, the node broadcasts identity `base_footprint -> nav2_target`. In Nav2
+mode, it converts that attachment to a map pose once and broadcasts
+`map -> nav2_target`. It then uses `/cmd_vel_teleop`'s X/Y components as
+**target-relative** translation and angular Z as heading rotation. The original
+`base_link` message header does not select the editing frame. Translation uses
+the target heading, never a continuously tracked robot heading. Commands expire
+after `command_timeout`; mode changes clear held input. Returning to teleop
+reattaches the target without canceling or otherwise changing navigation.
+
+The node observes successful request/response pairs on
+`/twist_switch/_service_event`, using retained service introspection like the
+existing toggle node. Before the first observed successful call it displays the
+attached target but disables editing (`waiting_for_mode`). A switch restart or
+liveliness loss also requires a fresh mode confirmation. It never calls the
+switch service to force a mode. Retained event history is limited, so incomplete
+request/response pairs are ignored.
+
+Display `nav2_target_marker` as a Marker in Foxglove/RViz, and enable TF axes for
+`nav2_target` to see its heading. The marker is a sphere, gray while attached and
+cyan while editing. `nav2_target_pose` publishes the draft in its current parent
+frame (base in teleop, map in Nav2); consumers must inspect `header.frame_id`.
+`nav2_target_status` reports `waiting_for_mode`, `teleop_attached`,
+`waiting_for_map_transform`, or `editing`. If the transition lacks map TF, the
+node waits and the old marker expires rather than inventing a map position.
+
+### First-phase validation on a ROS 2 device
+
+This phase has only been statically checked on the development device. After
+building and sourcing the package on the ROS 2 device:
+
+1. Start the tracker and confirm the sphere and axes coincide with the base in
+   teleop, including while driving. There must be no map-TF requirement in teleop.
+2. Switch to Nav2 with the existing mode button. Confirm the target preserves its
+   position, then stays map-fixed without input.
+3. Move and rotate it with the existing joystick/Foxglove controls. Rotate 90
+   degrees and verify forward translation follows the target's X axis.
+4. Release the controls and confirm the target stops; switch modes with a held
+   command and check that no old command produces a jump.
+5. Return to teleop and verify reattachment. Inspect TF around both parent changes
+   for lookup errors or transient display jumps.
+6. Start the tracker after selecting Nav2, restart the twist switch, and test a
+   transition with map TF unavailable. Check the reported state and recovery after
+   a new successful mode call / restored TF.
+7. Confirm no goal is submitted and the existing navigation/patrol behavior is
+   unchanged. Goal submission via `nav2_target_commit` (SetBool) is the next phase.
