@@ -31,7 +31,7 @@ class Nav2TargetNode(Node):
             'map_frame': 'map', 'base_frame': 'base_footprint',
             'target_frame': 'nav2_target', 'teleop_topic': 'cmd_vel_teleop',
             'mode_service': 'twist_switch', 'publish_rate': 30.0,
-            'command_timeout': 0.2, 'max_dt': 0.1, 'marker_scale': 0.08,
+            'command_timeout': 0.2, 'max_dt': 0.1, 'marker_scale': 0.05,
             'translation_scale': 1.0, 'rotation_scale': 1.0,
             'teleop_color': [0.5, 0.5, 0.5, 0.9],
             'editing_color': [0.0, 1.0, 1.0, 0.9],
