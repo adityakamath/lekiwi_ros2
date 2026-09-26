@@ -130,7 +130,8 @@ ros2 topic echo /nav2_target_goal_status
 ```
 
 `data: false` is a successful no-op, matching the reset-waypoints button convention.
-No physical button is assigned yet. A successful service response means submission
+Press **button 8 (right joystick button)** to make the same `data: true` call,
+with no L1 modifier required. A successful service response means submission
 started, not that Nav2 accepted or reached the goal. The action client sends to
 `navigate_to_pose`; the retained `nav2_target_goal_status` topic reports `idle`,
 `sending`, `active`, `rejected`, `succeeded`, `failed`, `canceled`, or `unknown`

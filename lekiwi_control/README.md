@@ -60,6 +60,11 @@ ros2 launch lekiwi_control teleop.launch.py                                    #
 
 **`base_teleop.yaml`** maps the joystick (a Steam Deck; see the [repository README](../README.md#joystick) for the buttons). Its axis scales, 0.2 m/s, 0.17 m/s and 0.68 rad/s, are the base's speed limits, and `velocity_smoother` in `lekiwi_navigation`'s `nav2.yaml` must match them. `pantilt_teleop.yaml` adds the D-pad for the pan-tilt and is loaded on top when `payload:=pantilt`.
 
+Button **8 (right joystick press)** calls `/nav2_send_goal` with
+`std_srvs/srv/SetBool` and `data: true`, using the same one-shot service mapping as
+reset waypoints. The target node accepts it only in Nav2 mode with an initialized
+target and no pending/active goal. No L1 modifier is required for this button.
+
 ## How it works
 
 The launch file expands the URDF from `lekiwi_description` with the values in `urdf_config.yaml`, starts one controller manager for everything, and spawns the controllers: joint states, the IMU broadcaster, the wheel controller, and the pan-tilt controller with `pt_control`'s own configuration file. There is one controller manager whether or not a payload is mounted, because the wheels and the payload share the servo bus.

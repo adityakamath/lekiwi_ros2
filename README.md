@@ -144,6 +144,7 @@ Teleoperation is set up for a **Steam Deck** used as a generic joystick, not thr
 | X | Toggle between teleop and Nav2 control |
 | R1 (hold) | Disable the collision monitor's predictive stop |
 | Screenshot | Save the current SLAM map |
+| Right joystick button (8) | Submit the edited Nav2 target via `/nav2_send_goal` (Nav2 mode only) |
 | Y / A / Settings | Record / toggle / reset a waypoint patrol |
 
 All of these, plus navigation goal outcomes, are announced by `lekiwi_audio` (unless `audio:=false`). To test the patrol announcements without the infinite loop, launch with `wp_loops:=1`.

@@ -60,6 +60,15 @@ joy_teleop:
         data: true
       buttons: [11]  # settings
 
+    # Submit the edited target, using the same one-shot SetBool pattern as reset_waypoints.
+    nav2_send_goal:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /nav2_send_goal
+      service_request:
+        data: true
+      buttons: [8]  # Right joystick button
+
     # map_saver_node's service.
     save_map:
       type: service
