@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Editable planar target; phase one deliberately does not submit navigation goals."""
+"""Editable planar target with explicit SetBool submission to Nav2."""
 
 import math
+
+from action_msgs.msg import GoalStatus
+from nav2_msgs.action import NavigateToPose
+from rclpy.action import ActionClient
 
 from geometry_msgs.msg import PoseStamped, TransformStamped, TwistStamped
 import rclpy
@@ -13,7 +17,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
 from service_msgs.msg import ServiceEventInfo
 from std_msgs.msg import String
-from std_srvs.srv import SetBool_Event
+from std_srvs.srv import SetBool, SetBool_Event
 import tf2_ros
 from visualization_msgs.msg import Marker
 
@@ -62,6 +66,14 @@ class Nav2TargetNode(Node):
                               reliability=ReliabilityPolicy.RELIABLE)
         self._pose_pub = self.create_publisher(PoseStamped, 'nav2_target_pose', retained)
         self._status_pub = self.create_publisher(String, 'nav2_target_status', retained)
+        self._goal_status_pub = self.create_publisher(String, 'nav2_target_goal_status', retained)
+        self._submitted_pub = self.create_publisher(
+            PoseStamped, 'nav2_target_submitted_pose', retained)
+        self._nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self._goal_token = None
+        self._goal_handle = None
+        self._send_service = self.create_service(SetBool, 'nav2_send_goal', self._send_goal)
+        self._publish_goal_status('idle')
         self._marker_pub = self.create_publisher(Marker, 'nav2_target_marker', 1)
         event_qos = QoSProfile(depth=32, durability=DurabilityPolicy.TRANSIENT_LOCAL,
                                reliability=ReliabilityPolicy.RELIABLE,
@@ -73,6 +85,98 @@ class Nav2TargetNode(Node):
         )
         self.create_subscription(TwistStamped, self._params['teleop_topic'], self._on_twist, 1)
         self.create_timer(1.0 / self._params['publish_rate'], self._tick)
+
+    def _publish_goal_status(self, state, detail=''):
+        text = state if not detail else f'{state}: {detail}'
+        self._goal_status_pub.publish(String(data=text))
+        self.get_logger().info(f'Nav2 target goal: {text}')
+
+    def _send_goal(self, request, response):
+        """Acknowledge submission promptly; acceptance/result are asynchronous."""
+        if not request.data:
+            response.success = True
+            response.message = 'No-op (set data: true to send the target).'
+            return response
+        reason = None
+        if self._mode is not True:
+            reason = 'Nav2 mode must be confirmed before sending a goal.'
+        elif self._pose is None:
+            reason = 'Target is not initialized in the map frame.'
+        elif self._goal_token is not None:
+            reason = 'A goal is pending, active, or its outcome is unknown.'
+        elif not all(math.isfinite(v) for v in self._pose):
+            reason = 'Target pose contains nonfinite values.'
+        elif not self._nav_client.server_is_ready():
+            reason = 'NavigateToPose action server is unavailable.'
+        if reason:
+            response.success = False
+            response.message = reason
+            return response
+        x, y, yaw = self._pose
+        goal = NavigateToPose.Goal()
+        goal.pose.header.frame_id = self._params['map_frame']
+        goal.pose.header.stamp = self.get_clock().now().to_msg()
+        goal.pose.pose.position.x = x
+        goal.pose.pose.position.y = y
+        goal.pose.pose.orientation.z = math.sin(yaw / 2)
+        goal.pose.pose.orientation.w = math.cos(yaw / 2)
+        # Reserve the slot before any asynchronous operation. Mode changes and draft
+        # edits deliberately leave this action state and its independent snapshot alone.
+        token = object()
+        self._goal_token = token
+        self._publish_goal_status('sending')
+        try:
+            future = self._nav_client.send_goal_async(goal)
+        except Exception as exc:
+            # Do not assume a transport exception proves the robot received nothing.
+            self._publish_goal_status('unknown', str(exc))
+            response.success = False
+            response.message = 'Submission outcome unknown; inspect Nav2 before retrying.'
+            return response
+        self._submitted_pub.publish(goal.pose)
+        future.add_done_callback(lambda done: self._on_goal_response(token, done))
+        response.success = True
+        response.message = 'Submission started; monitor nav2_target_goal_status for acceptance/result.'
+        return response
+
+    def _on_goal_response(self, token, future):
+        if token is not self._goal_token:
+            return
+        try:
+            handle = future.result()
+            if not handle.accepted:
+                self._goal_token = None
+                self._publish_goal_status('rejected')
+                return
+            self._goal_handle = handle
+            self._publish_goal_status('active')
+            result = handle.get_result_async()
+            result.add_done_callback(lambda done: self._on_goal_result(token, done))
+        except Exception as exc:
+            self._publish_goal_status('unknown', str(exc))
+
+    def _on_goal_result(self, token, future):
+        if token is not self._goal_token:
+            return
+        try:
+            result = future.result()
+            states = {
+                GoalStatus.STATUS_SUCCEEDED: 'succeeded',
+                GoalStatus.STATUS_ABORTED: 'failed',
+                GoalStatus.STATUS_CANCELED: 'canceled',
+            }
+            if result.status not in states:
+                self._publish_goal_status('unknown', f'action status {result.status}')
+                return
+            detail = getattr(result.result, 'error_msg', '')
+            error_code = getattr(result.result, 'error_code', 0)
+            if error_code:
+                detail = f'error_code={error_code}; {detail}'
+            self._goal_handle = None
+            self._goal_token = None
+            self._publish_goal_status(states[result.status], detail)
+        except Exception as exc:
+            self._publish_goal_status('unknown', str(exc))
 
     def _on_liveliness(self, event):
         if event.alive_count == 0:

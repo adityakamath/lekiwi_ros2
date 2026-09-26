@@ -84,10 +84,10 @@ pytest test -q
 
 The tests check the Nav2, EKF and SLAM configuration (including the speed limits against `lekiwi_control`), the launch arguments, and the two nodes.
 
-## Nav2 target tracker (phase one)
+## Nav2 target tracker
 
-The `nav2_target_node` edits and displays a planar target. This first phase
-**does not send navigation goals** and does not provide a commit service yet.
+The `nav2_target_node` edits and displays a planar target. The `/nav2_send_goal`
+SetBool service explicitly submits its current map pose to Nav2.
 It does not change the joystick configuration or the robot's velocity routing.
 
 The tracker starts automatically with `nav2.launch.py`, including through normal
@@ -120,9 +120,35 @@ frame (base in teleop, map in Nav2); consumers must inspect `header.frame_id`.
 `waiting_for_map_transform`, or `editing`. If the transition lacks map TF, the
 node waits and the old marker expires rather than inventing a map position.
 
-### First-phase validation on a ROS 2 device
+### Sending the target to Nav2
 
-This phase has only been statically checked on the development device. After
+In Nav2 mode, after editing the target:
+
+```bash
+ros2 service call /nav2_send_goal std_srvs/srv/SetBool "{data: true}"
+ros2 topic echo /nav2_target_goal_status
+```
+
+`data: false` is a successful no-op, matching the reset-waypoints button convention.
+No physical button is assigned yet. A successful service response means submission
+started, not that Nav2 accepted or reached the goal. The action client sends to
+`navigate_to_pose`; the retained `nav2_target_goal_status` topic reports `idle`,
+`sending`, `active`, `rejected`, `succeeded`, `failed`, `canceled`, or `unknown`
+(with error details when available). This is separate from the editing-mode status.
+`nav2_target_submitted_pose` retains the last submitted snapshot; later edits do not
+change that goal. The sphere continues to represent the editable target.
+
+Only one goal from this node may be pending/active at a time. Rejection or a terminal
+result releases that slot. Missing mode confirmation, missing map pose, nonfinite
+coordinates, or an unavailable action server reject the service request. Transport
+errors with uncertain outcomes keep the slot reserved: inspect/cancel the goal in
+Nav2 before restarting the tracker to permit another submission. Restarting the
+tracker does not cancel or recover ownership of a previously submitted goal.
+Changing modes also leaves existing navigation and patrol behavior alone.
+
+### Validation on a ROS 2 device
+
+This feature has only been statically checked on the development device. After
 building and sourcing the package on the ROS 2 device:
 
 1. Start normal robot bringup and confirm the sphere and axes coincide with the base in
@@ -138,5 +164,11 @@ building and sourcing the package on the ROS 2 device:
 6. Restart the tracker after selecting Nav2, restart the twist switch, and test a
    transition with map TF unavailable. Check the reported state and recovery after
    a new successful mode call / restored TF.
-7. Confirm no goal is submitted and the existing navigation/patrol behavior is
-   unchanged. Goal submission via `nav2_target_commit` (SetBool) is the next phase.
+7. Confirm editing alone never submits a goal. Call `/nav2_send_goal` with false
+   (no-op), then true in teleop (rejected), then true in Nav2 mode (submitted).
+8. Compare `nav2_target_submitted_pose` against the draft at submission, including
+   heading. Edit the draft during navigation and verify the submitted goal stays
+   unchanged. A second true call while busy must be rejected.
+9. Check success, rejection, failure, external cancellation, and subsequent
+   submissions. Switch to teleop during execution and confirm the action is not
+   canceled by this node. Check the existing patrol detour/resume behavior.
