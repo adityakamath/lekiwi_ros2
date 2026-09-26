@@ -244,6 +244,18 @@ def launch_setup(context, *args, **kwargs):
             ],
             arguments=['--ros-args', '--log-level', log_level],
         ),
+        # Target tracker is a plain node, outside Nav2 lifecycle management.
+        Node(
+            package='lekiwi_navigation',
+            executable='nav2_target_node',
+            name='nav2_target_node',
+            output='screen',
+            parameters=[
+                PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'nav2_target.yaml']),
+                {'use_sim_time': use_sim_time},
+            ],
+            arguments=['--ros-args', '--log-level', log_level],
+        ),
         # ── Velocity Smoother ────────────────────────────────────────────
         Node(
             package='nav2_velocity_smoother',

@@ -86,19 +86,14 @@ The tests check the Nav2, EKF and SLAM configuration (including the speed limits
 
 ## Nav2 target tracker (phase one)
 
-The optional `nav2_target_node` edits and displays a planar target. This first phase
+The `nav2_target_node` edits and displays a planar target. This first phase
 **does not send navigation goals** and does not provide a commit service yet.
 It does not change the joystick configuration or the robot's velocity routing.
 
-Start the existing robot stack, then run:
-
-```bash
-ros2 launch lekiwi_navigation nav2_target.launch.py
-# For simulation, add use_sim_time:=true.
-```
-
-Configuration is in `config/nav2/nav2_target.yaml`; override it with `params_file`.
-The standalone launch is deliberately not enabled in normal bringup yet.
+The tracker starts automatically with `nav2.launch.py`, including through normal
+navigation and robot bringup. It inherits `use_sim_time` and the launch log level.
+No separate launch command is needed. Configure it in
+`config/nav2/nav2_target.yaml`.
 
 In teleop, the node broadcasts identity `base_footprint -> nav2_target`. In Nav2
 mode, it converts that attachment to a map pose once and broadcasts
@@ -130,7 +125,7 @@ node waits and the old marker expires rather than inventing a map position.
 This phase has only been statically checked on the development device. After
 building and sourcing the package on the ROS 2 device:
 
-1. Start the tracker and confirm the sphere and axes coincide with the base in
+1. Start normal robot bringup and confirm the sphere and axes coincide with the base in
    teleop, including while driving. There must be no map-TF requirement in teleop.
 2. Switch to Nav2 with the existing mode button. Confirm the target preserves its
    position, then stays map-fixed without input.
@@ -140,7 +135,7 @@ building and sourcing the package on the ROS 2 device:
    command and check that no old command produces a jump.
 5. Return to teleop and verify reattachment. Inspect TF around both parent changes
    for lookup errors or transient display jumps.
-6. Start the tracker after selecting Nav2, restart the twist switch, and test a
+6. Restart the tracker after selecting Nav2, restart the twist switch, and test a
    transition with map TF unavailable. Check the reported state and recovery after
    a new successful mode call / restored TF.
 7. Confirm no goal is submitted and the existing navigation/patrol behavior is
