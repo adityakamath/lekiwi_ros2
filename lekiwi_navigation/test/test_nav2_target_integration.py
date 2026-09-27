@@ -54,7 +54,7 @@ def test_send_service_action_result_and_audio_events():
         assert requests and requests[0].request[0].data
         assert responses[0].response[0].success
         assert requests[0].info.sequence_number == responses[0].info.sequence_number
-        assert requests[0].info.client_gid == responses[0].info.client_gid
+        assert bytes(requests[0].info.client_gid) == bytes(responses[0].info.client_gid)
     finally:
         peer.destroy_subscription(subscription)
         server.destroy()
