@@ -45,6 +45,7 @@ DEFAULT_SERVICES = [
     '/twist_switch',
     '/record_waypoint',
     '/reset_waypoints',
+    '/nav2_send_goal',
     '/waypoint_follow',
     '/save_map',
     '/battery_low',

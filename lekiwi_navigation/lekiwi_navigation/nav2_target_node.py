@@ -6,6 +6,7 @@ import math
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
+from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionState
 
 from geometry_msgs.msg import PoseStamped, TransformStamped, TwistStamped
 import rclpy
@@ -13,7 +14,7 @@ from rclpy.duration import Duration
 from rclpy.event_handler import SubscriptionEventCallbacks
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy, qos_profile_services_default
 from rclpy.time import Time
 from service_msgs.msg import ServiceEventInfo
 from std_msgs.msg import String
@@ -73,6 +74,9 @@ class Nav2TargetNode(Node):
         self._goal_token = None
         self._goal_handle = None
         self._send_service = self.create_service(SetBool, 'nav2_send_goal', self._send_goal)
+        # One-shot event: do not replay old submissions to late-joining audio nodes.
+        self._send_service.configure_introspection(
+            self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
         self._publish_goal_status('idle')
         self._marker_pub = self.create_publisher(Marker, 'nav2_target_marker', 1)
         event_qos = QoSProfile(depth=32, durability=DurabilityPolicy.TRANSIENT_LOCAL,
