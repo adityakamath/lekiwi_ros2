@@ -15,11 +15,11 @@ joy_teleop:
           offset: 0.0
         twist-linear-y:
           axis: 0 # Left stick horizontal
-          scale: 0.17
+          scale: 0.2
           offset: 0.0
         twist-angular-z:
           axis: 2 # Right stick horizontal
-          scale: 0.68
+          scale: 0.8
           offset: 0.0
         header-frame_id:
           value: 'base_link'

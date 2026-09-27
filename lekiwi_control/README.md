@@ -58,7 +58,7 @@ ros2 launch lekiwi_control teleop.launch.py                                    #
 
 **`control.yaml`** sets the controller manager and the `OmniWheelDriveController`: three wheels at 60°, 180° and 300°, robot radius and wheel radius. The MuJoCo model reads its wheel geometry from here too. The controller enforces no speed limits.
 
-**`base_teleop.yaml`** maps the joystick (a Steam Deck; see the [repository README](../README.md#joystick) for the buttons). Its axis scales, 0.2 m/s, 0.17 m/s and 0.68 rad/s, are the base's speed limits, and `velocity_smoother` in `lekiwi_navigation`'s `nav2.yaml` must match them. `pantilt_teleop.yaml` adds the D-pad for the pan-tilt and is loaded on top when `payload:=pantilt`.
+**`base_teleop.yaml`** maps the joystick (a Steam Deck; see the [repository README](../README.md#joystick) for the buttons). Its axis scales, 0.2 m/s, 0.2 m/s and 0.8 rad/s, are the base's speed limits, and `velocity_smoother` in `lekiwi_navigation`'s `nav2.yaml` must match them. `pantilt_teleop.yaml` adds the D-pad for the pan-tilt and is loaded on top when `payload:=pantilt`.
 
 Button **8 (right joystick press)** calls `/nav2_send_goal` with
 `std_srvs/srv/SetBool` and `data: true`, using the same one-shot service mapping as
