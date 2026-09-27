@@ -102,3 +102,24 @@ def test_uncertain_transport_outcome_keeps_busy_slot(tracker):
     tracker._publish_goal_status.assert_called_with('unknown', 'transport lost')
     assert not send(tracker).success
     tracker._nav_client.send_goal_async.assert_called_once()
+
+
+@pytest.mark.parametrize('stage', ['response', 'result'])
+def test_async_exception_keeps_slot(tracker, stage):
+    send(tracker)
+    token = tracker._goal_token
+    future = Mock()
+    future.result.side_effect = RuntimeError('connection lost')
+    callback = tracker._on_goal_response if stage == 'response' else tracker._on_goal_result
+    callback(token, future)
+    assert tracker._goal_token is token
+    tracker._publish_goal_status.assert_called_with('unknown', 'connection lost')
+
+
+def test_unrecognized_result_does_not_allow_duplicate(tracker):
+    send(tracker)
+    token = tracker._goal_token
+    result = SimpleNamespace(status=GoalStatus.STATUS_UNKNOWN)
+    tracker._on_goal_result(token, Mock(result=lambda: result))
+    assert tracker._goal_token is token
+    assert not send(tracker).success

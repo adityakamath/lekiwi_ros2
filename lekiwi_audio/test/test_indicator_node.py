@@ -152,3 +152,36 @@ class TestIndicatorNodeGoalWatcherWiring:
         callback = node._make_goal_status_callback(node._goal_watchers['nav_goal'])
         callback(_status_array(GoalStatus.STATUS_SUCCEEDED, 1))
         assert spoken == ['Goal reached']
+
+
+@pytest.mark.parametrize('value,success,expected', [
+    (True, True, ['Sending navigation goal']),
+    (True, False, ['Navigation goal rejected']),
+    (False, True, []),
+    (False, False, []),
+])
+def test_nav2_submission_event_announcements(node, monkeypatch, value, success, expected):
+    from service_msgs.msg import ServiceEventInfo
+    from std_srvs.srv import SetBool, SetBool_Event
+    from lekiwi_audio.indicator_node import DEFAULT_SERVICES, DEFAULT_STATE_SERVICES
+
+    assert '/nav2_send_goal' in DEFAULT_SERVICES
+    assert '/nav2_send_goal' not in DEFAULT_STATE_SERVICES
+    spoken = []
+    monkeypatch.setattr(node._speech, 'speak', spoken.append)
+    callback = node._make_callback('/nav2_send_goal')
+    request = SetBool_Event()
+    request.info.event_type = ServiceEventInfo.REQUEST_RECEIVED
+    request.info.sequence_number = 42
+    request.request = [SetBool.Request(data=value)]
+    response = SetBool_Event()
+    response.info.event_type = ServiceEventInfo.RESPONSE_SENT
+    response.info.sequence_number = 42
+    response.response = [SetBool.Response(success=success)]
+    callback(response)  # unmatched response must be silent
+    assert spoken == []
+    callback(request)
+    assert spoken == []
+    callback(response)
+    callback(response)  # duplicate response must not repeat the phrase
+    assert spoken == expected

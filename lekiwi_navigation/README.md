@@ -174,3 +174,33 @@ building and sourcing the package on the ROS 2 device:
 9. Check success, rejection, failure, external cancellation, and subsequent
    submissions. Switch to teleop during execution and confirm the action is not
    canceled by this node. Check the existing patrol detour/resume behavior.
+
+### Automated target tests
+
+After building and sourcing on a ROS 2 device, run from the repository root:
+
+```bash
+pytest lekiwi_navigation/test/test_nav2_target*.py lekiwi_audio/test/test_indicator_node.py -q
+```
+
+The tracking tests cover attachment, map initialization, missing TF, target-relative
+translation, yaw wrap, mode-event correlation, liveliness loss, command expiry,
+clock discontinuities, invalid input, and sphere output. Goal tests cover snapshot
+isolation, submission guards, asynchronous errors, terminal outcomes, and stale
+callbacks. A fake Nav2 action server exercises the real service/action round trip
+and service introspection used by audio; no robot is required for that test.
+Run it on an isolated ROS domain without an existing navigation stack to avoid
+service/action name collisions. Audio tests check the success/rejection phrases,
+false no-op silence, and duplicate/unmatched event handling.
+
+Source asset checks (button binding, launch wiring, defaults, and phrases) can run
+without ROS, using Python with PyYAML installed:
+
+```bash
+python lekiwi_navigation/test/test_nav2_target_assets.py
+```
+
+These four asset checks passed on the development device. The ROS-dependent tests
+have been syntax-checked but still require execution on the ROS device. TF display
+behavior across parent changes, real patrol interaction, controller input, and
+actual audio playback still need the device validation above.
