@@ -46,7 +46,7 @@ ros2 run lekiwi_audio indicator_node --ros-args -p speaker_device:=plughw:CARD=<
 | `/emergency_stop` on / off | "Emergency stop enabled" / "disabled" |
 | `/twist_switch` on / off | "Autonomous mode" / "Tele-op mode" |
 | `/record_waypoint` | "Waypoint recorded" (or "Error") |
-| `/nav2_send_goal` | "Sending navigation goal" (or "Error"); false is silent |
+| `/nav2_send_goal` | "Sending navigation goal" (or "Navigation goal rejected"); false is silent |
 | `/reset_waypoints` | "Waypoints reset" |
 | `/waypoint_follow` on / off | "Waypoint following enabled" (or "No waypoints found") / "disabled" |
 | `/save_map` | "Saving map" (or "Error") |

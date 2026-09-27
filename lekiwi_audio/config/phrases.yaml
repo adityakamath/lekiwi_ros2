@@ -19,7 +19,7 @@ services:
   /nav2_send_goal:
     "true":
       success: "Sending navigation goal"
-      failure: "Error"
+      failure: "Navigation goal rejected"
 
   /reset_waypoints:
     "true":
