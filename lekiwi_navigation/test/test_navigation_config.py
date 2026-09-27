@@ -11,6 +11,7 @@ import subprocess
 
 import pytest
 import yaml
+from lekiwi_navigation.velocity_limits import velocity_overrides
 
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 _CFG_NAV2 = os.path.join(_PKG_SRC, 'config', 'nav2')
@@ -50,14 +51,12 @@ class TestNav2Yaml:
         model = self.cfg['controller_server']['ros__parameters']['FollowPath']['motion_model']
         assert model == 'Omni', "MPPI motion_model must be 'Omni' for holonomic drive"
 
-    def test_velocity_limits_consistent_across_sections(self):
-        """vx_max in MPPI must match max_velocity in velocity_smoother."""
+    def test_velocity_limits_have_single_source(self):
         mppi = self.cfg['controller_server']['ros__parameters']['FollowPath']
         smoother = self.cfg['velocity_smoother']['ros__parameters']
-        assert mppi['vx_max'] == smoother['max_velocity'][0], \
-            "MPPI vx_max and velocity_smoother max_velocity[0] must match"
-        assert mppi['wz_max'] == smoother['max_velocity'][2], \
-            "MPPI wz_max and velocity_smoother max_velocity[2] must match"
+        assert not {'vx_max', 'vx_min', 'vy_max', 'vy_min', 'wz_max', 'wz_min'} & mppi.keys()
+        assert not {'max_velocity', 'min_velocity'} & smoother.keys()
+        assert 'max_rotational_vel' not in self.cfg['behavior_server']['ros__parameters']
 
     def test_robot_radius_set(self):
         local = self.cfg['local_costmap']['local_costmap']['ros__parameters']['robot_radius']
@@ -203,26 +202,27 @@ class TestEkfOdomYaml:
 class TestCrossFileVelocityConsistency:
     """
     The base's speed limits are joy_teleop's axis scales (lekiwi_control/config/base_teleop.yaml);
-    the controller enforces none, so nav2.yaml must match them. Acceleration limits live in
+    the controller enforces none, so launch derives Nav2 limits from them. Acceleration limits live in
     nav2.yaml only.
     """
 
     def setup_method(self):
-        self.nav2 = _load(os.path.join(_CFG_NAV2, 'nav2.yaml'))
+        self.overrides = velocity_overrides(os.path.join(
+            _PKG_SRC, '..', 'lekiwi_control', 'config', 'base_teleop.yaml'))
         # lekiwi_navigation lives at src/lekiwi_ros2/lekiwi_navigation;
         # lekiwi_control lives at src/lekiwi_ros2/lekiwi_control - same monorepo.
         teleop = _load(os.path.normpath(os.path.join(
             _PKG_SRC, '..', 'lekiwi_control', 'config', 'base_teleop.yaml')))
         axes = teleop['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
-        self.limits = [axes['twist-linear-x']['scale'], axes['twist-linear-y']['scale'],
-                       axes['twist-angular-z']['scale']]
+        self.limits = [abs(axes[name]['scale']) for name in
+                       ('twist-linear-x', 'twist-linear-y', 'twist-angular-z')]
 
     def test_behavior_server_rotation_limit_matches_teleop(self):
-        bs = self.nav2['behavior_server']['ros__parameters']
+        bs = self.overrides['behavior_server']
         assert bs['max_rotational_vel'] == self.limits[2]
 
     def test_velocity_smoother_limits_match_teleop(self):
-        vs = self.nav2['velocity_smoother']['ros__parameters']
+        vs = self.overrides['velocity_smoother']
         assert list(vs['max_velocity']) == self.limits
         assert list(vs['min_velocity']) == [-v for v in self.limits]
 

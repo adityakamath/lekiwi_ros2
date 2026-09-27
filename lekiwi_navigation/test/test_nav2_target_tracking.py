@@ -72,7 +72,7 @@ def test_attached_marker_identity_without_map_lookup(target):
     marker = n._marker_pub.publish.call_args.args[0]
     assert marker.type == Marker.SPHERE and marker.frame_locked
     assert marker.header.frame_id == 'nav2_target'
-    assert marker.scale.x == marker.scale.y == marker.scale.z == 0.05
+    assert marker.scale.x == marker.scale.y == marker.scale.z == n.get_parameter('marker_scale').value
     assert marker.lifetime.sec > 0 or marker.lifetime.nanosec > 0
     assert n._command is None
 

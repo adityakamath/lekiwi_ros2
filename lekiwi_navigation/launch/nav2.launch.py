@@ -49,6 +49,7 @@ import os
 import tempfile
 
 import yaml
+from lekiwi_navigation.velocity_limits import velocity_overrides
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -90,6 +91,9 @@ def _launch_arg_as_int(context, name: str) -> int:
 def launch_setup(context, *args, **kwargs):
     """Build and return the Nav2 nodes, resolving map_name to filter mask paths."""
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
+    teleop_path = os.path.join(
+        FindPackageShare('lekiwi_control').perform(context), 'config', 'base_teleop.yaml')
+    speed_limits = velocity_overrides(teleop_path)
     map_name = LaunchConfiguration('map_name').perform(context)
     log_level = LaunchConfiguration('log_level').perform(context)
     if log_level not in _VALID_LOG_LEVELS:
@@ -185,7 +189,7 @@ def launch_setup(context, *args, **kwargs):
             package='nav2_controller',
             executable='controller_server',
             output='screen',
-            parameters=[configured_params] + filter_enable_params,
+            parameters=[configured_params, speed_limits['controller_server']] + filter_enable_params,
             arguments=['--ros-args', '--log-level', log_level],
             remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
         ),
@@ -207,7 +211,7 @@ def launch_setup(context, *args, **kwargs):
             executable='behavior_server',
             name='behavior_server',
             output='screen',
-            parameters=[configured_params],
+            parameters=[configured_params, speed_limits['behavior_server']],
             arguments=['--ros-args', '--log-level', log_level],
             remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
         ),
@@ -262,7 +266,7 @@ def launch_setup(context, *args, **kwargs):
             executable='velocity_smoother',
             name='velocity_smoother',
             output='screen',
-            parameters=[configured_params],
+            parameters=[configured_params, speed_limits['velocity_smoother']],
             arguments=['--ros-args', '--log-level', log_level],
             remappings=remappings + [('cmd_vel', 'cmd_vel_raw')],
         ),

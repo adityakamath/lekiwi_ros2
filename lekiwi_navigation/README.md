@@ -52,7 +52,16 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 | `config/nav2/map_saver.yaml` | The map saver's timeout |
 | `config/robot_localization/ekf*.yaml` | Which measurements the EKF fuses in each `fusion_mode` |
 
-The velocity smoother's `max_velocity` in `nav2.yaml` must match the joystick axis scales in `lekiwi_control`'s `base_teleop.yaml`, because the drive controller enforces no speed limits itself.
+The joystick axis scales in `lekiwi_control/config/base_teleop.yaml` are the single
+source of speed limits. `nav2.launch.py` reads their absolute values from the installed
+`lekiwi_control` package and overrides MPPI, behavior-server rotation, and velocity
+smoother limits after loading `params_file`. This also applies to custom Nav2
+parameter files. Keep acceleration and controller tuning in `nav2.yaml`.
+Change the teleop scales, rebuild `lekiwi_control` if using a copied install, and
+restart the stack; this is startup configuration, not live synchronization.
+Negative scales invert axes; zero/nonfinite scales and nonzero offsets are rejected.
+Launch through `nav2.launch.py` so the derived limits are applied; the YAML alone
+no longer supplies them.
 
 ### Maps and zones
 

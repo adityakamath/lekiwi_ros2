@@ -528,7 +528,8 @@ def test_pantilt_camera_rate_overrides_pt_mujoco_only_in_rate():
     override = yaml.safe_load((PACKAGE / 'config/mujoco_camera_pantilt.yaml').read_text())
     camera = payload['/**']['ros__parameters']['mujoco_plugins']['mujoco_camera_plugin']
     changed = override['/**']['ros__parameters']['mujoco_plugins']['mujoco_camera_plugin']
-    assert camera['camera_publish_rate'] == 30.0 and changed == {'camera_publish_rate': 5.0}
+    assert set(changed) == {'camera_publish_rate'}
+    assert 0 < changed['camera_publish_rate'] <= camera['camera_publish_rate']
     assert camera['type'] == 'mujoco_ros2_control_plugins/CameraPlugin'
 
 

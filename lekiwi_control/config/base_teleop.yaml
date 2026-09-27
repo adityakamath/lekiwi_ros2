@@ -6,8 +6,8 @@ joy_teleop:
       topic_name: /cmd_vel_teleop
       deadman_buttons: [9] # L1
       # The axis scales below are the base's speed limits [m/s, m/s, rad/s]: the controller
-      # (omni_wheel_drive_controller) enforces none, so nav2.yaml (velocity_smoother max_velocity)
-      # must match them.
+      # (omni_wheel_drive_controller) enforces none. nav2.launch.py derives MPPI,
+      # behavior-server rotation and velocity-smoother limits from these magnitudes.
       axis_mappings:
         twist-linear-x:
           axis: 1 # Left stick vertical
