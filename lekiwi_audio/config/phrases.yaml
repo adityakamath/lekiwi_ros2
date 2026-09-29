@@ -16,6 +16,11 @@ services:
       success: "Waypoint recorded"
       failure: "Error"
 
+  /nav2_send_goal:
+    "true":
+      success: "Sending navigation goal"
+      failure: "Navigation goal rejected"
+
   /reset_waypoints:
     "true":
       success: "Waypoints reset"

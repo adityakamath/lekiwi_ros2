@@ -189,6 +189,7 @@ STATUS_LABELS = 'Model\nTime\nStatus'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--variant', choices=['base', 'pt100', 'pt101'], default='pt101')
+    parser.add_argument('--camera', choices=['gemini2', 'oakd_s2'], default='gemini2')
     parser.add_argument('--control-package', type=Path)
     parser.add_argument('--description-package', type=Path)
     parser.add_argument('--pt-package', type=Path)
@@ -197,12 +198,12 @@ def main():
     parser.add_argument('--island-colors', action='store_true', help='Debug constraint islands instead of displaying robot materials')
     parser.add_argument('--telemetry', type=Path, help='Optional live model-state JSON')
     args = parser.parse_args()
-    filename = 'lekiwi_base.xml' if args.variant == 'base' else f'lekiwi_{args.variant}_oakd_s2.xml'
+    filename = 'lekiwi_base.xml' if args.variant == 'base' else f'lekiwi_{args.variant}_{args.camera}.xml'
     # Keep generated files alive for the viewer lifetime; mesh paths are absolute.
     generated = TemporaryDirectory(prefix='lekiwi_preview_') if args.model is None else None
     path = (args.model.resolve() if args.model else
             build(args.variant, Path(generated.name) / filename, absolute=True, scene=args.scene, control_dir=args.control_package,
-                  description_dir=args.description_package, pt_package=args.pt_package))
+                  description_dir=args.description_package, pt_package=args.pt_package, camera_config=args.camera))
     model = mujoco.MjModel.from_xml_path(str(path))
     simulation = Simulation(model)
     simulation.reset()

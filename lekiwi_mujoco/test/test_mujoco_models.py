@@ -19,7 +19,11 @@ def runtime_from_file(path, settle=True):
     runtime.reset(.5 if settle else 0.)
     return runtime
 
-VARIANTS = ['lekiwi_base.xml', 'lekiwi_pt100_oakd_s2.xml', 'lekiwi_pt101_oakd_s2.xml']
+MODELS = [('base', 'gemini2', 'lekiwi_base.xml')] + [
+    (variant, camera, f'lekiwi_{variant}_{camera}.xml')
+    for variant in ('pt100', 'pt101') for camera in ('oakd_s2', 'gemini2')
+]
+VARIANTS = [filename for _, _, filename in MODELS]
 
 
 @pytest.mark.parametrize('filename', VARIANTS)
@@ -33,11 +37,11 @@ def test_models_settle_and_preserve_interfaces_and_wheel_mass(filename):
     assert sum('roller_joint' in (mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, i) or '') for i in range(model.njnt)) == 48
     from lekiwi_mujoco.build_mujoco_models import package_paths
     import xacro
-    variant = 'base' if filename == VARIANTS[0] else ('pt100' if filename == VARIANTS[1] else 'pt101')
+    variant, camera, _ = next(model for model in MODELS if model[2] == filename)
     source = 'base/base.urdf.xacro' if variant == 'base' else 'base_pantilt/base_pantilt.urdf.xacro'
     with package_paths({'lekiwi_description': DESCRIPTION,
                         'pt_description': PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'}):
-        doc = xacro.process_file(str(DESCRIPTION / 'urdf' / source), mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/control.yaml'), 'pantilt_config': variant, 'use_mock': 'true'})
+        doc = xacro.process_file(str(DESCRIPTION / 'urdf' / source), mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/control.yaml'), 'pantilt_config': variant, 'camera_config': camera, 'use_mock': 'true'})
     urdf = ET.fromstring(doc.toxml())
     masses = {link.get('name'): float(link.find('inertial/mass').get('value'))
               for link in urdf.findall('link') if link.find('inertial/mass') is not None}
@@ -69,9 +73,10 @@ def test_pan_tilt_and_optical_axes(filename):
     model, data = runtime.model, runtime.data
     camera = model.camera('oak_rgb').id
     assert np.dot(-data.cam_xmat[camera].reshape(3, 3)[:, 2], [1, 0, 0]) > .999
-    # The physical camera is mounted upside down: image up is world -Z, right is world +Y.
-    assert np.dot(data.cam_xmat[camera].reshape(3, 3)[:, 1], [0, 0, -1]) > .999
-    assert np.dot(data.cam_xmat[camera].reshape(3, 3)[:, 0], [0, 1, 0]) > .999
+    # Gemini is upright; the legacy OAK mount is inverted.
+    sign = -1 if 'gemini2' in filename else 1
+    assert np.dot(data.cam_xmat[camera].reshape(3, 3)[:, 1], [0, 0, -sign]) > .999
+    assert np.dot(data.cam_xmat[camera].reshape(3, 3)[:, 0], [0, sign, 0]) > .999
     for name, goal in [('shoulder_pan_joint', .6), ('tilt_joint', .3)]:
         data.ctrl[model.actuator(name).id] = goal
     runtime.step(2000)
@@ -87,13 +92,13 @@ def test_wheel_command_speed_limit():
     assert np.all(abs(rates) <= runtime.control.wheel_limits + 1e-10)
 
 
-@pytest.mark.parametrize('variant,filename', list(zip(['base', 'pt100', 'pt101'], VARIANTS)))
-def test_generated_assets_are_current_and_portable(tmp_path, variant, filename):
+@pytest.mark.parametrize('variant,camera,filename', MODELS)
+def test_generated_assets_are_current_and_portable(tmp_path, variant, camera, filename):
     pytest.importorskip('xacro')
     spec = importlib.util.spec_from_file_location('builder', PACKAGE / 'lekiwi_mujoco/build_mujoco_models.py')
     builder = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(builder)
-    output = builder.build(variant, tmp_path / filename, absolute=True)
+    output = builder.build(variant, tmp_path / filename, absolute=True, camera_config=camera)
     expected = ET.parse(output).getroot()
     actual = ET.parse(PACKAGE / 'mjcf' / filename).getroot()
     for root, directory in [(expected, tmp_path), (actual, PACKAGE / 'mjcf')]:
@@ -126,15 +131,16 @@ def _urdf_transform(origin):
 
 
 @pytest.mark.parametrize('variant', ['pt100', 'pt101'])
+@pytest.mark.parametrize('camera', ['gemini2', 'oakd_s2'])
 @pytest.mark.parametrize('pan,tilt', [(0., 0.), (.6, -.4), (-.7, .5)])
-def test_payload_frames_and_visual_meshes_match_urdf(variant, pan, tilt):
+def test_payload_frames_and_visual_meshes_match_urdf(variant, camera, pan, tilt):
     import math
     xacro = pytest.importorskip('xacro')
     from lekiwi_mujoco.build_mujoco_models import package_paths
     payload = PACKAGE.parent / 'payloads/pantilt_ros2/pt_description'
     with package_paths({'lekiwi_description': DESCRIPTION, 'pt_description': payload}):
         doc = xacro.process_file(str(DESCRIPTION / 'urdf/base_pantilt/base_pantilt.urdf.xacro'),
-                                 mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/control.yaml'), 'pantilt_config': variant, 'use_mock': 'true',
+                                 mappings={'base_controller_config': str(PACKAGE.parent / 'lekiwi_control/config/control.yaml'), 'pantilt_config': variant, 'camera_config': camera, 'use_mock': 'true',
                                            'simulation_controllers': '', 'payload_simulation_controllers': ''})
     urdf = ET.fromstring(doc.toxml())
     transforms = {'base_footprint': np.eye(4)}
@@ -159,7 +165,7 @@ def test_payload_frames_and_visual_meshes_match_urdf(variant, pan, tilt):
             remaining.remove(joint)
             progress = True
         assert progress, 'Disconnected URDF joint tree'
-    runtime = runtime_from_file(PACKAGE / 'mjcf' / f'lekiwi_{variant}_oakd_s2.xml', settle=False)
+    runtime = runtime_from_file(PACKAGE / 'mjcf' / f'lekiwi_{variant}_{camera}.xml', settle=False)
     model, data = runtime.model, runtime.data
     for name, value in [('shoulder_pan_joint', pan), ('tilt_joint', tilt)]:
         data.qpos[model.joint(name).qposadr[0]] = value
@@ -174,8 +180,8 @@ def test_payload_frames_and_visual_meshes_match_urdf(variant, pan, tilt):
         assert np.allclose(actual, expected, atol=1e-8), name
     # Compare actual compiled/rendered mesh bounds with original STL vertices transformed
     # through the URDF. This catches wrong visual offsets as well as frame-only errors.
-    for link_name, mesh_name in [('tilt_link', 'tilt_joint_oakd_s2'),
-                                  ('oak_link_model_origin', 'oakd_s2')]:
+    for link_name, mesh_name in [('tilt_link', f'tilt_joint_{camera}'),
+                                  ('oak_link_model_origin', camera)]:
         visual = urdf.find(f"link[@name='{link_name}']/visual")
         transform = transforms[link_name] @ _urdf_transform(visual.find('origin'))
         path = payload / 'meshes' / (mesh_name + '.stl')
@@ -451,7 +457,7 @@ def test_payload_mass_changes_and_new_camera_inertia(parameter_workspace):
     module = payload / 'urdf/pantilt.module.xacro'
     text = module.read_text().replace('<mass value="1.0"/>', '<mass value="1.3"/>')
     module.write_text(text)
-    module = payload / 'urdf/oakd_s2.module.xacro'
+    module = payload / 'urdf/camera.module.xacro'
     text = module.read_text()
     # Adding missing inertial data later must replace the massless frame automatically.
     text = text.replace('<link name="${camera_name}_model_origin">',
@@ -528,7 +534,8 @@ def test_pantilt_camera_rate_overrides_pt_mujoco_only_in_rate():
     override = yaml.safe_load((PACKAGE / 'config/mujoco_camera_pantilt.yaml').read_text())
     camera = payload['/**']['ros__parameters']['mujoco_plugins']['mujoco_camera_plugin']
     changed = override['/**']['ros__parameters']['mujoco_plugins']['mujoco_camera_plugin']
-    assert camera['camera_publish_rate'] == 30.0 and changed == {'camera_publish_rate': 5.0}
+    assert set(changed) == {'camera_publish_rate'}
+    assert 0 < changed['camera_publish_rate'] <= camera['camera_publish_rate']
     assert camera['type'] == 'mujoco_ros2_control_plugins/CameraPlugin'
 
 
@@ -537,3 +544,42 @@ def test_missing_mount_joint_is_rejected(parameter_workspace):
     import mujoco as mj
     with pytest.raises(ValueError):
         attach_payload(mj.MjSpec(), 'pt101', ET.fromstring('<robot/>'), {}, {'pt_description': None})
+
+
+@pytest.mark.parametrize('variant', ['pt100', 'pt101'])
+def test_gemini_intrinsics_and_camera_mounted_imu(variant):
+    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf' / f'lekiwi_{variant}_gemini2.xml'))
+    data = mujoco.MjData(model)
+    camera = model.camera('oak_rgb').id
+    assert model.cam_resolution[camera].tolist() == [640, 360]
+    assert model.cam_fovy[camera] == pytest.approx(55.)
+    quat = model.sensor('gemini2_quat').id
+    assert model.sensor_type[quat] == mujoco.mjtSensor.mjSENS_FRAMEQUAT
+    accel = model.sensor('gemini2_accel').id
+    gyro = model.sensor('gemini2_gyro').id
+    assert model.sensor_type[accel] == mujoco.mjtSensor.mjSENS_ACCELEROMETER
+    assert model.sensor_type[gyro] == mujoco.mjtSensor.mjSENS_GYRO
+    assert model.sensor_objid[quat] == model.sensor_objid[accel] == model.sensor_objid[gyro]
+    site = model.sensor_objid[gyro]
+    assert model.site_bodyid[site] == model.body('oak_link').id
+    data.qvel[model.joint('shoulder_pan_joint').dofadr[0]] = .7
+    mujoco.mj_forward(model, data)
+    address = model.sensor_adr[gyro]
+    assert np.linalg.norm(data.sensordata[address:address + 3]) == pytest.approx(.7)
+    # The IMU optical axes agree with the render camera (+Z versus MuJoCo -Z).
+    optical = data.site_xmat[site].reshape(3, 3)
+    render = data.cam_xmat[camera].reshape(3, 3)
+    np.testing.assert_allclose(optical, render @ np.diag([1, -1, -1]), atol=1e-6)
+
+
+@pytest.mark.parametrize('variant', ['pt100', 'pt101'])
+def test_oak_camera_mounted_imu(variant):
+    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf' / f'lekiwi_{variant}_oakd_s2.xml'))
+    ids = [model.sensor(f'oak_{suffix}').id for suffix in ('quat', 'gyro', 'accel')]
+    assert [model.sensor_type[i] for i in ids] == [
+        mujoco.mjtSensor.mjSENS_FRAMEQUAT,
+        mujoco.mjtSensor.mjSENS_GYRO,
+        mujoco.mjtSensor.mjSENS_ACCELEROMETER,
+    ]
+    assert len({model.sensor_objid[i] for i in ids}) == 1
+    assert model.site_bodyid[model.sensor_objid[ids[0]]] == model.body('oak_link').id

@@ -49,3 +49,6 @@ lekiwi_navigation/maps/*/
 # not committed. See lekiwi_audio/lekiwi_audio/render_phrases.py.
 lekiwi_audio/voices/kokoro/*.onnx
 lekiwi_audio/voices/kokoro/*.bin
+
+# Local package build exclusions (any directory)
+COLCON_IGNORE

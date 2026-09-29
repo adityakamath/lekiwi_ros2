@@ -17,6 +17,29 @@ MuJoCo models of LeKiwi (`base`, `pt100`, `pt101`), generated from the URDF and 
 | `config/` | Physics and servo parameters, ROS plugin configuration, camera rate, laser filters |
 | `mjcf/` | MJCF sources, the `scenes/` and the pre-built `lekiwi_*.xml` models |
 
+## Camera variants
+
+`--camera gemini2` (default for a single model, the viewer and benchmark) or `--camera oakd_s2` selects camera geometry independently of `--variant pt100|pt101`. The builder with no arguments regenerates both cameras; `--camera` limits regeneration to that camera plus the base. Python callers pass `camera_config="gemini2"` or `"oakd_s2"` to `build`, `build_spec`, or `build_robot_spec`. The base-only model is unaffected by camera selection.
+
+```bash
+python3 -m lekiwi_mujoco.build_mujoco_models
+python3 -m lekiwi_mujoco.mujoco_preview --variant pt101 --camera gemini2
+python3 -m lekiwi_mujoco.benchmark_mujoco --camera oakd_s2 --output motion.json
+ros2 launch lekiwi_bringup lekiwi.launch.py payload:=pantilt camera_config:=gemini2 sim:=true
+```
+
+Both camera assemblies are built from the selected URDF and the payload's camera-specific subtree. Generated MJCF assets keep the existing relative filesystem paths. Gemini simulation uses `/gemini2/*`; OAK simulation uses `/oak/*`. The Gemini profile follows [Orbbec's specifications](https://www.orbbec.com/products/stereo-vision-camera/gemini-2/), [datasheet](https://www.orbbec.com/wp-content/uploads/2023/04/ORBBEC_Datasheet_Gemini-2.pdf), and the [ROS SDK launch configuration](https://github.com/orbbec/OrbbecSDK_ROS2/blob/v2-main/orbbec_camera/launch/gemini2.launch.py):
+
+- RGB: 640×360, nominal 55° vertical / approximately 86° horizontal field of view, upright at the home pose. Rendering is capped at 5 Hz; the shared `camera_fps` argument can lower it further in simulation.
+- Registered depth: ideal depth rendered into the RGB view, with the same intrinsics and `gemini2_color_optical_frame`. `/gemini2/depth/image_raw` is `16UC1` in millimeters; invalid values and depths outside 0.15–10 m are zero. Both color and depth camera-info topics are published.
+- Optional point cloud: `pointcloud:=true` starts one colored XYZRGB cloud at `/gemini2/depth_registered/points`. The helper removes invalid XYZ points while preserving valid RGB data. No cloud converters run by default.
+- Obstacle scan: `/gemini2/scan` is sliced directly from the registered depth image at the camera center row (0.15–10 m). It does not require a point cloud. The base LiDAR keeps `/scan` for Nav2.
+- IMU: upstream `mujoco_ros2_control` maps a camera-mounted frame quaternion, gyroscope and accelerometer into ROS 2 control sensor interfaces. A second `imu_sensor_broadcaster` publishes `/gemini2/gyro_accel/sample` in `gemini2_accel_gyro_optical_frame` at the 50 Hz controller rate. OAK-D S2 uses the same upstream path at its `oak_imu_frame` mount and publishes `/oak/imu/data`. Its orientation is an ideal simulated pose, unlike the real six-axis camera stream; the camera sensors follow base and pan-tilt motion and include gravity.
+
+This matches the enabled stream types in our real-driver wrapper (color, registered depth, synchronized IMU; IR disabled). The simulated color, depth, scan, and camera IMU start with `enable_camera:=true`; `enable_camera:=false` retains the model but skips the camera plugin and processing nodes. `pointcloud:=true` adds a colored cloud in simulation; on real hardware it enables a colored cloud and Cloudini compression for either camera. Simulation does not run Cloudini. JPEG RGB is always published for remote viewers. The scan uses `depthimage_to_laserscan` directly so it remains available without any cloud conversion. Raw unregistered depth has a wider nominal 91°×66° field of view and is not represented by the registered color view. We do not simulate IR illumination, stereo matching artifacts, rolling shutter, lens distortion, device-specific calibration offsets, IMU bias/noise, exposure controls, temperature, metadata, or device services. Camera and IMU extrinsics are idealized and co-located; they need hardware calibration. `/_gemini2/depth_raw` is the hidden floating-point render input, not an SDK topic. Optional cloud conversion uses hidden `/_gemini2/registered_points` before invalid points are removed.
+
+An explicit `--model` or `mujoco_model` selects an existing model and must match the chosen camera.
+
 ## Requirements
 
 - Python packages installed into your active Python environment (for ROS simulation, use the interpreter that ROS and colcon use): `pip install -r requirements.txt` (`mujoco`, `numpy`, `xacro`, `PyYAML`). Add `pytest<8` to run the tests.
@@ -60,7 +83,7 @@ variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco 
 platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
 as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
-Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates the committed `mjcf/lekiwi_*.xml` files, which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
+Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt100`/`pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates all five committed models: `lekiwi_base.xml` and `lekiwi_{pt100,pt101}_{gemini2,oakd_s2}.xml`, which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
 
 The viewer draws native LiDAR rays only when they hit geometry. In open space
 (such as outside the maze entrance), missing yellow rays represent no-hit readings,
@@ -146,13 +169,21 @@ ros2 launch lekiwi_control control.launch.py ros2_control_hardware_type:=mujoco 
     mujoco_headless:=true use_sim_time:=true mujoco_scene:=home            # control only
 ```
 
+For the lightest camera setup, keep the default `pointcloud:=false`, reduce `camera_fps` if needed, or use `enable_camera:=false` to remove all simulated camera processing while retaining camera geometry.
+
 `sim:=true` needs no display; `mujoco_gui:=true` opens the MuJoCo viewer. To watch a headless run from another machine, start `foxglove_bridge` and connect Foxglove to `ws://<host>:8765`. The battery monitor and audio are not simulated. The sensors and services come from plugins configured in `config/`:
 
 | Topic or service | What it is |
 |------------------|------------|
 | `/scan` | Native LiDAR plugin (360 rays, 5 Hz) publishes `/scan_raw`; `laser_filters` turns no-hit into `inf` and masks the pan-tilt |
+| `/gemini2/color/image_raw`, `/gemini2/depth/image_raw`, `/gemini2/color/camera_info` | Gemini camera images and shared intrinsics at 5 Hz |
+| `/gemini2/scan` | Depth-derived camera scan; no point cloud required |
+| `/gemini2/depth_registered/points` | Optional colored cloud (`pointcloud:=true`) |
+| `/gemini2/gyro_accel/sample` | Camera-mounted six-axis IMU |
 | `/oak/rgb/image_raw`, `/oak/stereo/image_raw`, `/oak/rgb/camera_info` | Simulated camera from `pt_mujoco` (rate lowered to 5 Hz here), in frame `oak_rgb_camera_optical_frame`; the image is upside down like the real, inverted mount |
-| `/oak/scan` | With the pan-tilt: a laser scan sliced from the depth image, as on the real robot |
+| `/oak/scan` | With the OAK-D S2 pan-tilt: a laser scan sliced from the depth image, as on the real robot |
+| `/oak/imu/data` | OAK-D S2 simulated IMU at `oak_imu_frame` when camera streaming is enabled |
+| `/oak/rgbd/points` | Optional OAK-D S2 simulated colored cloud (`pointcloud:=true`) |
 | `/free_joint_state_publisher/free_joint_states` | Ground-truth base pose and velocity |
 | `/emergency_stop` (`std_srvs/SetBool`) | Disables torque on every motor while enabled, matching the real robot's `sts_hardware_interface`; joints coast/drift freely, not held or braked; releasing hands control back |
 | `/external_wrench_plugin/apply_wrench` | Push a body for a test, for example to trigger Nav2 recoveries |

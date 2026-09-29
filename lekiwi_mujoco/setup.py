@@ -18,6 +18,8 @@ setup(
     maintainer='Aditya Kamath (Kamath Robotics)', maintainer_email='adityakamath@live.com',
     description='LeKiwi MuJoCo simulation infrastructure without a ROS runtime requirement',
     entry_points={'console_scripts': [
+        'gemini2_cloud = lekiwi_mujoco.gemini2_cloud:main',
+        'gemini2_depth = lekiwi_mujoco.gemini2_depth:main',
         'build_mujoco_models = lekiwi_mujoco.build_mujoco_models:main',
         'mujoco_preview = lekiwi_mujoco.mujoco_preview:main',
         'benchmark_mujoco = lekiwi_mujoco.benchmark_mujoco:main',

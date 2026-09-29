@@ -1,3 +1,4 @@
+# Speed limits are injected by nav2.launch.py from lekiwi_control/config/base_teleop.yaml.
 # Nav2 navigation stack — loaded by nav2.launch.py.
 
 bt_navigator:
@@ -48,12 +49,6 @@ controller_server:
       time_steps: 28
       model_dt: 0.1
       batch_size: 1250             # reduced from 2000 for Pi5
-      vx_max: 0.2                  # m/s — must match base_controller (control.yaml)
-      vx_min: -0.2
-      vy_max: 0.17                 # m/s — omni, must match base_controller
-      vy_min: -0.17
-      wz_max: 0.68                 # rad/s — must match base_controller
-      wz_min: -0.68
       vx_std: 0.2
       vy_std: 0.2
       wz_std: 0.4
@@ -295,7 +290,6 @@ behavior_server:
     robot_base_frame: base_footprint
     transform_tolerance: 0.1
     simulate_ahead_time: 1.5
-    max_rotational_vel: 0.68       # must match base_controller wz_max (control.yaml)
     min_rotational_vel: 0.4
     rotational_acc_lim: 3.4        # must match base_controller az_max (control.yaml)
 
@@ -305,8 +299,6 @@ velocity_smoother:
     smoothing_frequency: 20.0      # Hz
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.2, 0.17, 0.68]    # [vx, vy, wz] — must match the axis scales in lekiwi_control base_teleop.yaml
-    min_velocity: [-0.2, -0.17, -0.68]
     max_accel: [1.0, 0.85, 3.4]
     max_decel: [-1.0, -0.85, -3.4]
     odom_topic: /odometry/filtered

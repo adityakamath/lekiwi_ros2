@@ -21,6 +21,18 @@
   <exec_depend>robot_localization</exec_depend>
   <exec_depend>navigation2</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
+  <!-- Directly launched Nav2 executables (navigation2 also installs plugin packages) -->
+  <exec_depend>nav2_amcl</exec_depend>
+  <exec_depend>nav2_behaviors</exec_depend>
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_collision_monitor</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>nav2_velocity_smoother</exec_depend>
+  <exec_depend>nav2_waypoint_follower</exec_depend>
+  <exec_depend>lekiwi_control</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
@@ -30,6 +42,8 @@
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>service_msgs</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>python3-pil</exec_depend>
 

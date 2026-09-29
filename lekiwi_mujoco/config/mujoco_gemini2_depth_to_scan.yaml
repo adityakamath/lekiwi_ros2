@@ -1,0 +1,6 @@
+/gemini2_depth_to_scan:
+  ros__parameters:
+    scan_height: 1
+    range_min: 0.15
+    range_max: 10.0
+    output_frame: gemini2_link

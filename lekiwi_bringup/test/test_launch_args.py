@@ -11,6 +11,8 @@ These tests do NOT start any nodes - they only validate the launch surface.
 
 import subprocess
 
+import pytest
+
 
 def _show_arguments(package, launch_file, extra_args=None):
     """Run `ros2 launch --show-arguments` and return stdout + returncode."""
@@ -37,10 +39,10 @@ class TestLekiwiBringupArgs:
     """Checks that the top-level launch declares all expected arguments."""
 
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'diagnostics', 'use_mock', 'joy',
+        'payload', 'pantilt_config', 'camera_config', 'enable_camera', 'diagnostics', 'use_mock', 'joy',
         'sts_serial_port', 'mujoco_model',
         'fusion_mode', 'imu', 'laser', 'audio', 'battery_monitor', 'pointcloud',
-        'octomap', 'mission', 'map_name', 'wp_loops', 'use_sim_time',
+        'octomap', 'camera_fps', 'mission', 'map_name', 'wp_loops', 'use_sim_time',
     ]
 
     def test_expected_args_declared(self):
@@ -164,7 +166,7 @@ class TestControlLaunchArgs:
     """Checks that control.launch.py declares all expected arguments."""
 
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'sts_serial_port', 'use_mock',
+        'payload', 'pantilt_config', 'camera_config', 'sts_serial_port', 'use_mock',
         'diagnostics', 'imu', 'use_sim_time', 'joy',
     ]
 
@@ -172,3 +174,51 @@ class TestControlLaunchArgs:
         output, _ = _show_arguments('lekiwi_control', 'control.launch.py')
         for arg in self.EXPECTED_ARGS:
             assert arg in output, f"Expected argument '{arg}' not found in control.launch.py"
+
+
+@pytest.mark.parametrize('camera', ['gemini2', 'oakd_s2'])
+@pytest.mark.parametrize('enabled,sim', [('true', 'false'), ('false', 'false'), ('true', 'true')])
+def test_camera_selection_is_forwarded_and_driver_is_lazy(camera, enabled, sim, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    from launch import LaunchContext, LaunchDescription
+    from launch.actions import DeclareLaunchArgument
+    from launch_ros.substitutions import FindPackageShare
+
+    path = Path(__file__).resolve().parents[1] / 'launch/lekiwi.launch.py'
+    spec = importlib.util.spec_from_file_location('lekiwi_camera_test', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    context = LaunchContext()
+    for action in module.generate_launch_description().entities:
+        if isinstance(action, DeclareLaunchArgument):
+            action.execute(context)
+    assert context.launch_configurations['camera_config'] == 'gemini2'
+    assert context.launch_configurations['enable_camera'] == 'true'
+    context.launch_configurations.update(payload='pantilt', camera_config=camera,
+                                         enable_camera=enabled, sim=sim, laser='false',
+                                         audio='false', battery_monitor='false', diagnostics='false')
+    lookups = []
+
+    def find(self, package):
+        lookups.append(package)
+        assert package not in ('orbbec_camera', 'depthai_ros_driver')
+        return '/unused/' + package
+
+    monkeypatch.setattr(FindPackageShare, 'find', find)
+    actions = module.launch_setup(context)
+    control_args = dict(actions[0].launch_arguments)
+    assert control_args['camera_config'] == camera
+    assert control_args['enable_camera'] == enabled
+    assert control_args['pointcloud'] == 'false'
+    assert control_args['camera_fps'] == '15.0'
+    streaming = sim == 'false'
+    assert ('pt_bringup' in lookups) == streaming
+    assert len(actions) == (3 if streaming else 2)
+    if streaming:
+        assert dict(actions[-1].launch_arguments)['enable_camera'] == enabled
+        filename = 'gemini2.launch.py' if camera == 'gemini2' else 'oakd.launch.py'
+        source = actions[-1].launch_description_source
+        monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
+        source.get_launch_description(context)
+        assert source.location.endswith(filename)

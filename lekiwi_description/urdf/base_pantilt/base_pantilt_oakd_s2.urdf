@@ -166,7 +166,7 @@
       <state_interface name="linear_acceleration.z"/>
     </sensor>
   </ros2_control>
-  <!-- OAK-D S2 camera macro shared by pt100/pt101, with r/g/b/a mesh colour parameters -->
+  <!-- Camera macro shared by PT100/PT101 and OAK-D S2/Gemini 2, with r/g/b/a mesh colour parameters -->
   <link name="base_footprint"/>
   <!-- Material definitions (referenced by links below) -->
   <material name="base_light_grey">
@@ -587,7 +587,7 @@
       <geometry>
         <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/oakd_s2.stl"/>
       </geometry>
-      <material name="mat">
+      <material name="camera_charcoal">
         <color rgba="0.15 0.15 0.15 1.0"/>
       </material>
     </visual>

@@ -6,6 +6,7 @@ Config tests: validate YAML structure and required keys without starting any nod
 Launch tests: validate argument declarations using `ros2 launch --show-arguments`.
 """
 
+import math
 import os
 import subprocess
 
@@ -88,10 +89,10 @@ class TestTeleopYaml:
         actions = self.cfg['joy_teleop']['ros__parameters']
         assert 'teleop' in actions, "Missing 'teleop' drive action"
 
-    def test_axis_scales_are_positive_speed_limits(self):
+    def test_axis_scales_are_finite_nonzero_speed_limits(self):
         axes = self.cfg['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
         for name in ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'):
-            assert axes[name]['scale'] > 0
+            assert math.isfinite(axes[name]['scale']) and abs(axes[name]['scale']) > 0
 
     def test_deadman_button_defined(self):
         teleop = self.cfg['joy_teleop']['ros__parameters']['teleop']
@@ -218,7 +219,7 @@ class TestBno055DiagnosticsYaml:
 
 class TestControlLaunchArgs:
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'sts_serial_port', 'use_mock',
+        'payload', 'pantilt_config', 'camera_config', 'camera_fps', 'sts_serial_port', 'use_mock',
         'diagnostics', 'use_sim_time', 'joy',
     ]
 

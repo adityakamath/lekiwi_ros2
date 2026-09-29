@@ -1,0 +1,9 @@
+controller_manager:
+  ros__parameters:
+    oak_imu_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+oak_imu_broadcaster:
+  ros__parameters:
+    sensor_name: oak
+    frame_id: oak_imu_frame

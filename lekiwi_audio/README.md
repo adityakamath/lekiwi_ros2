@@ -46,6 +46,7 @@ ros2 run lekiwi_audio indicator_node --ros-args -p speaker_device:=plughw:CARD=<
 | `/emergency_stop` on / off | "Emergency stop enabled" / "disabled" |
 | `/twist_switch` on / off | "Autonomous mode" / "Tele-op mode" |
 | `/record_waypoint` | "Waypoint recorded" (or "Error") |
+| `/nav2_send_goal` | "Sending navigation goal" (or "Navigation goal rejected"); false is silent |
 | `/reset_waypoints` | "Waypoints reset" |
 | `/waypoint_follow` on / off | "Waypoint following enabled" (or "No waypoints found") / "disabled" |
 | `/save_map` | "Saving map" (or "Error") |
@@ -66,3 +67,7 @@ pytest test -q
 ```
 
 The tests stub out the voice model, but they still import the packages in `requirements-build.txt`, so install those first.
+
+The navigation-goal announcement confirms the submission request, not Nav2 acceptance.
+The existing Nav2 action-status watcher announces goal reached, failed, or canceled.
+Rebuild `lekiwi_audio` after changing the phrase text; its build renders the updated clip using the build-time dependencies listed above.

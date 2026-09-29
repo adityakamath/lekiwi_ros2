@@ -6,8 +6,8 @@ joy_teleop:
       topic_name: /cmd_vel_teleop
       deadman_buttons: [9] # L1
       # The axis scales below are the base's speed limits [m/s, m/s, rad/s]: the controller
-      # (omni_wheel_drive_controller) enforces none, so nav2.yaml (velocity_smoother max_velocity)
-      # must match them.
+      # (omni_wheel_drive_controller) enforces none. nav2.launch.py derives MPPI,
+      # behavior-server rotation and velocity-smoother limits from these magnitudes.
       axis_mappings:
         twist-linear-x:
           axis: 1 # Left stick vertical
@@ -15,11 +15,11 @@ joy_teleop:
           offset: 0.0
         twist-linear-y:
           axis: 0 # Left stick horizontal
-          scale: 0.17
+          scale: 0.2
           offset: 0.0
         twist-angular-z:
           axis: 2 # Right stick horizontal
-          scale: 0.68
+          scale: 0.8
           offset: 0.0
         header-frame_id:
           value: 'base_link'
@@ -59,6 +59,15 @@ joy_teleop:
       service_request:
         data: true
       buttons: [11]  # settings
+
+    # Submit the edited target, using the same one-shot SetBool pattern as reset_waypoints.
+    nav2_send_goal:
+      type: service
+      interface_type: std_srvs/srv/SetBool
+      service_name: /nav2_send_goal
+      service_request:
+        data: true
+      buttons: [8]  # Right joystick button
 
     # map_saver_node's service.
     save_map:

@@ -52,7 +52,16 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 | `config/nav2/map_saver.yaml` | The map saver's timeout |
 | `config/robot_localization/ekf*.yaml` | Which measurements the EKF fuses in each `fusion_mode` |
 
-The velocity smoother's `max_velocity` in `nav2.yaml` must match the joystick axis scales in `lekiwi_control`'s `base_teleop.yaml`, because the drive controller enforces no speed limits itself.
+The joystick axis scales in `lekiwi_control/config/base_teleop.yaml` are the single
+source of speed limits. `nav2.launch.py` reads their absolute values from the installed
+`lekiwi_control` package and overrides MPPI, behavior-server rotation, and velocity
+smoother limits after loading `params_file`. It reads the configured MPPI controller
+plugin ID from that file, so this also applies to custom Nav2 parameter files. Keep acceleration and controller tuning in `nav2.yaml`.
+Change the teleop scales, rebuild `lekiwi_control` if using a copied install, and
+restart the stack; this is startup configuration, not live synchronization.
+Negative scales invert axes; zero/nonfinite scales and nonzero offsets are rejected.
+Launch through `nav2.launch.py` so the derived limits are applied; the YAML alone
+no longer supplies them.
 
 ### Maps and zones
 
@@ -83,3 +92,121 @@ pytest test -q
 ```
 
 The tests check the Nav2, EKF and SLAM configuration (including the speed limits against `lekiwi_control`), the launch arguments, and the two nodes.
+
+## Nav2 target tracker
+
+The `nav2_target_node` edits and displays a planar target. The `/nav2_send_goal`
+SetBool service explicitly submits its current map pose to Nav2.
+It does not change the joystick configuration or the robot's velocity routing.
+
+The tracker starts automatically with `nav2.launch.py`, including through normal
+navigation and robot bringup. It inherits `use_sim_time` and the launch log level.
+No separate launch command is needed. Configure it in
+`config/nav2/nav2_target.yaml`.
+
+In teleop, the node broadcasts identity `base_footprint -> nav2_target`. In Nav2
+mode, it converts that attachment to a map pose once and broadcasts
+`map -> nav2_target`. It then uses `/cmd_vel_teleop`'s X/Y components as
+**target-relative** translation and angular Z as heading rotation. The original
+`base_link` message header does not select the editing frame. Translation uses
+the target heading, never a continuously tracked robot heading. Commands expire
+after `command_timeout`; mode changes clear held input. Returning to teleop
+reattaches the target without canceling or otherwise changing navigation.
+
+The node observes successful request/response pairs on
+`/twist_switch/_service_event`, using retained service introspection like the
+existing toggle node. Before the first observed successful call it displays the
+attached target but disables editing (`waiting_for_mode`). A switch restart or
+liveliness loss also requires a fresh mode confirmation. It never calls the
+switch service to force a mode. Retained event history is limited, so incomplete
+request/response pairs are ignored.
+
+Display `nav2_target_marker` as a Marker in Foxglove/RViz, and enable TF axes for
+`nav2_target` to see its heading. The marker is a sphere, gray while attached and
+cyan while editing. `nav2_target_pose` publishes the draft in its current parent
+frame (base in teleop, map in Nav2); consumers must inspect `header.frame_id`.
+`nav2_target_status` reports `waiting_for_mode`, `teleop_attached`,
+`waiting_for_map_transform`, or `editing`. If the transition lacks map TF, the
+node waits and the old marker expires rather than inventing a map position.
+
+### Sending the target to Nav2
+
+In Nav2 mode, after editing the target:
+
+```bash
+ros2 service call /nav2_send_goal std_srvs/srv/SetBool "{data: true}"
+ros2 topic echo /nav2_target_goal_status
+```
+
+`data: false` is a successful no-op except after an `unknown` goal outcome, when it acknowledges and clears that blocked slot.
+Press **button 8 (right joystick button)** to make the same `data: true` call,
+with no L1 modifier required. With audio enabled, a successful submission request
+announces "Sending navigation goal"; a rejected request announces "Navigation goal rejected". A successful service response means submission
+started, not that Nav2 accepted or reached the goal. The action client sends to
+`navigate_to_pose`; the retained `nav2_target_goal_status` topic reports `idle`,
+`sending`, `active`, `rejected`, `succeeded`, `failed`, `canceled`, or `unknown`
+(with error details when available). This is separate from the editing-mode status.
+`nav2_target_submitted_pose` retains the last submitted snapshot; later edits do not
+change that goal. The sphere continues to represent the editable target.
+
+Only one goal from this node may be pending/active at a time. Rejection or a terminal
+result releases that slot. Missing mode confirmation, missing map pose, nonfinite
+coordinates, or an unavailable action server reject the service request. Transport
+errors with uncertain outcomes keep the slot reserved: inspect/cancel the goal in
+Nav2 before calling `/nav2_send_goal` with `data: false` to clear the slot and
+permit another submission. Clearing the slot does not cancel or recover ownership
+of a previously submitted goal.
+Changing modes also leaves existing navigation and patrol behavior alone.
+
+### Validation on a ROS 2 device
+
+Automated ROS tests run on the development workspace, but physical robot behavior still needs validation. After building and sourcing the package on the robot:
+
+1. Start normal robot bringup and confirm the sphere and axes coincide with the base in
+   teleop, including while driving. There must be no map-TF requirement in teleop.
+2. Switch to Nav2 with the existing mode button. Confirm the target preserves its
+   position, then stays map-fixed without input.
+3. Move and rotate it with the existing joystick/Foxglove controls. Rotate 90
+   degrees and verify forward translation follows the target's X axis.
+4. Release the controls and confirm the target stops; switch modes with a held
+   command and check that no old command produces a jump.
+5. Return to teleop and verify reattachment. Inspect TF around both parent changes
+   for lookup errors or transient display jumps.
+6. Restart the tracker after selecting Nav2, restart the twist switch, and test a
+   transition with map TF unavailable. Check the reported state and recovery after
+   a new successful mode call / restored TF.
+7. Confirm editing alone never submits a goal. Call `/nav2_send_goal` with false
+   (no-op while idle), then true in teleop (rejected), then true in Nav2 mode (submitted).
+8. Compare `nav2_target_submitted_pose` against the draft at submission, including
+   heading. Edit the draft during navigation and verify the submitted goal stays
+   unchanged. A second true call while busy must be rejected.
+9. Check success, rejection, failure, external cancellation, and subsequent
+   submissions. Switch to teleop during execution and confirm the action is not
+   canceled by this node. Check the existing patrol detour/resume behavior.
+
+### Automated target tests
+
+After building and sourcing on a ROS 2 device, run from the repository root:
+
+```bash
+pytest lekiwi_navigation/test/test_nav2_target*.py lekiwi_audio/test/test_indicator_node.py -q
+```
+
+The tracking tests cover attachment, map initialization, missing TF, target-relative
+translation, yaw wrap, mode-event correlation, liveliness loss, command expiry,
+clock discontinuities, invalid input, and sphere output. Goal tests cover snapshot
+isolation, submission guards, asynchronous errors, terminal outcomes, and stale
+callbacks. A fake Nav2 action server exercises the real service/action round trip
+and service introspection used by audio; no robot is required for that test.
+Run it on an isolated ROS domain without an existing navigation stack to avoid
+service/action name collisions. Audio tests check the success/rejection phrases,
+false no-op silence, and duplicate/unmatched event handling.
+
+Source asset checks (button binding, launch wiring, defaults, and phrases) can run
+without ROS, using Python with PyYAML installed:
+
+```bash
+python lekiwi_navigation/test/test_nav2_target_assets.py
+```
+
+The asset checks and ROS-dependent tests pass in the development workspace. TF display behavior across parent changes, real patrol interaction, controller input, and actual audio playback still need the robot validation above.
