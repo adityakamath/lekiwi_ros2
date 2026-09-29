@@ -123,3 +123,23 @@ def test_unrecognized_result_does_not_allow_duplicate(tracker):
     tracker._on_goal_result(token, Mock(result=lambda: result))
     assert tracker._goal_token is token
     assert not send(tracker).success
+
+
+def test_operator_can_clear_only_unknown_goal_state(tracker):
+    assert send(tracker).success
+    active_token = tracker._goal_token
+    assert send(tracker, False).success
+    assert tracker._goal_token is active_token
+    tracker._mark_goal_unknown('transport lost')
+    assert tracker._goal_unknown
+    response = send(tracker, False)
+    assert response.success and 'Cleared unknown' in response.message
+    assert tracker._goal_token is None
+    assert tracker._goal_handle is None
+    assert not tracker._goal_unknown
+    tracker._publish_goal_status.assert_called_with(
+        'idle', 'unknown outcome cleared by operator')
+    assert send(tracker).success
+    new_token = tracker._goal_token
+    tracker._on_goal_response(active_token, Mock())
+    assert tracker._goal_token is new_token

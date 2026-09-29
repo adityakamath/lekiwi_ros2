@@ -33,6 +33,24 @@ class TestVelocityLimits(unittest.TestCase):
                     self.assertEqual(result['controller_server'][f'FollowPath.{axis}_max'], value)
                     self.assertEqual(result['controller_server'][f'FollowPath.{axis}_min'], -value)
 
+    def test_custom_mppi_plugin_id_receives_limits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            teleop = Path(directory) / 'teleop.yaml'
+            params = Path(directory) / 'nav2.yaml'
+            axes = {name: {'scale': scale, 'offset': 0} for name, scale in zip(
+                ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'), (.3, .4, .8))}
+            teleop.write_text(yaml.safe_dump({
+                'joy_teleop': {'ros__parameters': {'teleop': {'axis_mappings': axes}}}}))
+            params.write_text(yaml.safe_dump({'controller_server': {'ros__parameters': {
+                'controller_plugins': ['MyController'],
+                'MyController': {'plugin': 'nav2_mppi_controller::MPPIController'},
+            }}}))
+            limits = velocity_overrides(teleop, params)['controller_server']
+        self.assertEqual(limits['MyController.vx_max'], .3)
+        self.assertEqual(limits['MyController.vy_min'], -.4)
+        self.assertEqual(limits['MyController.wz_max'], .8)
+        self.assertNotIn('FollowPath.vx_max', limits)
+
     def test_invalid_scales_and_offset_fail(self):
         for value in (0, float('nan'), float('inf'), True, 'fast'):
             with self.subTest(value=value), self.assertRaises(ValueError):

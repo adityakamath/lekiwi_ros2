@@ -73,6 +73,7 @@ class Nav2TargetNode(Node):
         self._nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
         self._goal_token = None
         self._goal_handle = None
+        self._goal_unknown = False
         self._send_service = self.create_service(SetBool, 'nav2_send_goal', self._send_goal)
         # One-shot event: do not replay old submissions to late-joining audio nodes.
         self._send_service.configure_introspection(
@@ -98,6 +99,16 @@ class Nav2TargetNode(Node):
     def _send_goal(self, request, response):
         """Acknowledge submission promptly; acceptance/result are asynchronous."""
         if not request.data:
+            if self._goal_unknown:
+                # The operator must inspect Nav2 before acknowledging an unknown outcome.
+                # The token invalidates any late callbacks from the old submission.
+                self._goal_token = None
+                self._goal_handle = None
+                self._goal_unknown = False
+                self._publish_goal_status('idle', 'unknown outcome cleared by operator')
+                response.success = True
+                response.message = 'Cleared unknown goal state after operator inspection.'
+                return response
             response.success = True
             response.message = 'No-op (set data: true to send the target).'
             return response
@@ -128,12 +139,13 @@ class Nav2TargetNode(Node):
         # edits deliberately leave this action state and its independent snapshot alone.
         token = object()
         self._goal_token = token
+        self._goal_unknown = False
         self._publish_goal_status('sending')
         try:
             future = self._nav_client.send_goal_async(goal)
         except Exception as exc:
             # Do not assume a transport exception proves the robot received nothing.
-            self._publish_goal_status('unknown', str(exc))
+            self._mark_goal_unknown(str(exc))
             response.success = False
             response.message = 'Submission outcome unknown; inspect Nav2 before retrying.'
             return response
@@ -142,6 +154,10 @@ class Nav2TargetNode(Node):
         response.success = True
         response.message = 'Submission started; monitor nav2_target_goal_status for acceptance/result.'
         return response
+
+    def _mark_goal_unknown(self, detail):
+        self._goal_unknown = True
+        self._publish_goal_status('unknown', detail)
 
     def _on_goal_response(self, token, future):
         if token is not self._goal_token:
@@ -157,7 +173,7 @@ class Nav2TargetNode(Node):
             result = handle.get_result_async()
             result.add_done_callback(lambda done: self._on_goal_result(token, done))
         except Exception as exc:
-            self._publish_goal_status('unknown', str(exc))
+            self._mark_goal_unknown(str(exc))
 
     def _on_goal_result(self, token, future):
         if token is not self._goal_token:
@@ -170,7 +186,7 @@ class Nav2TargetNode(Node):
                 GoalStatus.STATUS_CANCELED: 'canceled',
             }
             if result.status not in states:
-                self._publish_goal_status('unknown', f'action status {result.status}')
+                self._mark_goal_unknown(f'action status {result.status}')
                 return
             detail = getattr(result.result, 'error_msg', '')
             error_code = getattr(result.result, 'error_code', 0)
@@ -180,7 +196,7 @@ class Nav2TargetNode(Node):
             self._goal_token = None
             self._publish_goal_status(states[result.status], detail)
         except Exception as exc:
-            self._publish_goal_status('unknown', str(exc))
+            self._mark_goal_unknown(str(exc))
 
     def _on_liveliness(self, event):
         if event.alive_count == 0:

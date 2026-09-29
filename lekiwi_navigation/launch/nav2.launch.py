@@ -93,7 +93,7 @@ def launch_setup(context, *args, **kwargs):
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
     teleop_path = os.path.join(
         FindPackageShare('lekiwi_control').perform(context), 'config', 'base_teleop.yaml')
-    speed_limits = velocity_overrides(teleop_path)
+    speed_limits = velocity_overrides(teleop_path, LaunchConfiguration('params_file').perform(context))
     map_name = LaunchConfiguration('map_name').perform(context)
     log_level = LaunchConfiguration('log_level').perform(context)
     if log_level not in _VALID_LOG_LEVELS:

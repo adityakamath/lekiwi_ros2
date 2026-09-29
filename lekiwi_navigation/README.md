@@ -55,8 +55,8 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 The joystick axis scales in `lekiwi_control/config/base_teleop.yaml` are the single
 source of speed limits. `nav2.launch.py` reads their absolute values from the installed
 `lekiwi_control` package and overrides MPPI, behavior-server rotation, and velocity
-smoother limits after loading `params_file`. This also applies to custom Nav2
-parameter files. Keep acceleration and controller tuning in `nav2.yaml`.
+smoother limits after loading `params_file`. It reads the configured MPPI controller
+plugin ID from that file, so this also applies to custom Nav2 parameter files. Keep acceleration and controller tuning in `nav2.yaml`.
 Change the teleop scales, rebuild `lekiwi_control` if using a copied install, and
 restart the stack; this is startup configuration, not live synchronization.
 Negative scales invert axes; zero/nonfinite scales and nonzero offsets are rejected.
@@ -138,7 +138,7 @@ ros2 service call /nav2_send_goal std_srvs/srv/SetBool "{data: true}"
 ros2 topic echo /nav2_target_goal_status
 ```
 
-`data: false` is a successful no-op, matching the reset-waypoints button convention.
+`data: false` is a successful no-op except after an `unknown` goal outcome, when it acknowledges and clears that blocked slot.
 Press **button 8 (right joystick button)** to make the same `data: true` call,
 with no L1 modifier required. With audio enabled, a successful submission request
 announces "Sending navigation goal"; a rejected request announces "Navigation goal rejected". A successful service response means submission
@@ -153,8 +153,9 @@ Only one goal from this node may be pending/active at a time. Rejection or a ter
 result releases that slot. Missing mode confirmation, missing map pose, nonfinite
 coordinates, or an unavailable action server reject the service request. Transport
 errors with uncertain outcomes keep the slot reserved: inspect/cancel the goal in
-Nav2 before restarting the tracker to permit another submission. Restarting the
-tracker does not cancel or recover ownership of a previously submitted goal.
+Nav2 before calling `/nav2_send_goal` with `data: false` to clear the slot and
+permit another submission. Clearing the slot does not cancel or recover ownership
+of a previously submitted goal.
 Changing modes also leaves existing navigation and patrol behavior alone.
 
 ### Validation on a ROS 2 device
@@ -175,7 +176,7 @@ Automated ROS tests run on the development workspace, but physical robot behavio
    transition with map TF unavailable. Check the reported state and recovery after
    a new successful mode call / restored TF.
 7. Confirm editing alone never submits a goal. Call `/nav2_send_goal` with false
-   (no-op), then true in teleop (rejected), then true in Nav2 mode (submitted).
+   (no-op while idle), then true in teleop (rejected), then true in Nav2 mode (submitted).
 8. Compare `nav2_target_submitted_pose` against the draft at submission, including
    heading. Edit the draft during navigation and verify the submitted goal stays
    unchanged. A second true call while busy must be rejected.
