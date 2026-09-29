@@ -2,8 +2,8 @@
 """Launch the LeKiwi robot system.
 
 The 'payload' argument selects which hardware payload is present:
-  ""        — base drive + navigation + laser [no pan-tilt, no OAK-D]
-  "pantilt" — base + pan-tilt + OAK-D + navigation + laser [default]
+  ""        — base drive + navigation + laser [no pan-tilt camera]
+  "pantilt" — base + pan-tilt + selected camera + navigation + laser [default]
 
 'imu'/'laser'/'audio'/'battery_monitor' (all default true) each gate one optional physical
 sensor's launch include - see their own DeclareLaunchArgument descriptions below."""

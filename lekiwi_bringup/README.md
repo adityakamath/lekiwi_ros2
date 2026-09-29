@@ -74,6 +74,12 @@ The rest of the system is configured in the packages that own it; the [repositor
 
 In simulation only the first three run: the simulated LiDAR and camera come from the MuJoCo plugins, and audio and the battery monitor are not simulated. `sim:=true` also forces simulation time and mock hardware. The EKF publishes `odom -> base_footprint`, so the launch file turns off the controller's own.
 
+## Comparing CPU use with component launches
+
+A bare `lekiwi.launch.py` command uses `payload:=pantilt`, `camera_config:=gemini2`, `enable_camera:=true`, `laser:=true`, `audio:=true`, and `battery_monitor:=true`. It also starts `lekiwi_navigation`, whose empty `mission` and `map_name` select SLAM mapping plus Nav2. Standalone `lekiwi_control/control.launch.py` and `lekiwi_bringup/laser.launch.py` both default to `payload:=""`; the latter therefore does not start the pan-tilt scan filter. A CPU comparison must launch the same payload, navigation stack, camera driver, laser filter, audio and battery components at the same camera rate. Running only the bare standalone control, navigation and laser commands is a lighter configuration.
+
+On the physical robot, compare per-process CPU after startup has settled with `ps -eo pid,pcpu,comm,args --sort=-pcpu | head -30` and compare active nodes with `ros2 node list`. In particular, check for `orbbec_camera`, `slam_toolbox`, Nav2 costmap nodes and `laser_scan_filter_chain`. The repository cannot establish the size of the reported CPU difference without measurements from the same robot and an exact list of standalone commands.
+
 ## Using it with another payload
 
 Add the payload's name to `_VALID_PAYLOADS` in `lekiwi.launch.py`. If it blocks part of the LiDAR's view, add `config/<name>_laser_filter.yaml` and `laser.launch.py` applies it automatically. The [repository README](../README.md#payloads) lists the rest of the wiring; a few launch branches still test for `pantilt` explicitly.
@@ -86,7 +92,7 @@ pytest test -q
 
 The tests check that the launch arguments are declared and validated, and that the LiDAR filter configuration resolves for each payload.
 
-Camera selection is forwarded unchanged to URDF and MuJoCo generation. Gemini 2 is the default; use `camera_config:=oakd_s2` for the alternative. Gemini 2 uses `/gemini2/*` in hardware and simulation. Simulation slices registered depth into `/gemini2/scan` without building a cloud; `pointcloud:=true` adds `/gemini2/depth_registered/points`; on real hardware it also publishes `/gemini2/depth_registered/points/compressed` through Cloudini. OAK-D S2 retains `/oak/*`; `pointcloud:=true` adds `/oak/rgbd/points` in simulation. Compressed RGB is always available in simulation. The real OAK profile defaults to 15 Hz with VIO off; the real Gemini wrapper requests 640×360 color and 640×400 depth at 15 Hz. See [camera variants](../lekiwi_mujoco/README.md#camera-variants) and [driver installation](../payloads/pantilt_ros2/README.md#installation).
+Camera selection is forwarded unchanged to URDF and MuJoCo generation. Gemini 2 is the default; use `camera_config:=oakd_s2` for the alternative. Gemini 2 uses `/gemini2/*` in hardware and simulation. Both real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; `pointcloud:=true` adds `/gemini2/depth_registered/points`; on real hardware it also publishes `/gemini2/depth_registered/points/compressed` through Cloudini. OAK-D S2 retains `/oak/*`; `pointcloud:=true` adds `/oak/rgbd/points` in simulation. Compressed RGB is always available in simulation. The real OAK profile defaults to 15 Hz with VIO off; the real Gemini wrapper requests 640×360 color and 640×400 depth at 15 Hz. See [camera variants](../lekiwi_mujoco/README.md#camera-variants) and [driver installation](../payloads/pantilt_ros2/README.md#installation).
 
 To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 
