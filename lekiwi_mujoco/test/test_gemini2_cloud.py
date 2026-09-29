@@ -4,6 +4,8 @@ import struct
 
 import numpy as np
 import pytest
+
+pytest.importorskip('sensor_msgs.msg')
 from sensor_msgs.msg import PointCloud2, PointField
 
 from lekiwi_mujoco.gemini2_cloud import finite_cloud

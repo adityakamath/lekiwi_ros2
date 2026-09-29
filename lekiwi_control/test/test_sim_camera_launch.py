@@ -31,6 +31,10 @@ def test_sim_camera_pipeline(camera, enabled, cloud, monkeypatch):
         nodes.append(kwargs)
         return original(**kwargs)
 
+    monkeypatch.setattr(module.FindPackageShare, 'find',
+                        lambda self, package: str(Path(__file__).resolve().parents[2] /
+                                                  ('payloads/pantilt_ros2' if package.startswith('pt_') else '') /
+                                                  package))
     monkeypatch.setattr(module, 'Node', record)
     module.launch_setup(context)
     names = {n.get('name') for n in nodes}

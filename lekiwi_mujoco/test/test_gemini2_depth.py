@@ -1,6 +1,8 @@
 """Gemini's registered depth uses millimeters and invalid pixels are zero."""
 import numpy as np
 import pytest
+
+pytest.importorskip('sensor_msgs.msg')
 from sensor_msgs.msg import Image
 
 from lekiwi_mujoco.gemini2_depth import depth_millimeters
