@@ -156,3 +156,60 @@ def test_nonfinite_input_clears_previous_command(target):
     msg.twist.angular.z = float('nan')
     n._on_twist(msg)
     assert n._command is None
+
+
+@pytest.mark.parametrize('input_hz', [10, 30, 50, 100])
+@pytest.mark.parametrize('command_first', [True, False])
+@pytest.mark.parametrize('axis', ['x', 'y', 'yaw'])
+def test_continuous_input_integrates_full_duration(target, input_hz, command_first, axis):
+    n, clock = target
+    n._mode, n._pose = True, [0., 0., 0.]
+    msg = TwistStamped()
+    if axis == 'yaw':
+        msg.twist.angular.z = 1.
+    else:
+        setattr(msg.twist.linear, axis, 1.)
+    # Three seconds at 1 m/s or rad/s, with independent 30 Hz publication.
+    events = [(i * 1_000_000_000 // 30, 'tick') for i in range(91)]
+    events += [(i * 1_000_000_000 // input_hz, 'command')
+               for i in range(input_hz * 3 + 1)]
+    for elapsed, kind in sorted(events, key=lambda e: (e[0], (e[1] == 'command')
+                                                      != command_first)):
+        clock.now.return_value = Time(nanoseconds=10_000_000_000 + elapsed)
+        if kind == 'tick':
+            n._tick()
+        else:
+            n._on_twist(msg)
+    expected = [0., 0., 0.]
+    expected[['x', 'y', 'yaw'].index(axis)] = 3.
+    assert n._pose == pytest.approx(expected)
+
+
+def test_command_changes_between_ticks_preserve_each_interval(target):
+    n, clock = target
+    n._mode, n._pose = True, [0., 0., 0.]
+    n._tick()
+    msg = TwistStamped()
+    # Start between ticks, reverse, stop, then restart after an idle interval.
+    for elapsed, velocity in [(20, 1.), (40, -2.), (70, 0.), (90, 1.)]:
+        clock.now.return_value = Time(nanoseconds=10_000_000_000 + elapsed * 1_000_000)
+        msg.twist.linear.x = velocity
+        n._on_twist(msg)
+    clock.now.return_value = Time(seconds=10.1)
+    n._tick()
+    assert n._pose == pytest.approx([.02 - .06 + .01, 0., 0.])
+
+
+@pytest.mark.parametrize('now', [9., 10.15, 10.5])
+def test_new_command_after_clock_gap_does_not_integrate_stale_input(target, now):
+    n, clock = target
+    n._mode, n._pose = True, [0., 0., 0.]
+    msg = TwistStamped()
+    msg.twist.linear.x = 1.
+    n._on_twist(msg)
+    clock.now.return_value = Time(seconds=now)
+    n._on_twist(msg)
+    assert n._pose == [0., 0., 0.]
+    clock.now.return_value = Time(nanoseconds=clock.now.return_value.nanoseconds + 50_000_000)
+    n._tick()
+    assert n._pose == pytest.approx([.05, 0., 0.])

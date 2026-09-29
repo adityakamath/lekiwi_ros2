@@ -219,7 +219,7 @@ class TestBno055DiagnosticsYaml:
 
 class TestControlLaunchArgs:
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'sts_serial_port', 'use_mock',
+        'payload', 'pantilt_config', 'camera_config', 'camera_fps', 'sts_serial_port', 'use_mock',
         'diagnostics', 'use_sim_time', 'joy',
     ]
 

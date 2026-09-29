@@ -58,7 +58,7 @@ class Nav2TargetNode(Node):
         self._pose = None
         self._pending = {}
         self._command = None
-        self._last_tick = None
+        self._last_update = None
         self._status = None
         self._buffer = tf2_ros.Buffer()
         self._listener = tf2_ros.TransformListener(self._buffer, self)
@@ -193,7 +193,7 @@ class Nav2TargetNode(Node):
         self._mode = mode
         self._pose = None
         self._command = None
-        self._last_tick = None
+        self._last_update = None
 
     def _on_mode_event(self, msg):
         key = (bytes(msg.info.client_gid), msg.info.sequence_number)
@@ -214,7 +214,33 @@ class Nav2TargetNode(Node):
             self._command = None
             return
         # This input is a target-control vector, regardless of its original base_link header.
-        self._command = (self.get_clock().now().nanoseconds, values)
+        now = self.get_clock().now().nanoseconds
+        # Account for the held command before replacing it, including stop messages.
+        self._advance_command(now)
+        self._command = (now, values)
+
+    def _advance_command(self, now):
+        """Integrate held input once, up to a timer tick or command change."""
+        previous = self._last_update
+        self._last_update = now
+        if self._command is None or previous is None:
+            return
+        received, (vx, vy, wz) = self._command
+        age = (now - received) * 1e-9
+        dt = (now - previous) * 1e-9
+        if not (0 <= age <= self._params['command_timeout']
+                and 0 <= dt <= self._params['max_dt']):
+            self._command = None
+            return
+        # Coincident callbacks must retain the command for the next interval.
+        if dt == 0:
+            return
+        x, y, yaw = self._pose
+        scale = self._params['translation_scale']
+        x += (math.cos(yaw) * vx - math.sin(yaw) * vy) * dt * scale
+        y += (math.sin(yaw) * vx + math.cos(yaw) * vy) * dt * scale
+        yaw += wz * dt * self._params['rotation_scale']
+        self._pose = [x, y, math.atan2(math.sin(yaw), math.cos(yaw))]
 
     def _publish_status(self, value):
         if value != self._status:
@@ -224,10 +250,7 @@ class Nav2TargetNode(Node):
 
     def _tick(self):
         now = self.get_clock().now()
-        previous = self._last_tick
-        self._last_tick = now.nanoseconds
-        if previous is not None and now.nanoseconds < previous:
-            self._command = None
+        self._advance_command(now.nanoseconds)
         if self._mode is True and self._pose is None:
             try:
                 # The attached target is identity in base_frame: this is the one-time
@@ -243,19 +266,6 @@ class Nav2TargetNode(Node):
             self._pose = [tf.transform.translation.x, tf.transform.translation.y, yaw]
             self._command = None
         attached = self._mode is not True
-        if not attached and self._command is not None and previous is not None:
-            received, (vx, vy, wz) = self._command
-            age = (now.nanoseconds - received) * 1e-9
-            dt = (now.nanoseconds - max(previous, received)) * 1e-9
-            if 0 <= age <= self._params['command_timeout'] and 0 < dt <= self._params['max_dt']:
-                x, y, yaw = self._pose
-                scale = self._params['translation_scale']
-                x += (math.cos(yaw) * vx - math.sin(yaw) * vy) * dt * scale
-                y += (math.sin(yaw) * vx + math.cos(yaw) * vy) * dt * scale
-                yaw += wz * dt * self._params['rotation_scale']
-                self._pose = [x, y, math.atan2(math.sin(yaw), math.cos(yaw))]
-            else:
-                self._command = None
         pose = PoseStamped()
         pose.header.stamp = now.to_msg()
         pose.header.frame_id = self._params['base_frame' if attached else 'map_frame']

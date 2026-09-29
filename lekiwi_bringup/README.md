@@ -35,9 +35,13 @@ The main arguments are in the [repository README](../README.md#launch-arguments)
 
 | Argument | Default | Meaning |
 |----------|---------|---------|
+| `camera_config` | `gemini2` | Pan-tilt camera geometry: `gemini2` or `oakd_s2`; also selects the generated simulation model |
 | `pantilt_config` | `pt101` | Pan-tilt mesh variant, `pt100` or `pt101` |
-| `pointcloud`, `octomap` | `false` | The OAK-D point cloud and octomap (`payload:=pantilt`, hardware only) |
+| `enable_camera` | `true` | Real or simulated camera publishing on/off; camera geometry remains selected |
+| `pointcloud` | `false` | One colored cloud for either camera in hardware or simulation; real drivers also start Cloudini compression |
+| `octomap` | `false` | OAK-D hardware only; requires `pointcloud:=true` |
 | `sts_serial_port`, `use_mock` | `""` | Servo serial port and mock mode; empty uses `lekiwi_control`'s `urdf_config.yaml` |
+| `camera_fps` | `15` | Shared RGB/depth rate for either real camera (5, 10, 15, 30 Hz); simulation caps rendering at 5 Hz |
 | `mujoco_model` | `""` | `sim` only: a pre-built MJCF; empty generates one at launch |
 | `use_sim_time` | `false` | Use `/clock`; forced on with `sim:=true` |
 
@@ -66,7 +70,7 @@ The rest of the system is configured in the packages that own it; the [repositor
 | LiDAR | `laser.launch.py` | real hardware and `laser:=true` |
 | Audio | `lekiwi_audio` | real hardware and `audio:=true` |
 | Battery monitor | `ina260_battery_monitor` | real hardware and `battery_monitor:=true` |
-| OAK-D camera | `pt_bringup` | real hardware and `payload:=pantilt` |
+| Gemini 2 or OAK-D camera | `pt_bringup` | real hardware, `payload:=pantilt`, `enable_camera:=true`; only the selected driver is included |
 
 In simulation only the first three run: the simulated LiDAR and camera come from the MuJoCo plugins, and audio and the battery monitor are not simulated. `sim:=true` also forces simulation time and mock hardware. The EKF publishes `odom -> base_footprint`, so the launch file turns off the controller's own.
 
@@ -81,3 +85,13 @@ pytest test -q
 ```
 
 The tests check that the launch arguments are declared and validated, and that the LiDAR filter configuration resolves for each payload.
+
+Camera selection is forwarded unchanged to URDF and MuJoCo generation. Gemini 2 is the default; use `camera_config:=oakd_s2` for the alternative. Gemini 2 uses `/gemini2/*` in hardware and simulation. Simulation slices registered depth into `/gemini2/scan` without building a cloud; `pointcloud:=true` adds `/gemini2/depth_registered/points`; on real hardware it also publishes `/gemini2/depth_registered/points/compressed` through Cloudini. OAK-D S2 retains `/oak/*`; `pointcloud:=true` adds `/oak/rgbd/points` in simulation. Compressed RGB is always available in simulation. The real OAK profile defaults to 15 Hz with VIO off; the real Gemini wrapper requests 640×360 color and 640×400 depth at 15 Hz. See [camera variants](../lekiwi_mujoco/README.md#camera-variants) and [driver installation](../payloads/pantilt_ros2/README.md#installation).
+
+To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
+
+```bash
+ros2 launch lekiwi_bringup lekiwi.launch.py enable_camera:=false
+```
+
+`camera_config` defaults to `gemini2`; `camera_config:=oakd_s2` selects the alternative. LeKiwi passes `enable_camera` to the selected camera-only launch in `pt_bringup`, which skips the driver and streaming helpers before resolving camera dependencies when false. Camera geometry remains in the URDF. In simulation, the same flag skips the camera plugin and camera processing while keeping the selected URDF and MJCF geometry.

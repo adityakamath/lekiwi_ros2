@@ -8,6 +8,8 @@ The 'payload' argument selects which hardware payload is present:
 'imu'/'laser'/'audio'/'battery_monitor' (all default true) each gate one optional physical
 sensor's launch include - see their own DeclareLaunchArgument descriptions below."""
 
+import math
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -31,9 +33,11 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 
 
 def launch_setup(context):
-    """Validate arguments and include control/navigation/laser (+ oakd for pantilt)."""
+    """Validate arguments and include control/navigation/laser (+ selected camera for pantilt)."""
     payload             = LaunchConfiguration('payload').perform(context)
     pantilt_config      = LaunchConfiguration('pantilt_config').perform(context)
+    camera_config       = LaunchConfiguration('camera_config').perform(context)
+    enable_camera       = _launch_arg_as_bool(context, 'enable_camera')
     diagnostics         = _launch_arg_as_bool(context, 'diagnostics')
     use_mock            = LaunchConfiguration('use_mock').perform(context)
     fusion_mode         = LaunchConfiguration('fusion_mode').perform(context)
@@ -54,6 +58,12 @@ def launch_setup(context):
     mujoco_model        = LaunchConfiguration('mujoco_model').perform(context)
     mujoco_scene        = LaunchConfiguration('mujoco_scene').perform(context)
 
+    camera_fps = float(LaunchConfiguration('camera_fps').perform(context))
+    if not math.isfinite(camera_fps) or camera_fps <= 0 or camera_fps > 30:
+        raise RuntimeError('camera_fps must be finite and in (0, 30] Hz')
+    if not sim and camera_fps not in (5, 10, 15, 30):
+        raise RuntimeError('Real camera_fps must be 5, 10, 15, or 30 Hz')
+
     if sim:
         # Running in MuJoCo implies sim time and mock hardware - forced here defensively
         # rather than relying solely on control.launch.py's mujoco branch never opening the real port.
@@ -69,6 +79,8 @@ def launch_setup(context):
         raise RuntimeError(
             "[lekiwi.launch.py] pointcloud:=true requires payload:=pantilt."
         )
+    if sim and octomap:
+        raise RuntimeError('[lekiwi.launch.py] octomap is not integrated in simulation yet.')
     if octomap and not pointcloud:
         raise RuntimeError(
             "[lekiwi.launch.py] octomap:=true requires pointcloud:=true."
@@ -91,6 +103,10 @@ def launch_setup(context):
     control_args = {
         'payload':          payload,
         'pantilt_config':   pantilt_config,
+        'camera_config':    camera_config,
+        'enable_camera':    str(enable_camera).lower(),
+        'pointcloud':       str(pointcloud).lower(),
+        'camera_fps': LaunchConfiguration('camera_fps').perform(context),
         'diagnostics':      str(diagnostics).lower(),
         'use_mock':         use_mock,
         'use_sim_time':     use_sim_time,
@@ -133,7 +149,7 @@ def launch_setup(context):
         ))
 
     if sim:
-        # laser/audio/battery_monitor/oakd have no simulated equivalent, or are
+        # laser/audio/battery_monitor/real camera have no simulated equivalent, or are
         # already hosted directly by control.launch.py's mujoco control node instead.
         return actions
 
@@ -164,12 +180,16 @@ def launch_setup(context):
         }))
 
     if payload == 'pantilt':
+        if enable_camera and not sim and camera_config == 'gemini2' and octomap:
+            raise RuntimeError('Gemini 2 octomap is not integrated; use octomap:=false.')
         pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
-        oakd = include(pkg_pantilt, 'launch/oakd.launch.py', {
+        camera = include(pkg_pantilt, f"launch/{'gemini2' if camera_config == 'gemini2' else 'oakd'}.launch.py", {
+            'enable_camera': str(enable_camera).lower(),
             'pointcloud': str(pointcloud).lower(),
+            'camera_fps': str(int(float(LaunchConfiguration('camera_fps').perform(context)))),
             'octomap':    str(octomap).lower(),
         })
-        actions.append(oakd)
+        actions.append(camera)
 
     return actions
 
@@ -182,6 +202,12 @@ def generate_launch_description():
             default_value='pantilt',
             description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
         ),
+        DeclareLaunchArgument('camera_config', default_value='gemini2', choices=['gemini2', 'oakd_s2'],
+                              description='Pan-tilt camera geometry and real driver.'),
+        DeclareLaunchArgument('enable_camera', default_value='true',
+                              description='Start the selected real or simulated camera; false retains geometry.'),
+        DeclareLaunchArgument('camera_fps', default_value='15.0',
+                              description='Camera RGB/depth rate in Hz for either model; simulation is capped at 5 Hz.'),
         DeclareLaunchArgument(
             'pantilt_config',
             default_value='pt101',
@@ -219,7 +245,7 @@ def generate_launch_description():
             'mujoco_model',
             default_value='',
             description='[advanced, sim only] Path to a pre-built MJCF file to load; empty means '
-                        'xacro-process it at launch time instead (picked by payload/pantilt_config).',
+                        'xacro-process it at launch time instead (picked by payload/pantilt_config/camera_config).',
         ),
         DeclareLaunchArgument(
             'fusion_mode',
@@ -262,7 +288,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'pointcloud',
             default_value='false',
-            description='[pantilt only] Enable RGBD point cloud output from OAK-D.',
+            description='[pantilt only] Enable point clouds from the selected camera.',
         ),
         DeclareLaunchArgument(
             'octomap',
@@ -306,7 +332,7 @@ def generate_launch_description():
             'sim',
             default_value='false',
             description='Run against MuJoCo instead of real hardware: forces use_sim_time and '
-                        'use_mock, and skips laser/audio/battery_monitor/oakd (laser is hosted '
+                        'use_mock, and skips laser/audio/battery_monitor/real camera (laser is hosted '
                         'by the mujoco control node itself; the other three have no simulated '
                         'equivalent at all). Base and pantilt payload both supported.',
         ),

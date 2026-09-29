@@ -1,0 +1,10 @@
+# The MJCF renderer camera retains its internal oak_rgb name for both assemblies.
+/**:
+  ros__parameters:
+    mujoco_plugins:
+      mujoco_camera_plugin:
+        oak_rgb:
+          frame_name: gemini2_color_optical_frame
+          info_topic: /gemini2/color/camera_info
+          image_topic: /gemini2/color/image_raw
+          depth_topic: /_gemini2/depth_raw

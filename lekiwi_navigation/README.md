@@ -159,8 +159,7 @@ Changing modes also leaves existing navigation and patrol behavior alone.
 
 ### Validation on a ROS 2 device
 
-This feature has only been statically checked on the development device. After
-building and sourcing the package on the ROS 2 device:
+Automated ROS tests run on the development workspace, but physical robot behavior still needs validation. After building and sourcing the package on the robot:
 
 1. Start normal robot bringup and confirm the sphere and axes coincide with the base in
    teleop, including while driving. There must be no map-TF requirement in teleop.
@@ -209,7 +208,4 @@ without ROS, using Python with PyYAML installed:
 python lekiwi_navigation/test/test_nav2_target_assets.py
 ```
 
-These four asset checks passed on the development device. The ROS-dependent tests
-have been syntax-checked but still require execution on the ROS device. TF display
-behavior across parent changes, real patrol interaction, controller input, and
-actual audio playback still need the device validation above.
+The asset checks and ROS-dependent tests pass in the development workspace. TF display behavior across parent changes, real patrol interaction, controller input, and actual audio playback still need the robot validation above.

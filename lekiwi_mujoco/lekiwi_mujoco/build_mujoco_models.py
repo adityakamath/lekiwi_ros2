@@ -56,7 +56,7 @@ def set_origin(element, origin):
     element.quat = quat
 
 
-def expand_urdf(variant, packages, control):
+def expand_urdf(variant, packages, control, camera_config='gemini2'):
     """The robot URDF in mock mode, plus the controller geometry and payload joint limits it is built from."""
     config = yaml.safe_load((control / 'config/control.yaml').read_text())['base_controller']['ros__parameters']
     motor = yaml.safe_load((control / 'config/urdf_config.yaml').read_text())
@@ -69,7 +69,7 @@ def expand_urdf(variant, packages, control):
     source = 'base/base.urdf.xacro' if variant == 'base' else 'base_pantilt/base_pantilt.urdf.xacro'
     with package_paths(packages):
         doc = xacro.process_file(str(packages['lekiwi_description'] / 'urdf' / source), mappings={
-            'pantilt_config': variant, 'use_mock': 'true',
+            'pantilt_config': variant, 'camera_config': camera_config, 'use_mock': 'true',
             'base_controller_config': str(control / 'config/control.yaml'),
             **{key: str(value).lower() if isinstance(value, bool) else str(value) for key, value in motor.items()},
             'simulation_controllers': '', 'payload_simulation_controllers': ''})
@@ -121,10 +121,12 @@ def sync_velocity_limits(spec, urdf, config):
             numeric('velocity_limit_' + name, [limit])
 
 
-def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_dir=None):
+def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_dir=None, camera_config='gemini2'):
     """Return an editable native spec with absolute assets for future scene composition."""
     if variant not in ('base', 'pt100', 'pt101'):
         raise ValueError(f'Unknown variant: {variant}')
+    if camera_config not in ('gemini2', 'oakd_s2'):
+        raise ValueError(f'Unknown camera: {camera_config}')
     control = Path(control_dir).resolve() if control_dir else control_package()
     packages = {'lekiwi_description': Path(description_dir).resolve() if description_dir else (PACKAGE or package_share('lekiwi_description'))}
     if variant != 'base':
@@ -133,9 +135,27 @@ def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_
         doc = xacro.process_file(str(SIM_PACKAGE / 'mjcf/base.mjcf.xacro'))
     # MuJoCo parses includes and maintains model references; no custom XML assembly.
     spec = mujoco.MjSpec.from_string(doc.toxml())
-    urdf, config, payload_limits = expand_urdf(variant, packages, control)
+    urdf, config, payload_limits = expand_urdf(variant, packages, control, camera_config)
     if variant != 'base':
         attach_payload(spec, variant, urdf, payload_limits, packages)
+        if camera_config == 'gemini2':
+            # Kilted's released MujocoSystemInterface expects the default IMU suffixes.
+            spec.sensor('gemini2_gyroscope').name = 'gemini2_gyro'
+            spec.sensor('gemini2_accelerometer').name = 'gemini2_accel'
+            spec.add_sensor(name='gemini2_quat', type=mujoco.mjtSensor.mjSENS_FRAMEQUAT,
+                            objtype=mujoco.mjtObj.mjOBJ_SITE, objname='gemini2_imu')
+        else:
+            # Mount the OAK IMU at its existing URDF frame, using Kilted's IMU suffixes.
+            imu_joint = urdf.find("joint[@name='oak_imu_frame_joint']")
+            imu_site = spec.body('oak_link').add_site(name='oak_imu')
+            set_origin(imu_site, imu_joint.find('origin'))
+            for suffix, sensor_type in (
+                ('quat', mujoco.mjtSensor.mjSENS_FRAMEQUAT),
+                ('gyro', mujoco.mjtSensor.mjSENS_GYRO),
+                ('accel', mujoco.mjtSensor.mjSENS_ACCELEROMETER),
+            ):
+                spec.add_sensor(name=f'oak_{suffix}', type=sensor_type,
+                                objtype=mujoco.mjtObj.mjOBJ_SITE, objname='oak_imu')
     sync_velocity_limits(spec, urdf, config)
     configure_physics(spec)
     return spec
@@ -195,8 +215,8 @@ def compose_scene(robot, scene='flat'):
     return world
 
 
-def build_spec(variant, pt_package=None, scene='flat', *, control_dir=None, description_dir=None):
-    return compose_scene(build_robot_spec(variant, pt_package, control_dir=control_dir, description_dir=description_dir), scene)
+def build_spec(variant, pt_package=None, scene='flat', *, control_dir=None, description_dir=None, camera_config='gemini2'):
+    return compose_scene(build_robot_spec(variant, pt_package, control_dir=control_dir, description_dir=description_dir, camera_config=camera_config), scene)
 
 
 def use_native_lidar(xml):
@@ -266,9 +286,9 @@ def mask_payload_lidar(xml, mask):
     return ET.tostring(root, encoding='unicode')
 
 
-def build(variant, output, absolute=False, pt_package=None, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder'):
+def build(variant, output, absolute=False, pt_package=None, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder', camera_config='gemini2'):
     output = Path(output).resolve()
-    spec = build_spec(variant, pt_package=pt_package, scene=scene, control_dir=control_dir, description_dir=description_dir)
+    spec = build_spec(variant, pt_package=pt_package, scene=scene, control_dir=control_dir, description_dir=description_dir, camera_config=camera_config)
     for mesh in [*spec.meshes, *spec.textures]:
         if mesh.file:
             path = Path(mesh.file).resolve()
@@ -304,6 +324,8 @@ def build(variant, output, absolute=False, pt_package=None, scene=True, *, contr
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--variant', choices=['base', 'pt100', 'pt101'])
+    parser.add_argument('--camera', choices=['gemini2', 'oakd_s2'],
+                        help='Camera geometry; defaults to Gemini 2 for a single model, both for regeneration')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--absolute', action='store_true')
     parser.add_argument('--pt-package', type=Path)
@@ -316,11 +338,15 @@ def main():
     if bool(args.variant) != bool(args.output):
         parser.error('--variant and --output must be used together')
     if args.variant:
-        build(args.variant, args.output, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar)
+        build(args.variant, args.output, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar, camera_config=args.camera or 'gemini2')
     else:
         for variant in ('base', 'pt100', 'pt101'):
-            filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_oakd_s2.xml'
-            print(build(variant, SIM_PACKAGE / 'mjcf' / filename, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar))
+            cameras = [args.camera or 'gemini2'] if variant == 'base' else ([args.camera] if args.camera else ['gemini2', 'oakd_s2'])
+            for camera in cameras:
+                filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_{camera}.xml'
+                print(build(variant, SIM_PACKAGE / 'mjcf' / filename, args.absolute, args.pt_package,
+                            scene=args.scene, control_dir=args.control_package,
+                            description_dir=args.description_package, lidar=args.lidar, camera_config=camera))
 
 
 if __name__ == '__main__':

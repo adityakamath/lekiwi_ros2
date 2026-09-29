@@ -70,5 +70,4 @@ The tests stub out the voice model, but they still import the packages in `requi
 
 The navigation-goal announcement confirms the submission request, not Nav2 acceptance.
 The existing Nav2 action-status watcher announces goal reached, failed, or canceled.
-Rebuild both `lekiwi_audio` and `lekiwi_navigation` after pulling this change. The
-audio build renders the new phrase using the build-time dependencies listed above.
+Rebuild `lekiwi_audio` after changing the phrase text; its build renders the updated clip using the build-time dependencies listed above.

@@ -1,0 +1,9 @@
+controller_manager:
+  ros__parameters:
+    gemini2_imu_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+gemini2_imu_broadcaster:
+  ros__parameters:
+    sensor_name: gemini2
+    frame_id: gemini2_accel_gyro_optical_frame
