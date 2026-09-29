@@ -32,7 +32,7 @@ These are separate repositories, included as git submodules under `modules/` and
 | [`bno055_hardware_interface`](https://github.com/adityakamath/bno055_hardware_interface) | `ros2_control` hardware interface for the BNO055 IMU |
 | [`ldlidar_ros2`](https://github.com/adityakamath/ldlidar_ros2) | LD06 LiDAR driver with bug fixes |
 | [`ina260_battery_monitor`](https://github.com/adityakamath/ina260_battery_monitor) | INA260 battery voltage, current and power, with threshold events |
-| [`mujoco_ros2_plugins`](https://github.com/adityakamath/mujoco_ros2_plugins) | `mujoco_ros2_control` plugins, currently the simulated `/emergency_stop` (`sim:=true` only) |
+| [`mujoco_ros2_plugins`](https://github.com/adityakamath/mujoco_ros2_plugins) | `mujoco_ros2_control` plugins, currently a configurable simulated emergency-stop service (default `/emergency_stop`; `sim:=true` only) |
 | [`pantilt_ros2`](https://github.com/adityakamath/pantilt_ros2) (`payloads/`) | Pan-tilt with Gemini 2 (default) or OAK-D S2 camera, with its own MuJoCo model |
 
 ## Hardware

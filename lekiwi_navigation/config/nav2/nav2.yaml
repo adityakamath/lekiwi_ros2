@@ -169,7 +169,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.10        # reduced from 0.20; robot_radius=0.17 + 0.10 = 0.27m clearance
+        inflation_radius: 0.20        # obstacle-to-center radius; exceeds the ~0.176 m inscribed radius
       always_send_full_costmap: false
 
 global_costmap:
@@ -208,7 +208,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.15        # reduced from 0.30; slightly larger than local for global planner conservatism
+        inflation_radius: 0.25        # exceeds the inscribed radius; slightly more conservative than local
       always_send_full_costmap: false
 
 keepout_costmap_filter_info_server:
@@ -229,10 +229,10 @@ speed_costmap_filter_info_server:
 
 # Note: planner_server logs one spurious ERROR at startup:
 #   "Inflation layer either not found or inflation is not set sufficiently..."
-# This is a Nav2 Kilted bug: GridCollisionChecker's constructor always passes
-# possible_collision_cost=-1 to setFootprint(), which unconditionally triggers
-# the check. For a circular robot (robot_radius), possible_collision_cost is
-# never consulted during actual collision checking — no performance impact.
+# SmacPlanner2D passes possible_collision_cost=0 to GridCollisionChecker for its
+# circular-robot mode, triggering this non-circular optimization warning even
+# when inflation is configured correctly. The separate InflationLayer warning
+# about inflation_radius < inscribed_radius is real and must not be ignored.
 planner_server:
   ros__parameters:
     expected_planner_frequency: 1.0  # Hz

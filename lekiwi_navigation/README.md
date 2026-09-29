@@ -63,6 +63,14 @@ Negative scales invert axes; zero/nonfinite scales and nonzero offsets are rejec
 Launch through `nav2.launch.py` so the derived limits are applied; the YAML alone
 no longer supplies them.
 
+The local and global inflation radii (0.20 m and 0.25 m) exceed the circular
+robot's 0.17 m configured radius. `inflation_radius` measures obstacle-to-robot-center
+distance; it is not an extra clearance added to `robot_radius`. Nav2 Kilted's
+SmacPlanner2D can still log an optimization warning about non-circular footprints
+at startup because its 2D circular path passes a zero optimization cost. The
+`InflationLayer` warning that the radius is smaller than the inscribed radius is
+a separate, actionable warning and should no longer appear with these settings.
+
 ### Maps and zones
 
 Saving a map (the `/save_map` service, bound to the Screenshot button) writes a timestamped folder under `maps/` with the map, the SLAM pose graph, the robot's pose for localization start-up, and a `filters/` folder with placeholder masks. Use the folder name as `map_name` (rename it first if you like). No-go and speed-limited zones are the images `filters/keepout_mask.pgm` and `speed_mask.pgm`, which start as no-op placeholders; edit them in an image editor to add zones. Maps are not committed to the repository.

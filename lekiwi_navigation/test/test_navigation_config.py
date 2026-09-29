@@ -63,6 +63,14 @@ class TestNav2Yaml:
         global_ = self.cfg['global_costmap']['global_costmap']['ros__parameters']['robot_radius']
         assert local > 0 and global_ > 0
 
+    def test_inflation_covers_the_circular_robot(self):
+        # Nav2's circular collision checks use inflated center-cell costs. If the
+        # inflation radius is smaller than the robot, obstacle cells outside that
+        # radius can be traversed even though the robot body would overlap them.
+        for name in ('local_costmap', 'global_costmap'):
+            params = self.cfg[name][name]['ros__parameters']
+            assert params['inflation_layer']['inflation_radius'] > params['robot_radius']
+
     def test_costmap_filters_default_disabled(self):
         """Filters must default to disabled; laser.launch.py enables them at runtime."""
         local_params = self.cfg['local_costmap']['local_costmap']['ros__parameters']

@@ -46,7 +46,7 @@ An explicit `--model` or `mujoco_model` selects an existing model and must match
 - The payload submodule for the pan-tilt models: run `git submodule update --init payloads/pantilt_ros2` from the `lekiwi_ros2` repository root. It provides `pt_description` and `pt_mujoco`.
 - For the ROS simulation only, on Kilted:
   - `sudo apt install ros-kilted-mujoco-ros2-control ros-kilted-mujoco-ros2-control-plugins ros-kilted-mujoco-3d-lidar ros-kilted-laser-filters` (0.1.2 or newer; older releases have no camera or native lidar plugin)
-  - [mujoco_ros2_plugins](../modules/mujoco_ros2_plugins/README.md), from the `modules/` submodule, built in the same workspace. It provides the simulated `/emergency_stop`.
+  - [mujoco_ros2_plugins](../modules/mujoco_ros2_plugins/README.md), from the `modules/` submodule, built in the same workspace. It provides the simulated emergency-stop service (default `/emergency_stop`; configurable with `mujoco_plugins.emergency_stop_plugin.service_name`).
 
 ## Running
 
@@ -185,7 +185,7 @@ For the lightest camera setup, keep the default `pointcloud:=false`, reduce `cam
 | `/oak/imu/data` | OAK-D S2 simulated IMU at `oak_imu_frame` when camera streaming is enabled |
 | `/oak/rgbd/points` | Optional OAK-D S2 simulated colored cloud (`pointcloud:=true`) |
 | `/free_joint_state_publisher/free_joint_states` | Ground-truth base pose and velocity |
-| `/emergency_stop` (`std_srvs/SetBool`) | Disables torque on every motor while enabled, matching the real robot's `sts_hardware_interface`; joints coast/drift freely, not held or braked; releasing hands control back |
+| `/emergency_stop` (`std_srvs/SetBool`, configurable service name) | Disables torque on every motor while enabled, matching the real robot's `sts_hardware_interface`; joints coast/drift freely, not held or braked; releasing hands control back |
 | `/external_wrench_plugin/apply_wrench` | Push a body for a test, for example to trigger Nav2 recoveries |
 | `/mujoco_ros2_control_node/{reset_world,set_free_joint_state,set_pause,step_simulation}` | Reset, teleport the base, pause and single-step the simulation |
 | `/joint_states`, `/imu_sensor_broadcaster/imu`, `/base_controller/odom` | From ros2_control on the simulated hardware |
