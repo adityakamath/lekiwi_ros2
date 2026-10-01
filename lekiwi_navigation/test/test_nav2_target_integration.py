@@ -1,12 +1,14 @@
 """Real ROS service/action/introspection round trip with a local fake Nav2 server."""
 import time
 
+from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionServer
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import qos_profile_services_default
 from service_msgs.msg import ServiceEventInfo
+from std_msgs.msg import String
 from std_srvs.srv import SetBool, SetBool_Event
 
 from lekiwi_navigation.nav2_target_node import Nav2TargetNode
@@ -18,7 +20,7 @@ def test_send_service_action_result_and_audio_events():
     executor = SingleThreadedExecutor()
     executor.add_node(tracker)
     executor.add_node(peer)
-    received, events = [], []
+    received, events, input_status = [], [], []
 
     def execute(handle):
         received.append(handle.request.pose)
@@ -30,6 +32,9 @@ def test_send_service_action_result_and_audio_events():
     subscription = peer.create_subscription(
         SetBool_Event, 'nav2_send_goal/_service_event', events.append,
         qos_profile_services_default)
+    goal_input = peer.create_publisher(PoseStamped, 'nav2_target_goal_input', 10)
+    input_status_subscription = peer.create_subscription(
+        String, 'nav2_target_goal_input_status', input_status.append, 10)
 
     def until(predicate):
         deadline = time.monotonic() + 10
@@ -39,6 +44,7 @@ def test_send_service_action_result_and_audio_events():
 
     try:
         until(lambda: client.service_is_ready() and tracker._nav_client.server_is_ready()
+              and peer.count_subscribers('nav2_target_goal_input') > 0
               and peer.count_publishers('nav2_send_goal/_service_event') > 0)
         tracker._mode, tracker._pose = True, [1., 2., 0.]
         response = client.call_async(SetBool.Request(data=True))
@@ -55,8 +61,22 @@ def test_send_service_action_result_and_audio_events():
         assert responses[0].response[0].success
         assert requests[0].info.sequence_number == responses[0].info.sequence_number
         assert bytes(requests[0].info.client_gid) == bytes(responses[0].info.client_gid)
+
+        selected_goal = PoseStamped()
+        selected_goal.header.frame_id = 'map'
+        selected_goal.pose.position.x = 5.0
+        selected_goal.pose.position.y = 6.0
+        selected_goal.pose.orientation.w = 1.0
+        goal_input.publish(selected_goal)
+        until(lambda: len(received) == 2 and input_status)
+        assert received[1].pose.position.x == 5.0
+        assert received[1].pose.position.y == 6.0
+        assert tracker._pose == [5.0, 6.0, 0.0]
+        assert input_status[-1].data.startswith('submitted:')
     finally:
         peer.destroy_subscription(subscription)
+        peer.destroy_subscription(input_status_subscription)
+        peer.destroy_publisher(goal_input)
         server.destroy()
         executor.remove_node(tracker)
         executor.remove_node(peer)

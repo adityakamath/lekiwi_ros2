@@ -33,9 +33,8 @@ class Nav2TargetNode(Node):
             'target_frame': 'nav2_target', 'teleop_topic': 'cmd_vel_teleop',
             'mode_service': 'twist_switch', 'publish_rate': 30.0,
             'command_timeout': 0.2, 'max_dt': 0.1, 'marker_scale': 0.05,
-            'translation_scale': 1.0, 'rotation_scale': 1.0,
-            'teleop_color': [0.5, 0.5, 0.5, 0.9],
-            'editing_color': [0.0, 1.0, 1.0, 0.9],
+            'translation_scale': 2.0, 'rotation_scale': 2.0,
+            'marker_color': [0.0, 1.0, 0.4, 0.9],
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
@@ -47,10 +46,9 @@ class Nav2TargetNode(Node):
         for name in ('translation_scale', 'rotation_scale'):
             if not math.isfinite(self._params[name]) or self._params[name] < 0:
                 raise ValueError(f'{name} must be finite and nonnegative')
-        for name in ('teleop_color', 'editing_color'):
-            color = self._params[name]
-            if len(color) != 4 or any(not math.isfinite(v) or not 0 <= v <= 1 for v in color):
-                raise ValueError(f'{name} must contain four RGBA values in [0, 1]')
+        color = self._params['marker_color']
+        if len(color) != 4 or any(not math.isfinite(v) or not 0 <= v <= 1 for v in color):
+            raise ValueError('marker_color must contain four RGBA values in [0, 1]')
         frames = [self._params[n] for n in ('map_frame', 'base_frame', 'target_frame')]
         if any(not f or f.startswith('/') for f in frames) or len(set(frames)) != 3:
             raise ValueError('Frames must be nonempty, distinct, and have no leading slash')
@@ -68,6 +66,8 @@ class Nav2TargetNode(Node):
         self._pose_pub = self.create_publisher(PoseStamped, 'nav2_target_pose', retained)
         self._status_pub = self.create_publisher(String, 'nav2_target_status', retained)
         self._goal_status_pub = self.create_publisher(String, 'nav2_target_goal_status', retained)
+        self._goal_input_status_pub = self.create_publisher(
+            String, 'nav2_target_goal_input_status', retained)
         self._submitted_pub = self.create_publisher(
             PoseStamped, 'nav2_target_submitted_pose', retained)
         self._nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
@@ -89,6 +89,8 @@ class Nav2TargetNode(Node):
             event_callbacks=SubscriptionEventCallbacks(liveliness=self._on_liveliness),
         )
         self.create_subscription(TwistStamped, self._params['teleop_topic'], self._on_twist, 1)
+        self.create_subscription(PoseStamped, 'nav2_target_goal_input',
+                     self._on_external_goal, 10)
         self.create_timer(1.0 / self._params['publish_rate'], self._tick)
 
     def _publish_goal_status(self, state, detail=''):
@@ -112,22 +114,57 @@ class Nav2TargetNode(Node):
             response.success = True
             response.message = 'No-op (set data: true to send the target).'
             return response
-        reason = None
-        if self._mode is not True:
-            reason = 'Nav2 mode must be confirmed before sending a goal.'
-        elif self._pose is None:
-            reason = 'Target is not initialized in the map frame.'
-        elif self._goal_token is not None:
-            reason = 'A goal is pending, active, or its outcome is unknown.'
-        elif not all(math.isfinite(v) for v in self._pose):
-            reason = 'Target pose contains nonfinite values.'
-        elif not self._nav_client.server_is_ready():
-            reason = 'NavigateToPose action server is unavailable.'
-        if reason:
+        if self._pose is None:
             response.success = False
-            response.message = reason
+            response.message = 'Target is not initialized in the map frame.'
             return response
-        x, y, yaw = self._pose
+        accepted, message = self._submit_goal_pose(*self._pose)
+        response.success = accepted
+        response.message = message
+        return response
+
+    def _on_external_goal(self, msg):
+        """Adopt and submit a one-shot user-selected pose expressed in the map frame."""
+        if msg.header.frame_id != self._params['map_frame']:
+            self._publish_goal_input_status(
+                'rejected', f"pose frame must be '{self._params['map_frame']}'")
+            return
+        position = msg.pose.position
+        orientation = msg.pose.orientation
+        values = (position.x, position.y, position.z,
+                  orientation.x, orientation.y, orientation.z, orientation.w)
+        if not all(math.isfinite(value) for value in values):
+            self._publish_goal_input_status('rejected', 'pose contains nonfinite values')
+            return
+        norm = math.sqrt(sum(value * value for value in
+                             (orientation.x, orientation.y, orientation.z, orientation.w)))
+        if norm < 1e-9:
+            self._publish_goal_input_status('rejected', 'orientation quaternion is zero')
+            return
+        qx, qy, qz, qw = (orientation.x / norm, orientation.y / norm,
+                          orientation.z / norm, orientation.w / norm)
+        yaw = math.atan2(2 * (qw * qz + qx * qy),
+                         1 - 2 * (qy * qy + qz * qz))
+        accepted, message = self._submit_goal_pose(position.x, position.y, yaw)
+        self._publish_goal_input_status('submitted' if accepted else 'rejected', message)
+
+    def _publish_goal_input_status(self, state, detail=''):
+        text = state if not detail else f'{state}: {detail}'
+        self._goal_input_status_pub.publish(String(data=text))
+
+    def _submit_goal_pose(self, x, y, yaw):
+        """Send one map pose through Nav2 and make it the visible target draft."""
+        if self._mode is not True:
+            return False, 'Nav2 mode must be confirmed before sending a goal.'
+        if not all(math.isfinite(value) for value in (x, y, yaw)):
+            return False, 'Target pose contains nonfinite values.'
+        if self._goal_token is not None:
+            return False, 'A goal is pending, active, or its outcome is unknown.'
+        if not self._nav_client.server_is_ready():
+            return False, 'NavigateToPose action server is unavailable.'
+
+        self._pose = [x, y, yaw]
+        self._command = None
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = self._params['map_frame']
         goal.pose.header.stamp = self.get_clock().now().to_msg()
@@ -146,14 +183,10 @@ class Nav2TargetNode(Node):
         except Exception as exc:
             # Do not assume a transport exception proves the robot received nothing.
             self._mark_goal_unknown(str(exc))
-            response.success = False
-            response.message = 'Submission outcome unknown; inspect Nav2 before retrying.'
-            return response
+            return False, 'Submission outcome unknown; inspect Nav2 before retrying.'
         self._submitted_pub.publish(goal.pose)
         future.add_done_callback(lambda done: self._on_goal_response(token, done))
-        response.success = True
-        response.message = 'Submission started; monitor nav2_target_goal_status for acceptance/result.'
-        return response
+        return True, 'Submission started; monitor nav2_target_goal_status for acceptance/result.'
 
     def _mark_goal_unknown(self, detail):
         self._goal_unknown = True
@@ -304,7 +337,7 @@ class Nav2TargetNode(Node):
         marker.pose.orientation.w = 1.0
         marker.frame_locked = True
         marker.scale.x = marker.scale.y = marker.scale.z = self._params['marker_scale']
-        color = self._params['teleop_color' if attached else 'editing_color']
+        color = self._params['marker_color']
         marker.color.r, marker.color.g, marker.color.b, marker.color.a = color
         marker.lifetime = Duration(seconds=3.0 / self._params['publish_rate']).to_msg()
         self._marker_pub.publish(marker)

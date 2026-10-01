@@ -89,10 +89,6 @@ The waypoint patrol is driven by three `SetBool` services, bound to joystick but
 
 A goal sent from RViz or Foxglove during a patrol is treated as a detour, and the patrol resumes afterwards. A waypoint that fails repeatedly is dropped. With `diagnostics:=true`, the patrol's progress is published on `/diagnostics`.
 
-## Using it on another robot
-
-The package is written for LeKiwi's frames (`base_footprint`, `odom`, `map`), robot radius and speed limits, so start from `config/nav2/nav2.yaml` and the EKF files, and adjust the radius, speeds and sensor topics for your robot.
-
 ## Tests
 
 ```bash
@@ -104,8 +100,13 @@ The tests check the Nav2, EKF and SLAM configuration (including the speed limits
 ## Nav2 target tracker
 
 The `nav2_target_node` edits and displays a planar target. The `/nav2_send_goal`
-SetBool service explicitly submits its current map pose to Nav2.
-It does not change the joystick configuration or the robot's velocity routing.
+SetBool service submits the current map pose to Nav2. A one-shot
+`geometry_msgs/PoseStamped` on `/nav2_target_goal_input` lets a pose picker set
+the target and submit that goal through the normal `/navigate_to_pose` action.
+The input must be in `map`; `/nav2_target_goal_input_status` reports whether it
+was submitted or rejected. Goals sent directly to `/navigate_to_pose` bypass the
+target and do not move its marker. This leaves the normal Nav2 action path,
+including waypoint patrol, untouched.
 
 The tracker starts automatically with `nav2.launch.py`, including through normal
 navigation and robot bringup. It inherits `use_sim_time` and the launch log level.
@@ -118,8 +119,10 @@ mode, it converts that attachment to a map pose once and broadcasts
 **target-relative** translation and angular Z as heading rotation. The original
 `base_link` message header does not select the editing frame. Translation uses
 the target heading, never a continuously tracked robot heading. Commands expire
-after `command_timeout`; mode changes clear held input. Returning to teleop
-reattaches the target without canceling or otherwise changing navigation.
+after `command_timeout`; mode changes clear held input. Target translation and
+rotation use 2× the joystick's configured base teleop limits: up to 0.4 m/s in
+X/Y and 1.6 rad/s in yaw. Returning to teleop reattaches the target without
+canceling or otherwise changing navigation.
 
 The node observes successful request/response pairs on
 `/twist_switch/_service_event`, using retained service introspection like the
@@ -130,9 +133,12 @@ switch service to force a mode. Retained event history is limited, so incomplete
 request/response pairs are ignored.
 
 Display `nav2_target_marker` as a Marker in Foxglove/RViz, and enable TF axes for
-`nav2_target` to see its heading. The marker is a sphere, gray while attached and
-cyan while editing. `nav2_target_pose` publishes the draft in its current parent
-frame (base in teleop, map in Nav2); consumers must inspect `header.frame_id`.
+`nav2_target` to see its heading. The sphere uses one constant green color in
+teleop and Nav2 modes, configured by `marker_color` in
+`config/nav2/nav2_target.yaml`. Goal lifecycle details remain available on
+`nav2_target_goal_status`. `nav2_target_pose` publishes the draft in its current
+parent frame (base in teleop, map in Nav2); consumers must inspect
+`header.frame_id`.
 `nav2_target_status` reports `waiting_for_mode`, `teleop_attached`,
 `waiting_for_map_transform`, or `editing`. If the transition lacks map TF, the
 node waits and the old marker expires rather than inventing a map position.
@@ -145,6 +151,22 @@ In Nav2 mode, after editing the target:
 ros2 service call /nav2_send_goal std_srvs/srv/SetBool "{data: true}"
 ros2 topic echo /nav2_target_goal_status
 ```
+
+For a goal selected outside the target controls, publish its final map pose once
+to `/nav2_target_goal_input` so the marker and submitted goal stay in sync. For
+example, this submits `(x=1.0, y=2.0, yaw=90°)` and moves the target marker to
+that goal:
+
+```bash
+ros2 topic pub --once /nav2_target_goal_input geometry_msgs/msg/PoseStamped \
+   "{header: {frame_id: map}, pose: {position: {x: 1.0, y: 2.0}, orientation: {z: 0.70710678, w: 0.70710678}}}"
+```
+
+In Nav2 mode, joystick input edits the map-fixed draft and button 8 submits it
+with `/nav2_send_goal`. A pose input is a one-shot goal, not a stream for
+dragging; use the target controls to edit continuously, then commit with the
+button. Waypoint patrol and other direct Nav2 callers remain unchanged and do
+not move this marker.
 
 `data: false` is a successful no-op except after an `unknown` goal outcome, when it acknowledges and clears that blocked slot.
 Press **button 8 (right joystick button)** to make the same `data: true` call,

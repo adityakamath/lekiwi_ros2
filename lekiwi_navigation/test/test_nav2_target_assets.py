@@ -35,6 +35,9 @@ class TestTargetAssets(unittest.TestCase):
         self.assertIn('use_sim_time', source)
         self.assertFalse((ROOT / 'lekiwi_navigation/launch/nav2_target.launch.py').exists())
 
+        launch_source = (ROOT / 'lekiwi_navigation/launch/nav2.launch.py').read_text()
+        self.assertNotIn('navigate_to_pose_backend', launch_source)
+
     def test_config_defaults_match(self):
         config = yaml.safe_load((ROOT / 'lekiwi_navigation/config/nav2/nav2_target.yaml').read_text())
         params = config['nav2_target_node']['ros__parameters']
@@ -44,6 +47,14 @@ class TestTargetAssets(unittest.TestCase):
                         and t.id == 'defaults' for t in n.targets))
         self.assertEqual(set(params), set(defaults))
         self.assertGreater(params['marker_scale'], 0)
+        self.assertEqual(params['marker_color'], [0.0, 1.0, 0.4, 0.9])
+        teleop = yaml.safe_load((ROOT / 'lekiwi_control/config/base_teleop.yaml').read_text())
+        axes = teleop['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+        self.assertEqual(params['translation_scale'], 2.0)
+        self.assertEqual(params['rotation_scale'], 2.0)
+        self.assertEqual(params['translation_scale'] * axes['twist-linear-x']['scale'], 0.4)
+        self.assertEqual(params['translation_scale'] * axes['twist-linear-y']['scale'], 0.4)
+        self.assertEqual(params['rotation_scale'] * axes['twist-angular-z']['scale'], 1.6)
 
     def test_audio_phrases(self):
         config = yaml.safe_load((ROOT / 'lekiwi_audio/config/phrases.yaml').read_text())

@@ -74,7 +74,23 @@ def test_attached_marker_identity_without_map_lookup(target):
     assert marker.header.frame_id == 'nav2_target'
     assert marker.scale.x == marker.scale.y == marker.scale.z == n.get_parameter('marker_scale').value
     assert marker.lifetime.sec > 0 or marker.lifetime.nanosec > 0
+    assert (marker.color.r, marker.color.g, marker.color.b, marker.color.a) == tuple(
+        n.get_parameter('marker_color').value)
     assert n._command is None
+
+
+@pytest.mark.parametrize('goal_state', [
+    'active', 'succeeded', 'failed', 'rejected', 'canceled', 'unknown',
+])
+def test_marker_color_stays_constant_across_goal_states(target, goal_state):
+    n, _ = target
+    n._mode, n._pose = True, [1.0, 2.0, 0.0]
+    n._publish_goal_status(goal_state)
+    n._tick()
+
+    marker = n._marker_pub.publish.call_args.args[0]
+    assert (marker.color.r, marker.color.g, marker.color.b, marker.color.a) == tuple(
+        n.get_parameter('marker_color').value)
 
 
 def test_map_transition_seeds_once_and_reattaches(target):
@@ -106,7 +122,7 @@ def test_missing_tf_waits_without_publishing_invented_pose(target):
     n._marker_pub.publish.assert_not_called()
 
 
-@pytest.mark.parametrize('vx,vy,expected', [(1., 0., [0., .05]), (0., 1., [-.05, 0.])])
+@pytest.mark.parametrize('vx,vy,expected', [(1., 0., [0., .1]), (0., 1., [-.1, 0.])])
 def test_translation_uses_target_heading(target, vx, vy, expected):
     n, clock = target
     n._mode, n._pose = True, [0., 0., math.pi / 2]
@@ -130,7 +146,7 @@ def test_rotation_wrap_and_no_autosubmit(target):
     n._on_twist(msg)
     clock.now.return_value = Time(seconds=10.05)
     n._tick()
-    assert n._pose[2] == pytest.approx(-math.pi + .04)
+    assert n._pose[2] == pytest.approx(-math.pi + .09)
     n._nav_client.send_goal_async.assert_not_called()
 
 
@@ -181,7 +197,10 @@ def test_continuous_input_integrates_full_duration(target, input_hz, command_fir
         else:
             n._on_twist(msg)
     expected = [0., 0., 0.]
-    expected[['x', 'y', 'yaw'].index(axis)] = 3.
+    expected_value = 6.
+    if axis == 'yaw':
+        expected_value = math.atan2(math.sin(expected_value), math.cos(expected_value))
+    expected[['x', 'y', 'yaw'].index(axis)] = expected_value
     assert n._pose == pytest.approx(expected)
 
 
@@ -197,7 +216,7 @@ def test_command_changes_between_ticks_preserve_each_interval(target):
         n._on_twist(msg)
     clock.now.return_value = Time(seconds=10.1)
     n._tick()
-    assert n._pose == pytest.approx([.02 - .06 + .01, 0., 0.])
+    assert n._pose == pytest.approx([.04 - .12 + .02, 0., 0.])
 
 
 @pytest.mark.parametrize('now', [9., 10.15, 10.5])
@@ -212,4 +231,4 @@ def test_new_command_after_clock_gap_does_not_integrate_stale_input(target, now)
     assert n._pose == [0., 0., 0.]
     clock.now.return_value = Time(nanoseconds=clock.now.return_value.nanoseconds + 50_000_000)
     n._tick()
-    assert n._pose == pytest.approx([.05, 0., 0.])
+    assert n._pose == pytest.approx([.1, 0., 0.])
