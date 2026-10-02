@@ -342,7 +342,7 @@ class TestSharedBusTuning:
 
 # ── pan-tilt URDF ─────────────────────────────────────────────────────────────
 
-class TestBasePantiltUrdf:
+class TestPrebuiltPantiltUrdfAssets:
     """The PT101 pan-tilt URDF must parse successfully."""
 
     def test_pantilt_parses(self):

@@ -1,6 +1,7 @@
 [tool.ruff]
 line-length = 99
 target-version = "py312"
+extend-exclude = ["modules/ldlidar_ros2"]
 
 [tool.ruff.lint]
 # E, F, W only - deliberately not "I" (import sorting). ament_flake8's bundled
