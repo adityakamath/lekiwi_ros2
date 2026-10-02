@@ -11,7 +11,7 @@ URDF/xacro models of LeKiwi: the standalone base, and the base with the pan-tilt
 | `urdf/base/base.common.xacro` | Geometry constants: colours, wheel geometry and component offsets |
 | `urdf/base/base.control.xacro` | The `<ros2_control>` block for the wheels and IMU, and the xacro arguments below |
 | `urdf/base_pantilt/` | The base with the pan-tilt: the same files, plus the pan-tilt module from `pt_description` and a combined `<ros2_control>` block for the shared servo bus |
-| `urdf/*/*.urdf` | Pre-generated base plus PT101/OAK-D S2 and PT101/Gemini 2 URDFs |
+| `urdf/*/*.urdf` | Pre-generated base and PT101/Gemini 2 URDFs |
 | `meshes/` | STL files for the base, wheels, LiDAR, IMU and microphone array (`*_mujoco.stl` are simplified for the simulation) |
 
 ## Requirements
@@ -25,7 +25,7 @@ There is no launch file here. Expand the xacro yourself, for example to check th
 ```bash
 cd urdf
 xacro base/base.urdf.xacro base_controller_config:=$(ros2 pkg prefix lekiwi_control)/share/lekiwi_control/config/control.yaml
-xacro base_pantilt/base_pantilt.urdf.xacro base_controller_config:=<same path> pantilt_config:=pt101 camera_config:=gemini2
+xacro base_pantilt/base_pantilt.urdf.xacro base_controller_config:=<same path>
 ```
 
 ## Configuration
@@ -42,13 +42,13 @@ Pass these to `xacro` as `name:=value`. `lekiwi_control` fills them in from its 
 | `left_motor_id`, `back_motor_id`, `right_motor_id` | `7`, `8`, `9` | Wheel servo IDs |
 | `sts3215_max_vel_steps` | `3400` | Servo maximum speed in steps/s |
 | `internal_max_vel`, `internal_max_acc`, `internal_acc_coeff` | `254`, `254`, `100` | Wheel servo speed profile, written to each servo at start-up |
+| `internal_control_period` | `20` | The servos' internal control-loop period register (1–254, written to EEPROM), set for the wheel servos |
+| `proportional_acc_max`, `proportional_vel_max` | `25`, `0` | Make the wheels finish ramping together: the wheel with the largest move gets this acceleration (0–254) or velocity (steps/s), and the others are scaled to match. `0` disables each; with `proportional_vel_max` at 0, each joint uses its commanded velocity |
 | `imu` | `true` | A physical BNO055 is present; `false` leaves out the IMU sensor |
 | `imu_i2c_bus`, `imu_i2c_addr`, `imu_axis_remap`, `imu_sensor_mode` | `1`, `28`, `P1`, `NDOF` | IMU I2C bus, I2C address (`0x28`), mounting orientation and fusion mode |
 | `ros2_control_hardware_type` | `real` | Hardware plugin: `real`, `gazebo` or `mujoco` |
 | `mujoco_model`, `mujoco_headless` | `""`, `false` | `mujoco` only: the generated MJCF and whether to skip the viewer |
-| `camera_config` | `gemini2` | `base_pantilt` only: `gemini2` or `oakd_s2`, independent of the body variant |
-| `enable_camera` | `true` | `base_pantilt` simulation only: expose the selected Gemini or OAK-D camera IMU sensor interfaces when streaming is enabled |
-| `pantilt_config` | `pt101` | `base_pantilt` only: pan-tilt mesh variant, `pt100` or `pt101` |
+| `enable_camera` | `true` | `base_pantilt` simulation only: expose the Gemini 2 camera IMU sensor interface when streaming is enabled |
 | `pantilt_internal_max_vel`, `pantilt_internal_max_acc`, `pantilt_internal_acc_coeff` | `65`, `50`, `0` | `base_pantilt` only: pan-tilt servo speed profile |
 
 ## Frames
@@ -65,7 +65,7 @@ base_footprint
 
 ## Regenerating the pre-built URDFs
 
-The checked-in files are `urdf/base/base.urdf`, `urdf/base_pantilt/base_pantilt_oakd_s2.urdf` (renamed from `base_pantilt.urdf`), and `urdf/base_pantilt/base_pantilt_gemini2.urdf`. Both pan-tilt snapshots use PT101; Xacro also supports PT100 with either camera. These files are for tools that want plain URDF. LeKiwi meshes use `../../meshes/` paths, while pan-tilt meshes use `https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/`. Runtime Xacro retains `package://` mesh URIs. Regenerate them after any xacro change:
+The checked-in files are `urdf/base/base.urdf` and `urdf/base_pantilt/base_pantilt_gemini2.urdf`, which uses PT101. These files are for tools that want plain URDF. LeKiwi meshes use `../../meshes/` paths, while pan-tilt meshes use `https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/`. Runtime Xacro retains `package://` mesh URIs. Regenerate them after any xacro change:
 
 ```bash
 python3 test/test_urdf_xacro.py --write

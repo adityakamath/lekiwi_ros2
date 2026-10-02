@@ -35,7 +35,6 @@ _BASE_ARGS = [
 ]
 
 _PANTILT_ARGS = _BASE_ARGS + [
-    'pantilt_config:=pt101',
     'proportional_vel_max:=0',
 ]
 # Motor IDs, step-centering, and joint limits are not passed here - they're
@@ -293,17 +292,21 @@ class TestPrebuiltUrdfConsistency:
         assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
             'base.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
-    @pytest.mark.parametrize('camera', ['oakd_s2', 'gemini2'])
-    def test_base_pantilt_urdf_not_stale(self, camera):
-        prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', f'base_pantilt_{camera}.urdf')
+    def test_base_pantilt_urdf_not_stale(self):
+        prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt_gemini2.urdf')
         if not os.path.exists(prebuilt):
-            pytest.fail(f"Missing base_pantilt_{camera}.urdf")
-        generated, _, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS + [f'camera_config:={camera}'])
+            pytest.fail("Missing base_pantilt_gemini2.urdf")
+        generated, _, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
         assert rc == 0
+        root = ET.fromstring(generated)
+        assert root.find("link[@name='gemini2_link']") is not None
+        assert root.find("link[@name='oak_link']") is None
+        camera_joint = root.find("joint[@name='gemini2_link_center_joint']")
+        assert camera_joint.find('parent').get('link') == 'tilt_link'
         with open(prebuilt) as f:
             existing = f.read()
         assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
-            f'base_pantilt_{camera}.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
+            'base_pantilt_gemini2.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
 
 # ── EEPROM tuning that reaches each motor on the shared bus ─────────────────────
@@ -337,26 +340,21 @@ class TestSharedBusTuning:
         assert len(self.rc.findall('hardware')) == 1
 
 
-# ── pantilt_config variant ────────────────────────────────────────────────────
+# ── pan-tilt URDF ─────────────────────────────────────────────────────────────
 
-class TestBasePantiltUrdfVariants:
-    """Both pt100 and pt101 mesh variants must parse successfully."""
+class TestBasePantiltUrdf:
+    """The PT101 pan-tilt URDF must parse successfully."""
 
-    @pytest.mark.parametrize('variant', ['pt100', 'pt101'])
-    @pytest.mark.parametrize('camera', ['gemini2', 'oakd_s2'])
-    def test_pantilt_variant_parses(self, variant, camera):
-        args = [a for a in _PANTILT_ARGS if not a.startswith('pantilt_config')]
-        args.extend([f'pantilt_config:={variant}', f'camera_config:={camera}'])
-        xml, stderr, rc = _xacro(_URDF_PANTILT, args)
-        assert rc == 0, f"xacro failed for pantilt_config:={variant}:\n{stderr}"
-        assert f"/{camera}.stl" in xml
-        assert f"/tilt_joint_{camera}.stl" in xml
+    def test_pantilt_parses(self):
+        xml, stderr, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
+        assert rc == 0, f"xacro failed for the pan-tilt URDF:\n{stderr}"
+        assert "/gemini2.stl" in xml
+        assert "/tilt_joint_gemini2.stl" in xml
 
 
 if __name__ == '__main__' and '--write' in sys.argv:
     models = [('base', 'base', 'base', _BASE_ARGS)]
-    models += [('base_pantilt', 'base_pantilt', f'base_pantilt_{camera}',
-                _PANTILT_ARGS + [f'camera_config:={camera}']) for camera in ('oakd_s2', 'gemini2')]
+    models += [('base_pantilt', 'base_pantilt', 'base_pantilt_gemini2', _PANTILT_ARGS)]
     for folder, source, name, args in models:
         result = subprocess.run(['xacro', f'{folder}/{source}.urdf.xacro'] + args, cwd=os.path.join(_PKG_SRC, 'urdf'),
                                 capture_output=True, text=True, check=True)
@@ -364,22 +362,17 @@ if __name__ == '__main__' and '--write' in sys.argv:
             out.write(_portable(result.stdout))
 
 
-@pytest.mark.parametrize('camera,enabled', [
-    ('gemini2', 'true'), ('gemini2', 'false'),
-    ('oakd_s2', 'true'), ('oakd_s2', 'false'),
-])
-def test_sim_camera_imu_interfaces_follow_camera_selection(camera, enabled):
+@pytest.mark.parametrize('enabled', ['true', 'false'])
+def test_sim_camera_imu_interface_follows_enable_camera(enabled):
     xml, errors, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS + [
-        'ros2_control_hardware_type:=mujoco', f'camera_config:={camera}',
-        f'enable_camera:={enabled}',
+        'ros2_control_hardware_type:=mujoco', f'enable_camera:={enabled}',
     ])
     assert rc == 0, errors
     root = ET.fromstring(xml)
-    for name in ('gemini2', 'oak'):
-        sensor = root.find(f'ros2_control[@name="lekiwi_base"]/sensor[@name="{name}"]')
-        expected = enabled == 'true' and name == ('gemini2' if camera == 'gemini2' else 'oak')
-        assert (sensor is not None) == expected
-        if expected:
-            params = {param.get('name'): param.text for param in sensor.findall('param')}
-            assert params['mujoco_type'] == 'imu'
-            assert params['mujoco_sensor_name'] == name
+    sensor = root.find('ros2_control[@name="lekiwi_base"]/sensor[@name="gemini2"]')
+    assert (sensor is not None) == (enabled == 'true')
+    assert root.find('ros2_control[@name="lekiwi_base"]/sensor[@name="oak"]') is None
+    if sensor is not None:
+        params = {param.get('name'): param.text for param in sensor.findall('param')}
+        assert params['mujoco_type'] == 'imu'
+        assert params['mujoco_sensor_name'] == 'gemini2'

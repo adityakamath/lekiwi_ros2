@@ -14,7 +14,7 @@ from lekiwi_mujoco.mujoco_preview import HeldKeys, KeyboardControl  # noqa: E402
 
 @pytest.fixture(scope='module')
 def model():
-    return mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101_oakd_s2.xml'))
+    return mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101_gemini2.xml'))
 
 
 @pytest.mark.parametrize('key,shift,command', [

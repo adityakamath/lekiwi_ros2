@@ -47,8 +47,6 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 def launch_setup(context):
     """Build the control-stack nodes for the selected payload."""
     payload        = LaunchConfiguration('payload').perform(context)
-    pantilt_config = LaunchConfiguration('pantilt_config').perform(context)
-    camera_config = LaunchConfiguration('camera_config').perform(context)
     enable_camera = _launch_arg_as_bool(context, 'enable_camera')
     pointcloud = _launch_arg_as_bool(context, 'pointcloud')
     camera_fps = float(LaunchConfiguration('camera_fps').perform(context))
@@ -94,9 +92,9 @@ def launch_setup(context):
         subprocess.run([
             sys.executable, '-m', 'lekiwi_mujoco.build_mujoco_models',
             '--control-package', pkg_ctrl, '--description-package', pkg_desc,
-            '--variant', pantilt_config if payload == 'pantilt' else 'base',
+            '--variant', 'pt101' if payload == 'pantilt' else 'base',
             '--output', final_mujoco_model, '--absolute', '--scene', mujoco_scene,
-            '--lidar', 'plugin', '--camera', camera_config,
+            '--lidar', 'plugin',
         ], capture_output=True, text=True, check=True)
     else:
         final_mujoco_model = ''
@@ -126,8 +124,6 @@ def launch_setup(context):
     if payload == 'pantilt':
         pt_cfg = yaml.safe_load(open(f'{pkg_pt_control}/config/urdf_config.yaml'))
         xacro_cmd += (
-            f' pantilt_config:={pantilt_config}'
-            f' camera_config:={camera_config}'
             f' enable_camera:={str(enable_camera).lower()}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
             f' pantilt_internal_max_vel:={pt_cfg["internal_max_vel"]}'
@@ -177,14 +173,12 @@ def launch_setup(context):
         parameters=[
             robot_description,
             f'{pkg_ctrl}/config/control.yaml',
-            *([f'{pkg_ctrl}/config/{"gemini2" if camera_config == "gemini2" else "oak"}_imu_broadcaster.yaml']
+            *([f'{pkg_ctrl}/config/gemini2_imu_broadcaster.yaml']
               if payload == 'pantilt' and enable_camera else []),
             f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
-            *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml']
-              if payload == 'pantilt' and enable_camera else []),
-            *([f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml',
-               *([f'{pkg_mujoco}/config/mujoco_camera_gemini2.yaml']
-                 if camera_config == 'gemini2' else [])]
+            *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
+               f'{pkg_pt_mujoco}/config/mujoco_camera_gemini2.yaml',
+               f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml']
               if payload == 'pantilt' and enable_camera else []),
             {'use_sim_time': True},
             *([{'mujoco_plugins': {'mujoco_camera_plugin':
@@ -212,120 +206,62 @@ def launch_setup(context):
             remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
         ))
         if payload == 'pantilt' and enable_camera:
-            if camera_config == 'gemini2':
+            sim_nodes.extend([
+                Node(
+                    package='lekiwi_mujoco', executable='gemini2_depth',
+                    name='gemini2_depth', output='log', parameters=[{'use_sim_time': True}],
+                ),
+                Node(
+                    package='depthimage_to_laserscan',
+                    executable='depthimage_to_laserscan_node',
+                    name='gemini2_depth_to_scan', output='log',
+                    parameters=[f'{pkg_mujoco}/config/mujoco_gemini2_depth_to_scan.yaml',
+                                {'use_sim_time': True}],
+                    remappings=[('depth', '/gemini2/depth/image_raw'),
+                                ('depth_camera_info', '/gemini2/depth/camera_info'),
+                                ('scan', '/gemini2/scan')],
+                ),
+                Node(
+                    package='tf2_ros', executable='static_transform_publisher',
+                    name='gemini2_imu_tf', output='log',
+                    arguments=['--frame-id', 'gemini2_color_optical_frame',
+                               '--child-frame-id', 'gemini2_accel_gyro_optical_frame'],
+                    parameters=[{'use_sim_time': True}],
+                ),
+                Node(
+                    package='tf2_ros', executable='static_transform_publisher',
+                    name='gemini2_optical_frame_publisher', output='log',
+                    arguments=['--frame-id', 'gemini2_link',
+                               '--child-frame-id', 'gemini2_color_optical_frame',
+                               '--roll', '-1.5707963', '--pitch', '0', '--yaw', '-1.5707963'],
+                    parameters=[{'use_sim_time': True}],
+                ),
+            ])
+            sim_nodes.append(Node(
+                package='image_transport', executable='republish',
+                name='gemini2_rgb_compressor', output='log',
+                parameters=[{'in_transport': 'raw', 'out_transport': 'compressed',
+                             'use_sim_time': True}],
+                remappings=[('in', '/gemini2/color/image_raw'),
+                            ('out/compressed', '/gemini2/color/image_raw/compressed')],
+            ))
+            if pointcloud:
                 sim_nodes.extend([
                     Node(
-                        package='lekiwi_mujoco', executable='gemini2_depth',
-                        name='gemini2_depth', output='log', parameters=[{'use_sim_time': True}],
-                    ),
-                    Node(
-                        package='depthimage_to_laserscan',
-                        executable='depthimage_to_laserscan_node',
-                        name='gemini2_depth_to_scan', output='log',
-                        parameters=[f'{pkg_mujoco}/config/mujoco_gemini2_depth_to_scan.yaml',
-                                    {'use_sim_time': True}],
-                        remappings=[('depth', '/gemini2/depth/image_raw'),
-                                    ('depth_camera_info', '/gemini2/depth/camera_info'),
-                                    ('scan', '/gemini2/scan')],
-                    ),
-                    Node(
-                        package='tf2_ros', executable='static_transform_publisher',
-                        name='gemini2_mount_tf', output='log',
-                        arguments=['--frame-id', 'oak_link', '--child-frame-id', 'gemini2_link',
-                                   '--roll', '3.141592653589793'],
+                        package='depth_image_proc', executable='point_cloud_xyzrgb_node',
+                        name='gemini2_colored_pointcloud', output='log',
                         parameters=[{'use_sim_time': True}],
+                        remappings=[('rgb/image_rect_color', '/gemini2/color/image_raw'),
+                                    ('rgb/camera_info', '/gemini2/color/camera_info'),
+                                    ('depth_registered/image_rect', '/gemini2/depth/image_raw'),
+                                    ('points', '/_gemini2/registered_points')],
                     ),
                     Node(
-                        package='tf2_ros', executable='static_transform_publisher',
-                        name='gemini2_imu_tf', output='log',
-                        arguments=['--frame-id', 'gemini2_color_optical_frame',
-                                   '--child-frame-id', 'gemini2_accel_gyro_optical_frame'],
-                        parameters=[{'use_sim_time': True}],
-                    ),
-                    Node(
-                        package='tf2_ros', executable='static_transform_publisher',
-                        name='gemini2_optical_frame_publisher', output='log',
-                        arguments=['--frame-id', 'gemini2_link',
-                                   '--child-frame-id', 'gemini2_color_optical_frame',
-                                   '--roll', '-1.5707963', '--pitch', '0', '--yaw', '-1.5707963'],
+                        package='lekiwi_mujoco', executable='gemini2_cloud',
+                        name='gemini2_cloud', output='log',
                         parameters=[{'use_sim_time': True}],
                     ),
                 ])
-                sim_nodes.append(Node(
-                    package='image_transport', executable='republish',
-                    name='gemini2_rgb_compressor', output='log',
-                    parameters=[{'in_transport': 'raw', 'out_transport': 'compressed',
-                                 'use_sim_time': True}],
-                    remappings=[('in', '/gemini2/color/image_raw'),
-                                ('out/compressed', '/gemini2/color/image_raw/compressed')],
-                ))
-                if pointcloud:
-                    sim_nodes.extend([
-                        Node(
-                            package='depth_image_proc', executable='point_cloud_xyzrgb_node',
-                            name='gemini2_colored_pointcloud', output='log',
-                            parameters=[{'use_sim_time': True}],
-                            remappings=[('rgb/image_rect_color', '/gemini2/color/image_raw'),
-                                        ('rgb/camera_info', '/gemini2/color/camera_info'),
-                                        ('depth_registered/image_rect', '/gemini2/depth/image_raw'),
-                                        ('points', '/_gemini2/registered_points')],
-                        ),
-                        Node(
-                            package='lekiwi_mujoco', executable='gemini2_cloud',
-                            name='gemini2_cloud', output='log',
-                            parameters=[{'use_sim_time': True}],
-                        ),
-                    ])
-            else:
-                # Keep the same compressed RGB transport as the real OAK profile.
-                sim_nodes.append(Node(
-                    package='image_transport', executable='republish',
-                    name='oak_rgb_compressor', output='log',
-                    parameters=[{'in_transport': 'raw', 'out_transport': 'compressed',
-                                 'use_sim_time': True}],
-                    remappings=[('in', '/oak/rgb/image_raw'),
-                                ('out/compressed', '/oak/rgb/image_raw/compressed')],
-                ))
-                sim_nodes.append(Node(
-                    package='depthimage_to_laserscan',
-                    executable='depthimage_to_laserscan_node',
-                    name='depth_to_scan',
-                    output='log',
-                    parameters=[f'{pkg_pt_mujoco}/config/mujoco_depth_to_scan.yaml', {'use_sim_time': True}],
-                    # The simulated depth shares the RGB camera's intrinsics, and has no camera_info of its own.
-                    remappings=[('depth', '/oak/stereo/image_raw'), ('depth_camera_info', '/oak/rgb/camera_info'),
-                                ('scan', '/oak/scan')],
-                ))
-                if pointcloud:
-                    sim_nodes.extend([
-                        Node(
-                            package='depth_image_proc', executable='point_cloud_xyzrgb_node',
-                            name='oak_colored_pointcloud', output='log',
-                            parameters=[{'use_sim_time': True}],
-                            remappings=[('rgb/image_rect_color', '/oak/rgb/image_raw'),
-                                        ('rgb/camera_info', '/oak/rgb/camera_info'),
-                                        ('depth_registered/image_rect', '/oak/stereo/image_raw'),
-                                        ('points', '/_oak/registered_points')],
-                        ),
-                        Node(
-                            package='lekiwi_mujoco', executable='gemini2_cloud',
-                            name='oak_cloud', output='log',
-                            parameters=[{'use_sim_time': True}],
-                            remappings=[('/_gemini2/registered_points',
-                                         '/_oak/registered_points'),
-                                        ('/gemini2/depth_registered/points',
-                                         '/oak/rgbd/points')],
-                        ),
-                    ])
-                sim_nodes.append(Node(
-                    package='tf2_ros',
-                    executable='static_transform_publisher',
-                    name='oak_optical_frame_publisher',
-                    output='log',
-                    arguments=['--frame-id', 'oak_link', '--child-frame-id', 'oak_rgb_camera_optical_frame',
-                               '--roll', '-1.5707963', '--pitch', '0', '--yaw', '-1.5707963'],
-                    parameters=[{'use_sim_time': True}],
-                ))
 
     teleop_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([f'{pkg_ctrl}/launch/teleop.launch.py']),
@@ -367,15 +303,12 @@ def launch_setup(context):
                             '--controller-manager-timeout', '30'], output='both'),
         )
     if hw_type == 'mujoco' and payload == 'pantilt' and enable_camera:
-        imu_camera = 'gemini2' if camera_config == 'gemini2' else 'oak'
-        imu_topic = ('/gemini2/gyro_accel/sample' if camera_config == 'gemini2'
-                     else '/oak/imu/data')
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
-                 arguments=[f'{imu_camera}_imu_broadcaster', '-c', '/controller_manager',
+                 arguments=['gemini2_imu_broadcaster', '-c', '/controller_manager',
                             '--controller-manager-timeout', '30',
-                            '--param-file', f'{pkg_ctrl}/config/{imu_camera}_imu_broadcaster.yaml',
-                            '--controller-ros-args', f'--ros-args -r ~/imu:={imu_topic}'],
+                            '--param-file', f'{pkg_ctrl}/config/gemini2_imu_broadcaster.yaml',
+                            '--controller-ros-args', '--ros-args -r ~/imu:=/gemini2/gyro_accel/sample'],
                  output='both'),
         )
     if payload == 'pantilt':
@@ -452,19 +385,12 @@ def generate_launch_description():
             default_value='',
             description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
         ),
-        DeclareLaunchArgument('camera_config', default_value='gemini2', choices=['gemini2', 'oakd_s2'],
-                              description='Pan-tilt camera geometry, independent of body variant.'),
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start simulated camera publishing; geometry remains selected.'),
         DeclareLaunchArgument('pointcloud', default_value='false',
-                              description='[pantilt simulation] Publish one colored cloud for either camera.'),
+                              description='[pantilt simulation] Publish one colored cloud (real hardware uses pt_bringup Cloudini compression when enabled).'),
         DeclareLaunchArgument('camera_fps', default_value='15.0',
                               description='Camera frame rate in Hz; simulation is capped at 5 Hz.'),
-        DeclareLaunchArgument(
-            'pantilt_config',
-            default_value='pt101',
-            description='Pan-tilt mesh variant when payload:="pantilt": "pt100" or "pt101"',
-        ),
         DeclareLaunchArgument(
             'sts_serial_port',
             default_value='',
@@ -525,7 +451,7 @@ def generate_launch_description():
             default_value='',
             description='Path to a pre-built MJCF file to load; empty means generate with MjSpec from '
                         'the base MJCF and the selected payload URDF '
-                        '(picked by payload, pantilt_config and camera_config) at launch time instead. Only '
+                        '(picked by payload) at launch time instead. Only '
                         'used when ros2_control_hardware_type:="mujoco".',
         ),
         DeclareLaunchArgument(

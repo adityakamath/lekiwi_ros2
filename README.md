@@ -5,7 +5,7 @@
 [![Ask DeepWiki (Experimental)](https://deepwiki.com/badge.svg)](https://deepwiki.com/adityakamath/lekiwi_ros2)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot and its payloads. It provides holonomic drive with odometry, joystick teleoperation, SLAM and Nav2 navigation, motor diagnostics, battery monitoring, spoken status announcements and a MuJoCo simulation. The base has a LiDAR, and optional payloads add more; the pan-tilt payload, for example, brings an Orbbec Gemini 2 depth camera by default, with OAK-D S2 also supported.
+ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot and its payloads. It provides holonomic drive with odometry, joystick teleoperation, SLAM and Nav2 navigation, motor diagnostics, battery monitoring, spoken status announcements and a MuJoCo simulation. The base has a LiDAR, and optional payloads add more; the pan-tilt payload, for example, brings an Orbbec Gemini 2 depth camera.
 
 ## ⚠️ Safety
 
@@ -33,19 +33,19 @@ These are separate repositories, included as git submodules under `modules/` and
 | [`ldlidar_ros2`](https://github.com/adityakamath/ldlidar_ros2) | LD06 LiDAR driver with bug fixes |
 | [`ina260_battery_monitor`](https://github.com/adityakamath/ina260_battery_monitor) | INA260 battery voltage, current and power, with threshold events |
 | [`mujoco_ros2_plugins`](https://github.com/adityakamath/mujoco_ros2_plugins) | `mujoco_ros2_control` plugins, currently a configurable simulated emergency-stop service (default `/emergency_stop`; `sim:=true` only) |
-| [`pantilt_ros2`](https://github.com/adityakamath/pantilt_ros2) (`payloads/`) | Pan-tilt with Gemini 2 (default) or OAK-D S2 camera, with its own MuJoCo model |
+| [`pantilt_ros2`](https://github.com/adityakamath/pantilt_ros2) (`payloads/`) | Pan-tilt with a Gemini 2 camera, with its own MuJoCo model |
 
 ## Hardware
 
 | Component | Details |
 |-----------|---------|
 | Drive | Three Feetech STS3215 servo motors (IDs 7 left, 8 back, 9 right) on one serial bus at 1 Mbaud |
-| LiDAR | LD06 |
+| LiDAR | LD06 (the same device as the LD19; the driver is configured with the `LDLiDAR_LD19` product name) |
 | IMU | BNO055 |
 | Battery monitor | INA260 current and voltage sensor |
 | Microphone array | reSpeaker Flex (XVF3800), for the spoken announcements |
 | Controller | A Steam Deck used as a generic joystick (see [Joystick](#joystick)) |
-| Payload | Optional, for example the [pan-tilt](https://github.com/adityakamath/pantilt_ros2) with a Gemini 2 (default) or OAK-D S2 camera |
+| Payload | Optional, for example the [pan-tilt](https://github.com/adityakamath/pantilt_ros2) with a Gemini 2 camera |
 
 ### Stable device names (udev)
 
@@ -85,7 +85,7 @@ colcon build --packages-up-to lekiwi_bringup
 source install/setup.bash
 ```
 
-The alternative OAK-D S2 driver is installed with the pan-tilt apt dependencies; Cloudini is built from source for either real camera's optional point cloud.
+Cloudini is built from source for the real camera's optional point cloud.
 
 ### Simulation (optional)
 
@@ -115,7 +115,7 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `payload` | `pantilt` | Payload to mount: `""` for the base alone, or a payload name (see [Payloads](#payloads)) |
-| `mission` | `""` | Navigation mode: `map` (SLAM mapping), `slam` or `amcl` (localization, needs `map_name`) |
+| `mission` | `""` | Navigation mode: `map` (SLAM mapping), `slam` or `amcl` (localization, needs `map_name`). Empty maps from scratch, or uses AMCL if `map_name` is set |
 | `map_name` | `""` | Map to load, e.g. `livingroom1` |
 | `wp_loops` | `0` | Waypoint patrol passes per start: `0` loops forever, `N>0` runs `N` passes |
 | `fusion_mode` | `base` | EKF sensor fusion: `base`, `imu` or `odom`; `odom` is required when `imu:=false` |
@@ -129,7 +129,7 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 | `diagnostics` | `false` | Launch the motor and IMU diagnostics nodes |
 | `joy` | `false` | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |
 
-Payload-specific arguments (`payload:=pantilt`): `pantilt_config` (`pt101` default, or `pt100`) selects the body variant. `camera_config:=gemini2` (default) or `oakd_s2` selects camera geometry and the corresponding real driver. `enable_camera:=false` retains camera geometry while skipping real or simulated camera publishing. `pointcloud:=true` enables one colored cloud with either camera and Cloudini compression on real hardware; `camera_fps` controls both real RGB/depth rates (15 Hz default, simulation capped at 5 Hz); octomap remains OAK-only. Driver includes are lazy, and simulation starts neither real driver.
+Payload-specific arguments (`payload:=pantilt`): `enable_camera:=false` retains camera geometry while skipping real or simulated camera publishing. `pointcloud:=true` (off by default; nothing in the stack uses the cloud and it is costly on a Raspberry Pi) enables one colored cloud and Cloudini compression on real hardware; `camera_fps` controls both real RGB/depth rates (15 Hz default, simulation capped at 5 Hz). The driver include is lazy, and simulation does not start the real driver.
 
 ### Joystick
 
@@ -176,7 +176,7 @@ Motion control is verified end to end: a single `controller_manager` drives the 
 
 ## Payloads
 
-The base runs on its own (`payload:=""`). Optional payloads, each in its own repository under `payloads/`, mount on top of it; `payload:=<name>` selects one. Currently that is `pantilt` ([pantilt_ros2](https://github.com/adityakamath/pantilt_ros2): pan-tilt + Gemini 2 or OAK-D S2 camera), which is also the reference to copy. Following the same layout, users can add their own payloads, such as the SO-101 arm.
+The base runs on its own (`payload:=""`). Optional payloads, each in its own repository under `payloads/`, mount on top of it; `payload:=<name>` selects one. Currently that is `pantilt` ([pantilt_ros2](https://github.com/adityakamath/pantilt_ros2): pan-tilt + Gemini 2 camera), which is also the reference to copy. Following the same layout, users can add their own payloads, such as the SO-101 arm.
 
 How a payload is wired in (`<name>` is the `payload` value):
 
@@ -188,17 +188,13 @@ How a payload is wired in (`<name>` is the `payload` value):
 
 A few launch-file branches still test for `pantilt` explicitly (in `lekiwi.launch.py` and `control.launch.py`), so adding a payload means extending them as well as providing the pieces above.
 
-## License
+## Camera
 
-Apache License 2.0 - See [LICENSE](LICENSE) file.
+The description exports `base_pantilt_gemini2.urdf` in `lekiwi_description/urdf/base_pantilt/`, using PT101. LeKiwi meshes use `../../meshes/`; pantilt meshes use raw GitHub URLs. See [URDF regeneration](lekiwi_description/README.md#regenerating-the-pre-built-urdfs).
 
-## Camera model variants
+MuJoCo includes the PT101 with Gemini 2 model, `lekiwi_pt101_gemini2.xml`. See [camera model and regeneration](lekiwi_mujoco/README.md#camera-model).
 
-The description exports `base_pantilt_oakd_s2.urdf` and `base_pantilt_gemini2.urdf` in `lekiwi_description/urdf/base_pantilt/`, both using PT101. The old `base_pantilt.urdf` is now named `base_pantilt_oakd_s2.urdf`. LeKiwi meshes use `../../meshes/`; pantilt meshes use raw GitHub URLs. See [URDF regeneration](lekiwi_description/README.md#regenerating-the-pre-built-urdfs).
-
-MuJoCo includes all four PT100/PT101 × Gemini 2/OAK-D S2 combinations, including `lekiwi_pt100_gemini2.xml` and `lekiwi_pt101_gemini2.xml`. See [camera variants and regeneration](lekiwi_mujoco/README.md#camera-variants).
-
-Real Gemini 2 requires the upstream Orbbec source driver and USB rules described in [pantilt installation](payloads/pantilt_ros2/README.md#installation). Camera-only calibration uses `pt_bringup/gemini2.launch.py`; live acquisition and physical mount calibration still await hardware. Gemini uses `/gemini2/*` in hardware and simulation; OAK-D uses `/oak/*`. Real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; simulation also provides a camera-mounted six-axis IMU. Add one colored cloud with `pointcloud:=true`; on real hardware this also starts Cloudini and publishes `/gemini2/depth_registered/points/compressed`. Adjust the shared `camera_fps` or set `enable_camera:=false` to lower the load. See [simulation fidelity](lekiwi_mujoco/README.md#camera-variants). Existing OAK-specific consumers need their own topic/frame configuration before use with real Gemini.
+Real Gemini 2 requires the upstream Orbbec source driver and USB rules described in [pantilt installation](payloads/pantilt_ros2/README.md#installation). Camera-only calibration uses `pt_bringup/gemini2.launch.py`; live acquisition and physical mount calibration still await hardware. Gemini uses `/gemini2/*` in hardware and simulation; real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; simulation also provides a camera-mounted six-axis IMU. Add one colored cloud with `pointcloud:=true`; on real hardware this also starts Cloudini and publishes `/gemini2/depth_registered/points/compressed`. Adjust the shared `camera_fps` or set `enable_camera:=false` to lower the load. See [simulation fidelity](lekiwi_mujoco/README.md#camera-model).
 
 To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 
@@ -206,4 +202,8 @@ To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 ros2 launch lekiwi_bringup lekiwi.launch.py enable_camera:=false
 ```
 
-`camera_config` defaults to `gemini2`; `camera_config:=oakd_s2` selects the alternative. LeKiwi passes `enable_camera` to the selected camera-only launch in `pt_bringup`, which skips the driver and streaming helpers before resolving camera dependencies when false. Camera geometry remains in the URDF. In simulation, the same flag skips camera rendering and processing while preserving its URDF and MJCF geometry.
+LeKiwi passes `enable_camera` to the camera-only launch in `pt_bringup`, which skips the driver and streaming helpers before resolving camera dependencies when false. Camera geometry remains in the URDF. In simulation, the same flag skips camera rendering and processing while preserving its URDF and MJCF geometry.
+
+## License
+
+Apache License 2.0 - See [LICENSE](LICENSE) file.

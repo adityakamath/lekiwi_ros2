@@ -10,6 +10,7 @@ Spoken status announcements for LeKiwi. A node watches the robot's services and 
 | `lekiwi_audio/indicator_node.py` | Watches services and goal status, and plays the matching clip |
 | `config/phrases.yaml` | What is said for each event |
 | `sounds/` | The rendered clips, one WAV per phrase |
+| `voices/kokoro/` | Where the Kokoro voice model files are downloaded on the first render (not committed) |
 | `lekiwi_audio/render_phrases.py`, `tts.py` | Build-time tools that render `phrases.yaml` to `sounds/` with the Kokoro voice model |
 
 ## Requirements

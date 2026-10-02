@@ -35,8 +35,6 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 def launch_setup(context):
     """Validate arguments and include control/navigation/laser (+ selected camera for pantilt)."""
     payload             = LaunchConfiguration('payload').perform(context)
-    pantilt_config      = LaunchConfiguration('pantilt_config').perform(context)
-    camera_config       = LaunchConfiguration('camera_config').perform(context)
     enable_camera       = _launch_arg_as_bool(context, 'enable_camera')
     diagnostics         = _launch_arg_as_bool(context, 'diagnostics')
     use_mock            = LaunchConfiguration('use_mock').perform(context)
@@ -47,7 +45,6 @@ def launch_setup(context):
     battery_monitor     = _launch_arg_as_bool(context, 'battery_monitor')
     map_name            = LaunchConfiguration('map_name').perform(context)
     pointcloud          = _launch_arg_as_bool(context, 'pointcloud')
-    octomap             = _launch_arg_as_bool(context, 'octomap')
     mission             = LaunchConfiguration('mission').perform(context)
     wp_loops            = LaunchConfiguration('wp_loops').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
@@ -79,12 +76,6 @@ def launch_setup(context):
         raise RuntimeError(
             "[lekiwi.launch.py] pointcloud:=true requires payload:=pantilt."
         )
-    if sim and octomap:
-        raise RuntimeError('[lekiwi.launch.py] octomap is not integrated in simulation yet.')
-    if octomap and not pointcloud:
-        raise RuntimeError(
-            "[lekiwi.launch.py] octomap:=true requires pointcloud:=true."
-        )
     if not imu and fusion_mode in ('base', 'imu'):
         raise RuntimeError(
             f"[lekiwi.launch.py] imu:=false requires fusion_mode:=odom "
@@ -102,8 +93,6 @@ def launch_setup(context):
 
     control_args = {
         'payload':          payload,
-        'pantilt_config':   pantilt_config,
-        'camera_config':    camera_config,
         'enable_camera':    str(enable_camera).lower(),
         'pointcloud':       str(pointcloud).lower(),
         'camera_fps': LaunchConfiguration('camera_fps').perform(context),
@@ -180,14 +169,11 @@ def launch_setup(context):
         }))
 
     if payload == 'pantilt':
-        if enable_camera and not sim and camera_config == 'gemini2' and octomap:
-            raise RuntimeError('Gemini 2 octomap is not integrated; use octomap:=false.')
         pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
-        camera = include(pkg_pantilt, f"launch/{'gemini2' if camera_config == 'gemini2' else 'oakd'}.launch.py", {
+        camera = include(pkg_pantilt, 'launch/gemini2.launch.py', {
             'enable_camera': str(enable_camera).lower(),
             'pointcloud': str(pointcloud).lower(),
             'camera_fps': str(int(float(LaunchConfiguration('camera_fps').perform(context)))),
-            'octomap':    str(octomap).lower(),
         })
         actions.append(camera)
 
@@ -202,17 +188,10 @@ def generate_launch_description():
             default_value='pantilt',
             description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
         ),
-        DeclareLaunchArgument('camera_config', default_value='gemini2', choices=['gemini2', 'oakd_s2'],
-                              description='Pan-tilt camera geometry and real driver.'),
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start the selected real or simulated camera; false retains geometry.'),
         DeclareLaunchArgument('camera_fps', default_value='15.0',
                               description='Camera RGB/depth rate in Hz for either model; simulation is capped at 5 Hz.'),
-        DeclareLaunchArgument(
-            'pantilt_config',
-            default_value='pt101',
-            description='Pan-tilt mesh variant when payload:="pantilt": "pt100" or "pt101"',
-        ),
         DeclareLaunchArgument(
             'diagnostics',
             default_value='false',
@@ -245,7 +224,7 @@ def generate_launch_description():
             'mujoco_model',
             default_value='',
             description='[advanced, sim only] Path to a pre-built MJCF file to load; empty means '
-                        'xacro-process it at launch time instead (picked by payload/pantilt_config/camera_config).',
+                        'xacro-process it at launch time instead (picked by payload).',
         ),
         DeclareLaunchArgument(
             'fusion_mode',
@@ -288,12 +267,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'pointcloud',
             default_value='false',
-            description='[pantilt only] Enable point clouds from the selected camera.',
-        ),
-        DeclareLaunchArgument(
-            'octomap',
-            default_value='false',
-            description='[pantilt only, requires pointcloud:=true] Run octomap_server on the OAK-D point cloud.',
+            description='[pantilt only] Enable point clouds from the selected camera; real Gemini 2 drivers also publish the Cloudini-compressed cloud.',
         ),
         DeclareLaunchArgument(
             'mission',

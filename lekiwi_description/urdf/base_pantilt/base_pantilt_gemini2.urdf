@@ -567,23 +567,23 @@
     <limit effort="2.942" lower="-1.5708" upper="1.5708" velocity="1000000.0"/>
   </joint>
   <!-- base_link of the sensor-->
-  <link name="oak_link"/>
-  <joint name="oak_link_center_joint" type="fixed">
+  <link name="gemini2_link"/>
+  <joint name="gemini2_link_center_joint" type="fixed">
     <parent link="tilt_link"/>
-    <child link="oak_link"/>
-    <origin rpy="-1.5707963267948966 0 -1.5707963267948966" xyz="-0.0306 -0.0068941 -0.000225"/>
+    <child link="gemini2_link"/>
+    <origin rpy="1.5707963267948966 0 -1.5707963267948966" xyz="-0.0306 -0.0068941 -0.000225"/>
   </joint>
   <!-- IMU frame -->
-  <link name="oak_imu_frame"/>
-  <joint name="oak_imu_frame_joint" type="fixed">
-    <parent link="oak_link"/>
-    <child link="oak_imu_frame"/>
+  <link name="gemini2_imu_frame"/>
+  <joint name="gemini2_imu_frame_joint" type="fixed">
+    <parent link="gemini2_link"/>
+    <child link="gemini2_imu_frame"/>
     <origin rpy="3.141592653589793 1.5707963267948966 0" xyz="-0.008 -0.037945 -0.00079"/>
   </joint>
   <!-- Device mesh with custom color -->
-  <link name="oak_link_model_origin">
+  <link name="gemini2_link_model_origin">
     <visual>
-      <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/gemini2.stl"/>
       </geometry>
@@ -592,9 +592,9 @@
       </material>
     </visual>
   </link>
-  <joint name="oak_link_model_origin_joint" type="fixed">
-    <parent link="oak_link"/>
-    <child link="oak_link_model_origin"/>
+  <joint name="gemini2_link_model_origin_joint" type="fixed">
+    <parent link="gemini2_link"/>
+    <child link="gemini2_link_model_origin"/>
     <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
   </joint>
   <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading

@@ -39,11 +39,9 @@ ros2 launch lekiwi_control teleop.launch.py                                    #
 | Argument | Default | Meaning |
 |----------|---------|---------|
 | `payload` | `""` | `""` for the base alone, or `pantilt` |
-| `camera_config` | `gemini2` | Pan-tilt camera geometry: `gemini2` or `oakd_s2`; also selects the generated simulation model |
 | `enable_camera` | `true` | Start simulated camera plugin and processing nodes; geometry stays in URDF/MJCF |
-| `pointcloud` | `false` | Publish one colored simulation cloud for either Gemini 2 or OAK-D S2 |
+| `pointcloud` | `false` | Publish one colored simulation cloud; nothing in the stack consumes it, so leave it off unless you need it |
 | `camera_fps` | `15` | Shared frame rate for either real camera; simulation caps rendering at 5 Hz |
-| `pantilt_config` | `pt101` | Pan-tilt mesh variant, `pt100` or `pt101` |
 | `sts_serial_port` | `""` | Servo serial port; empty uses `urdf_config.yaml` |
 | `use_mock` | `""` | `true` or `false`; empty uses `urdf_config.yaml` |
 | `diagnostics` | `false` | Also start the motor and IMU diagnostics nodes |
@@ -60,7 +58,9 @@ ros2 launch lekiwi_control teleop.launch.py                                    #
 
 **`urdf_config.yaml`** holds the servo serial port (`/dev/ttySERVO`, see the [udev rules](../README.md#stable-device-names-udev)), baud rate, wheel motor IDs (7, 8, 9), mock mode and the servo speed profile (`internal_max_vel`, `internal_max_acc`, `internal_acc_coeff`, default 254 / 254 / 100). `sts_serial_port` and `use_mock` can also be set on the command line; edit the file for the rest. The pan-tilt reads its own speed profile from `pt_control`.
 
-**`gemini2_imu_broadcaster.yaml`** and **`oak_imu_broadcaster.yaml`** configure the simulation-only camera IMU broadcasters. They read sensor interfaces supplied by upstream `mujoco_ros2_control`, independently of the base BNO055 broadcaster. With streaming enabled, Gemini publishes `/gemini2/gyro_accel/sample` and OAK-D S2 publishes `/oak/imu/data`.
+**`gemini2_imu_broadcaster.yaml`** configures the simulation-only camera IMU broadcaster. It reads sensor interfaces supplied by upstream `mujoco_ros2_control`, independently of the base BNO055 broadcaster. With streaming enabled, it publishes `/gemini2/gyro_accel/sample`.
+
+**Camera topics.** Gemini 2 uses `/gemini2/*` in hardware and simulation. Real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; `pointcloud:=true` adds `/gemini2/depth_registered/points`. Compressed RGB is always available in simulation. On real hardware, `pointcloud:=true` also starts Cloudini compression. The real Gemini wrapper requests 640×360 color and 640×400 depth at 15 Hz. See [camera variants](../lekiwi_mujoco/README.md#camera-model) and [driver installation](../payloads/pantilt_ros2/README.md#installation).
 
 **`control.yaml`** sets the controller manager and the `OmniWheelDriveController`: three wheels at 60°, 180° and 300°, robot radius and wheel radius. The MuJoCo model reads its wheel geometry from here too. The controller enforces no speed limits.
 
@@ -96,5 +96,3 @@ pytest test -q
 ```
 
 The tests check the configuration files against each other (speed limits, joystick mappings, toggle services), the support nodes, the teleop and payload wiring in the launch files, and that the launch files' arguments are consistent.
-
-Camera selection is forwarded unchanged to URDF and MuJoCo generation. Gemini 2 is the default; use `camera_config:=oakd_s2` for the alternative. Gemini 2 uses `/gemini2/*` in hardware and simulation. Real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; `pointcloud:=true` adds `/gemini2/depth_registered/points`; OAK-D S2 retains `/oak/*`; `pointcloud:=true` adds `/oak/rgbd/points` in simulation. Compressed RGB is always available in simulation. On real hardware, `pointcloud:=true` also starts Cloudini compression for either camera. The real OAK profile defaults to 15 Hz with VIO off; the real Gemini wrapper requests 640×360 color and 640×400 depth at 15 Hz. See [camera variants](../lekiwi_mujoco/README.md#camera-variants) and [driver installation](../payloads/pantilt_ros2/README.md#installation).

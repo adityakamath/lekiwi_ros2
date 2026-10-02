@@ -39,10 +39,10 @@ class TestLekiwiBringupArgs:
     """Checks that the top-level launch declares all expected arguments."""
 
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'camera_config', 'enable_camera', 'diagnostics', 'use_mock', 'joy',
+        'payload', 'enable_camera', 'diagnostics', 'use_mock', 'joy',
         'sts_serial_port', 'mujoco_model',
         'fusion_mode', 'imu', 'laser', 'audio', 'battery_monitor', 'pointcloud',
-        'octomap', 'camera_fps', 'mission', 'map_name', 'wp_loops', 'use_sim_time',
+        'camera_fps', 'mission', 'map_name', 'wp_loops', 'use_sim_time',
     ]
 
     def test_expected_args_declared(self):
@@ -66,11 +66,6 @@ class TestLekiwiBringupValidation:
                               ['payload:=', 'pointcloud:=true'])
         # Empty payload is also rejected as malformed - either way launch fails.
         assert any(kw in output.lower() for kw in ('pointcloud', 'pantilt', 'malformed', 'runtimeerror'))
-
-    def test_octomap_without_pointcloud_rejected(self):
-        output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py',
-                              ['payload:=pantilt', 'octomap:=true', 'pointcloud:=false'])
-        assert 'octomap' in output.lower() or 'pointcloud' in output.lower()
 
     def test_imu_false_with_default_fusion_mode_rejected(self):
         output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py', ['imu:=false'])
@@ -166,7 +161,7 @@ class TestControlLaunchArgs:
     """Checks that control.launch.py declares all expected arguments."""
 
     EXPECTED_ARGS = [
-        'payload', 'pantilt_config', 'camera_config', 'sts_serial_port', 'use_mock',
+        'payload', 'sts_serial_port', 'use_mock',
         'diagnostics', 'imu', 'use_sim_time', 'joy',
     ]
 
@@ -176,9 +171,8 @@ class TestControlLaunchArgs:
             assert arg in output, f"Expected argument '{arg}' not found in control.launch.py"
 
 
-@pytest.mark.parametrize('camera', ['gemini2', 'oakd_s2'])
 @pytest.mark.parametrize('enabled,sim', [('true', 'false'), ('false', 'false'), ('true', 'true')])
-def test_camera_selection_is_forwarded_and_driver_is_lazy(camera, enabled, sim, monkeypatch):
+def test_camera_enable_is_forwarded_and_driver_is_lazy(enabled, sim, monkeypatch):
     import importlib.util
     from pathlib import Path
     from launch import LaunchContext, LaunchDescription
@@ -193,22 +187,20 @@ def test_camera_selection_is_forwarded_and_driver_is_lazy(camera, enabled, sim, 
     for action in module.generate_launch_description().entities:
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
-    assert context.launch_configurations['camera_config'] == 'gemini2'
     assert context.launch_configurations['enable_camera'] == 'true'
-    context.launch_configurations.update(payload='pantilt', camera_config=camera,
+    context.launch_configurations.update(payload='pantilt',
                                          enable_camera=enabled, sim=sim, laser='false',
                                          audio='false', battery_monitor='false', diagnostics='false')
     lookups = []
 
     def find(self, package):
         lookups.append(package)
-        assert package not in ('orbbec_camera', 'depthai_ros_driver')
+        assert package != 'depthai_ros_driver'
         return '/unused/' + package
 
     monkeypatch.setattr(FindPackageShare, 'find', find)
     actions = module.launch_setup(context)
     control_args = dict(actions[0].launch_arguments)
-    assert control_args['camera_config'] == camera
     assert control_args['enable_camera'] == enabled
     assert control_args['pointcloud'] == 'false'
     assert control_args['camera_fps'] == '15.0'
@@ -217,8 +209,7 @@ def test_camera_selection_is_forwarded_and_driver_is_lazy(camera, enabled, sim, 
     assert len(actions) == (3 if streaming else 2)
     if streaming:
         assert dict(actions[-1].launch_arguments)['enable_camera'] == enabled
-        filename = 'gemini2.launch.py' if camera == 'gemini2' else 'oakd.launch.py'
         source = actions[-1].launch_description_source
         monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
         source.get_launch_description(context)
-        assert source.location.endswith(filename)
+        assert source.location.endswith('gemini2.launch.py')

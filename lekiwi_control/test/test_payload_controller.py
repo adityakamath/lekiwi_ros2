@@ -27,7 +27,7 @@ def test_launch_spawns_the_pantilt_controller_with_the_payloads_file_and_loads_n
     assert "config/{payload}_urdf_config.yaml" not in source
 
 
-def test_launch_runs_the_same_depth_to_scan_slice_for_the_pantilt_in_simulation():
+def test_launch_runs_the_depth_to_scan_slice_for_the_pantilt_in_simulation():
     source = (SOURCE / 'launch/control.launch.py').read_text()
     assert "executable='depthimage_to_laserscan_node'" in source
-    assert "f'{pkg_pt_mujoco}/config/mujoco_depth_to_scan.yaml'" in source and "('scan', '/oak/scan')" in source
+    assert "mujoco_gemini2_depth_to_scan.yaml" in source and "('scan', '/gemini2/scan')" in source

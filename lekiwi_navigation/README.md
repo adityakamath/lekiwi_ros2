@@ -1,6 +1,6 @@
 # LeKiwi Navigation
 
-Navigation for LeKiwi: sensor fusion, mapping, localization, path planning and patrol. It runs [robot_localization](https://github.com/cra-ros-pkg/robot_localization) for the odometry, [slam_toolbox](https://github.com/SteveMacenski/slam_toolbox) or AMCL for the map, and [Nav2](https://docs.nav2.org/) for planning and control, plus a service-driven waypoint patrol and a map saver.
+Navigation for LeKiwi: sensor fusion, mapping, localization, path planning and patrol. It runs [robot_localization](https://github.com/cra-ros-pkg/robot_localization) for the odometry, [slam_toolbox](https://github.com/SteveMacenski/slam_toolbox) or AMCL for the map, and [Nav2](https://docs.nav2.org/) for planning and control, plus a service-driven waypoint patrol, a map saver and an editable [Nav2 target](#nav2-target-tracker).
 
 ## Contents
 
@@ -11,8 +11,8 @@ Navigation for LeKiwi: sensor fusion, mapping, localization, path planning and p
 | `launch/slam.launch.py` | slam_toolbox (mapping or localization), or a map server with AMCL |
 | `launch/nav2.launch.py` | The Nav2 nodes, the waypoint nodes and the zone-filter mask servers |
 | `config/robot_localization/` | EKF settings, one file per fusion mode |
-| `config/nav2/` | Nav2 (`nav2.yaml`), AMCL, slam_toolbox, map saver and waypoint recorder settings |
-| `lekiwi_navigation/` | `map_saver_node` and `waypoint_recorder_node` |
+| `config/nav2/` | Nav2 (`nav2.yaml`), AMCL, slam_toolbox, map saver, waypoint recorder and Nav2 target settings |
+| `lekiwi_navigation/` | `map_saver_node`, `waypoint_recorder_node` and `nav2_target_node`, plus `velocity_limits.py`, which derives the Nav2 speed limits from the teleop scales |
 | `maps/` | Saved maps, one folder each (not committed) |
 
 ## Requirements
@@ -50,6 +50,7 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 | `config/nav2/slam_toolbox.yaml`, `amcl.yaml` | Mapping and localization |
 | `config/nav2/waypoint_recorder.yaml` | Patrol loops and how often a failing waypoint is retried before it is dropped |
 | `config/nav2/map_saver.yaml` | The map saver's timeout |
+| `config/nav2/nav2_target.yaml` | The Nav2 target's frames, publish rate, command timeout, 2× motion scales and marker |
 | `config/robot_localization/ekf*.yaml` | Which measurements the EKF fuses in each `fusion_mode` |
 
 The joystick axis scales in `lekiwi_control/config/base_teleop.yaml` are the single
@@ -88,14 +89,6 @@ The waypoint patrol is driven by three `SetBool` services, bound to joystick but
 | `/reset_waypoints` | Cancels the patrol and clears all waypoints |
 
 A goal sent from RViz or Foxglove during a patrol is treated as a detour, and the patrol resumes afterwards. A waypoint that fails repeatedly is dropped. With `diagnostics:=true`, the patrol's progress is published on `/diagnostics`.
-
-## Tests
-
-```bash
-pytest test -q
-```
-
-The tests check the Nav2, EKF and SLAM configuration (including the speed limits against `lekiwi_control`), the launch arguments, and the two nodes.
 
 ## Nav2 target tracker
 
@@ -240,3 +233,11 @@ python lekiwi_navigation/test/test_nav2_target_assets.py
 ```
 
 The asset checks and ROS-dependent tests pass in the development workspace. TF display behavior across parent changes, real patrol interaction, controller input, and actual audio playback still need the robot validation above.
+
+## Tests
+
+```bash
+pytest test -q
+```
+
+The tests check the Nav2, EKF and SLAM configuration (including the speed limits against `lekiwi_control`), the launch arguments, and the nodes.
