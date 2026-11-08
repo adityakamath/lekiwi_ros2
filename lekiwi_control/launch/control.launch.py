@@ -320,6 +320,22 @@ def launch_setup(context):
                  output='both'),
         )
 
+    # Real-hardware motor health for motor_diagnostics_node (/dynamic_joint_states is gone on Lyrical);
+    # the MuJoCo joints export no voltage/temperature/current/is_moving interfaces.
+    if diagnostics and hw_type != 'mujoco':
+        sts_joints = ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']
+        if payload == 'pantilt':
+            sts_joints += ['shoulder_pan_joint', 'tilt_joint']
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_state_ifaces_', delete=False) as f:
+            yaml.safe_dump({'state_interfaces_broadcaster': {'ros__parameters': {'interfaces': [
+                f'{j}/{i}' for j in sts_joints
+                for i in ('effort', 'voltage', 'temperature', 'current', 'is_moving')]}}}, f)
+        extra_spawner_nodes.append(
+            Node(package='controller_manager', executable='spawner',
+                 arguments=['state_interfaces_broadcaster', '-c', '/controller_manager',
+                            '--controller-manager-timeout', '30', '--param-file', f.name],
+                 output='both'))
+
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',

@@ -20,6 +20,10 @@ controller_manager:
     imu_sensor_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
+    # Motor health for motor_diagnostics_node; the interface list comes from control.launch.py (--param-file)
+    state_interfaces_broadcaster:
+      type: state_interfaces_broadcaster/StateInterfacesBroadcaster
+
     base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
 

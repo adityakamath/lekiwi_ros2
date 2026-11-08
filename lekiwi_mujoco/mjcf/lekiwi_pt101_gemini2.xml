@@ -603,7 +603,7 @@
           <geom class="marker" mass="0" material="base_charcoal" mesh="respeaker_flex_mic" />
         </body>
         <frame name="pantilt_mount">
-          <body name="pantilt_base_link" pos="0.032725 0 0.0525">
+          <body name="pantilt_base_link" pos="0.032725 0 0.0975">
             <inertial pos="0 0 0" mass="1" diaginertia="0.01 0.01 0.01" />
             <geom class="visual" pos="0 0 0.0002" quat="0.5 0.5 0.5 0.5" material="light_grey" mesh="pantilt_base_link_mesh" />
             <geom class="visual" quat="0.707107 0 0 0.707107" material="charcoal" mesh="pan_motor" />

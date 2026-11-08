@@ -5,6 +5,7 @@ from pathlib import Path
 from launch import LaunchContext
 from launch.actions import DeclareLaunchArgument
 import pytest
+import yaml
 
 
 @pytest.mark.parametrize('enabled,cloud', [
@@ -66,3 +67,50 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
     assert ('/_gemini2/registered_points' in remaps) == (cloud == 'true')
     assert 'gemini2_pointcloud' not in names
     assert 'gemini2_pointcloud_to_scan' not in names
+
+
+@pytest.mark.parametrize('payload,hw_type,diagnostics,expected_joints', [
+    ('', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']),
+    ('pantilt', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint',
+                                 'shoulder_pan_joint', 'tilt_joint']),
+    ('pantilt', 'real', 'false', None),
+    ('pantilt', 'mujoco', 'true', None),  # MuJoCo joints export no voltage/temperature/current
+])
+def test_state_interfaces_broadcaster_for_motor_diagnostics(
+        payload, hw_type, diagnostics, expected_joints, monkeypatch):
+    path = Path(__file__).resolve().parents[1] / 'launch/control.launch.py'
+    spec = importlib.util.spec_from_file_location('state_ifaces_launch', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    context = LaunchContext()
+    for action in module.generate_launch_description().entities:
+        if isinstance(action, DeclareLaunchArgument):
+            action.execute(context)
+    context.launch_configurations.update(payload=payload, diagnostics=diagnostics,
+                                         enable_camera='false',
+                                         ros2_control_hardware_type=hw_type,
+                                         mujoco_model='/unused/model.xml')
+    nodes = []
+    original = module.Node
+
+    def record(**kwargs):
+        nodes.append(kwargs)
+        return original(**kwargs)
+
+    monkeypatch.setattr(module.FindPackageShare, 'find',
+                        lambda self, package: str(Path(__file__).resolve().parents[2] /
+                                                  ('payloads/pantilt_ros2' if package.startswith('pt_') else '') /
+                                                  package))
+    monkeypatch.setattr(module, 'Node', record)
+    module.launch_setup(context)
+    spawners = [n for n in nodes if n.get('package') == 'controller_manager'
+                and 'state_interfaces_broadcaster' in n.get('arguments', [])]
+    if expected_joints is None:
+        assert not spawners
+        return
+    assert len(spawners) == 1
+    args = spawners[0]['arguments']
+    params = yaml.safe_load(open(args[args.index('--param-file') + 1]))
+    interfaces = params['state_interfaces_broadcaster']['ros__parameters']['interfaces']
+    assert interfaces == [f'{j}/{i}' for j in expected_joints
+                          for i in ('effort', 'voltage', 'temperature', 'current', 'is_moving')]

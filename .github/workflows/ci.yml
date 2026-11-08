@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [kilted, jazzy]
+        ros_distro: [kilted, jazzy, lyrical]
     runs-on: ubuntu-latest
     container: ros:${{ matrix.ros_distro }}
     timeout-minutes: 15
@@ -58,6 +58,7 @@ jobs:
             ros-${{ matrix.ros_distro }}-ros2-control \
             ros-${{ matrix.ros_distro }}-ros2-controllers \
             ros-${{ matrix.ros_distro }}-slam-toolbox \
+            ros-${{ matrix.ros_distro }}-state-interfaces-broadcaster \
             ros-${{ matrix.ros_distro }}-teleop-twist-joy \
             ros-${{ matrix.ros_distro }}-teleop-twist-keyboard \
             ros-${{ matrix.ros_distro }}-xacro
