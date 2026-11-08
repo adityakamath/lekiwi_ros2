@@ -16,6 +16,11 @@
        explicit quat, not euler, per the mesh-geom euler-composition bug (see ld06_lidar's
        fix). Z-span checked against the collision cylinder above: matches within ~1mm. -->
   <geom class="base_visual" mesh="lekiwi_base_visual" material="base_light_grey" quat="-0.70710678 0 0 0.70710678"/>
+  <!-- plate_link (base.module.xacro's plate_joint): visual only, same quat as the base mesh. The
+       generator swaps its mesh to payload_plate_visual when a payload is attached. -->
+  <body name="plate_link">
+    <geom name="plate_visual" class="base_visual" mesh="container_plate_visual" material="base_charcoal" quat="-0.70710678 0 0 0.70710678"/>
+  </body>
 
   <!-- Wheel orientation is an explicit quat, not euler="0 pi/2 <yaw>" - MuJoCo's eulerseq
        doesn't compose the same way URDF's rpy does, which previously put every wheel's

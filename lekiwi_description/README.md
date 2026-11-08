@@ -12,7 +12,7 @@ URDF/xacro models of LeKiwi: the standalone base, and the base with the pan-tilt
 | `urdf/base/base.control.xacro` | The `<ros2_control>` block for the wheels and IMU, and the xacro arguments below |
 | `urdf/base_pantilt/` | The base with the pan-tilt: the same files, plus the pan-tilt module from `pt_description` and a combined `<ros2_control>` block for the shared servo bus |
 | `urdf/*/*.urdf` | Pre-generated base and PT101/Gemini 2 URDFs |
-| `meshes/` | STL files for the base, wheels, LiDAR, IMU and microphone array (`*_mujoco.stl` are simplified for the simulation) |
+| `meshes/` | STL files for the base, top plates, wheels, LiDAR, IMU and microphone array (`*_mujoco.stl` are simplified for the simulation) |
 
 ## Requirements
 
@@ -73,7 +73,7 @@ python3 test/test_urdf_xacro.py --write
 
 ## Using it on another robot
 
-A payload adds a `urdf/base_<name>/` folder that includes the payload's own module and mounts it on `base_link` at a fixed joint (see `base_pantilt.urdf.xacro`). The [repository README](../README.md#payloads) lists the other pieces of wiring a payload needs.
+A payload adds a `urdf/base_<name>/` folder that includes the payload's own module and mounts it on `base_link` at a fixed joint (see `base_pantilt.urdf.xacro`). The base's top plate is `container_plate.stl` by default; a payload swaps it for `payload_plate.stl` by passing `payload="true"` to `lekiwi_base_module`. The [repository README](../README.md#payloads) lists the other pieces of wiring a payload needs.
 
 ## Tests
 

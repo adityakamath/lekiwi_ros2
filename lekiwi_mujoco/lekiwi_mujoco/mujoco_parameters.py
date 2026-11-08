@@ -50,7 +50,7 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
     # All represented base joints follow the expanded URDF. Payload chain is handled
     # separately because its mount uses an extra fixed intermediate MJCF body.
     base_joints = ['lekiwi_mount_joint', 'laser_joint', 'laser_frame_joint',
-                   'imu_joint', 'imu_frame_joint', 'mic_joint'] + [p + '_wheel_joint' for p in WHEELS]
+                   'imu_joint', 'imu_frame_joint', 'mic_joint', 'plate_joint'] + [p + '_wheel_joint' for p in WHEELS]
     for name in base_joints:
         joint = urdf.find(f"joint[@name='{name}']")
         if joint is None:
@@ -77,7 +77,7 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
     # Sync visual mesh origins and scales, with explicit decimated mesh mapping.
     # Actual asset name for the wheel is read by geoms rather than assumed.
     mesh_scales = {}
-    for body_name in ('base_link', 'left_wheel_link', 'back_wheel_link', 'right_wheel_link', 'imu_link', 'mic_link'):
+    for body_name in ('base_link', 'left_wheel_link', 'back_wheel_link', 'right_wheel_link', 'imu_link', 'mic_link', 'plate_link'):
         visual = urdf.find(f"link[@name='{body_name}']/visual")
         for geom in spec.body(body_name).geoms:
             if geom.meshname:

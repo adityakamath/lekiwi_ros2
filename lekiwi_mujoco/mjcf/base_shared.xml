@@ -58,7 +58,7 @@
     <mesh name="ld06_lidar" file="$(find lekiwi_description)/meshes/ld06_lidar.stl"/>
     <mesh name="bno055_imu" file="$(find lekiwi_description)/meshes/bno055_imu.stl"/>
     <mesh name="respeaker_flex_mic" file="$(find lekiwi_description)/meshes/respeaker_flex_mic.stl"/>
-    <!-- lekiwi_base.stl (403321 faces) and omni_wheel.stl (543010 faces) both exceed
+    <!-- lekiwi_base.stl (400393 faces) and omni_wheel.stl (543010 faces) both exceed
          MuJoCo's 200000-face STL limit outright. These are decimated copies kept alongside
          the full-resolution originals - decimation quality verified by comparing convex-hull
          volume before/after. base: pymeshlab (boundary/normal/topology-preserving quadric
@@ -67,6 +67,10 @@
          matching bounding-box extent. wheel: 196710 faces, ~0.15% volume delta. Visual only -
          collision uses the chassis cylinder and passive rollers. -->
     <mesh name="lekiwi_base_visual" file="$(find lekiwi_description)/meshes/lekiwi_base_mujoco.stl"/>
+    <!-- Top plates (visual only, small enough to use unmodified): the base uses container_plate;
+         build_mujoco_models swaps to payload_plate when a payload is attached. -->
+    <mesh name="container_plate_visual" file="$(find lekiwi_description)/meshes/container_plate.stl"/>
+    <mesh name="payload_plate_visual" file="$(find lekiwi_description)/meshes/payload_plate.stl"/>
     <mesh name="omni_wheel_visual" file="$(find lekiwi_description)/meshes/omni_wheel_mujoco.stl"/>
   </asset>
 

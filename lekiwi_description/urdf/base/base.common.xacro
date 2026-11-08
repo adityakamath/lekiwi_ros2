@@ -21,6 +21,9 @@
   <xacro:property name="wheel_base_radius" value="${base_geometry['robot_radius']}"/>
   <xacro:property name="wheel_base_offset_z" value="0.01036"/>
 
+  <!-- Top plate drop from the plate meshes' CAD origin: plate underside (z=94.5 mm) onto the standoff tops (z=87.5 mm) -->
+  <xacro:property name="plate_base_offset_z" value="-0.007"/>
+
   <!-- LD06 laser offsets from base_link -->
   <xacro:property name="laser_base_offset_x" value="-0.045042"/>
   <xacro:property name="laser_base_offset_z" value="0.0915"/>

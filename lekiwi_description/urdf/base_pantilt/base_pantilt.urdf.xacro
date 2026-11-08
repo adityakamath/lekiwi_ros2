@@ -8,7 +8,7 @@
 
   <link name="base_footprint"/>
 
-  <xacro:lekiwi_base_module parent="base_footprint">
+  <xacro:lekiwi_base_module parent="base_footprint" payload="true">
     <origin xyz="0 0 ${wheel_radius - wheel_base_offset_z}" rpy="0 0 0"/>
   </xacro:lekiwi_base_module>
 

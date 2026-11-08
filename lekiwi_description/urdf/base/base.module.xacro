@@ -3,7 +3,10 @@
 
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.common.xacro"/>
 
-  <xacro:macro name="lekiwi_base_module" params="parent *origin">
+  <xacro:macro name="lekiwi_base_module" params="parent *origin payload:=false">
+
+    <!-- Top plate: payload_plate when a payload is mounted, container_plate otherwise -->
+    <xacro:property name="plate_mesh" value="${'payload_plate' if payload else 'container_plate'}"/>
 
     <!-- Material definitions (referenced by links below) -->
     <material name="base_light_grey">
@@ -38,6 +41,27 @@
       <inertial>
         <mass value="2.0"/>
         <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.02"/>
+      </inertial>
+    </link>
+
+    <!-- Top plate link (same mesh frame as lekiwi_base.stl) -->
+    <link name="plate_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/${plate_mesh}.stl"/>
+        </geometry>
+        <material name="base_charcoal"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/${plate_mesh}.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
       </inertial>
     </link>
 
@@ -229,6 +253,13 @@
     </link>
 
     <!-- JOINTS -->
+
+    <!-- top plate fixed joint -->
+    <joint name="plate_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="plate_link"/>
+      <origin xyz="0 0 ${plate_base_offset_z}" rpy="0 0 0"/>
+    </joint>
 
     <!-- laser fixed joint -->
     <joint name="laser_joint" type="fixed">

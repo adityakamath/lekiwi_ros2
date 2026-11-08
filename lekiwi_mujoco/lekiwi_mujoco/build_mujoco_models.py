@@ -135,6 +135,7 @@ def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_
     spec = mujoco.MjSpec.from_string(doc.toxml())
     urdf, config, payload_limits = expand_urdf(variant, packages, control)
     if variant != 'base':
+        spec.geom('plate_visual').meshname = 'payload_plate_visual'
         attach_payload(spec, variant, urdf, payload_limits, packages)
         # Kilted's released MujocoSystemInterface expects the default IMU suffixes.
         spec.sensor('gemini2_gyroscope').name = 'gemini2_gyro'
