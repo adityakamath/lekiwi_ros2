@@ -470,7 +470,7 @@
   <joint name="pantilt_mount_joint" type="fixed">
     <parent link="base_link"/>
     <child link="pantilt_base_link"/>
-    <origin rpy="0 0 0" xyz="0.032725 0 0.0975"/>
+    <origin rpy="0 0 0" xyz="0.032725 -0.006608 0.0975"/>
   </joint>
   <!-- Pan-tilt base link (was "base_link" in standalone URDF) -->
   <link name="pantilt_base_link">

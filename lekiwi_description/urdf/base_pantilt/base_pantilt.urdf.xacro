@@ -13,7 +13,7 @@
   </xacro:lekiwi_base_module>
 
   <xacro:pantilt_module parent="base_link">
-    <origin xyz="${pantilt_base_offset_x} 0 ${pantilt_base_offset_z}" rpy="0 0 0"/>
+    <origin xyz="${pantilt_base_offset_x} ${pantilt_base_offset_y} ${pantilt_base_offset_z}" rpy="0 0 0"/>
   </xacro:pantilt_module>
 
   <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
