@@ -57,7 +57,7 @@
         <inertial pos="0 0 0" mass="2" diaginertia="0.01 0.01 0.02"/>
         <joint type="free"/>
         <geom name="base_link_collision" size="0.108 0.0575" pos="0 0 0.05025" type="cylinder" group="3" mass="0" material="base_transparent"/>
-        <geom class="base_visual" quat="-0.707107 0 0 0.707107" mass="0" material="base_light_grey" mesh="lekiwi_base_visual"/>
+        <geom class="base_visual" pos="0 0 0" quat="-0.707107 0 0 0.707107" mass="0" material="base_light_grey" mesh="lekiwi_base_visual"/>
         <body name="left_wheel_link" pos="0.0661195 0.114522 0.01036" quat="0.612372 -0.353553 0.612372 0.353553">
           <inertial pos="0 0 0" quat="-0.5 0.5 0.5 0.5" mass="0.068" diaginertia="0.00094096 0.000969962 0.000969962"/>
           <joint name="left_wheel_joint" class="sts3215" damping="0"/>
