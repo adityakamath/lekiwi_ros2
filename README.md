@@ -4,13 +4,49 @@
 [![CI](https://github.com/adityakamath/lekiwi_ros2/actions/workflows/ci.yml/badge.svg)](https://github.com/adityakamath/lekiwi_ros2/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot and its payloads. It provides holonomic drive with odometry, joystick teleoperation, SLAM and Nav2 navigation, motor diagnostics, battery monitoring, spoken status announcements and a MuJoCo simulation. The base includes a LiDAR, and optional payloads add more; for example, the pan-tilt payload adds an Orbbec Gemini 2 depth camera.
+ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot. It provides holonomic drive with odometry, joystick teleoperation, SLAM and Nav2 navigation, motor diagnostics, battery monitoring, spoken status announcements and a MuJoCo simulation.
 
 ## ⚠️ Safety
 
 **This is a real, motorized robot with no hardwired physical emergency stop.** `/emergency_stop` is a software service call (toggled via joystick button or Foxglove) that tells the hardware interface to stop issuing motor commands. It is not a hardware kill switch, and it will not help if the software stack itself has hung, crashed, or lost connection to the joystick.
 
-This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes and incomplete safety coverage. Simulation (`sim:=true`) has verified motion control (see [Simulation](#simulation)) but is not validated against real hardware behavior. No warranty, express or implied — see [LICENSE](LICENSE).
+This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes. Simulation (`sim:=true`) is not validated against real hardware. No warranty, express or implied — see [LICENSE](LICENSE).
+
+## Robot configurations
+
+| Configuration | Top plate | Camera | Launch | Status |
+|---------------|-----------|--------|--------|--------|
+| **Base with tray (default)** | Container plate (a tray) | Static Gemini 2 on the front bracket | `lekiwi.launch.py` (default) | Maintained |
+| Payload | Payload plate | What the payload brings | `payload:=<name>` | SO-101 arm in progress |
+| Pan-tilt payload | Payload plate | Gemini 2 on the pan-tilt | `payload:=pantilt` | Legacy, no longer maintained |
+
+## How it fits together
+
+```text
+joystick (/joy) -> joy_teleop -- /cmd_vel_teleop ---------.
+                                                           v
+Nav2 (planner, MPPI, velocity smoother) -- /cmd_vel_smoothed -> twist_switch_node
+                                                                      | /cmd_vel_presafety
+                                                                      v
+                                                              collision_monitor
+                                                                      | /base_controller/cmd_vel
+                                                                      v
+  omni_wheel_drive_controller -> ros2_control -> sts_hardware_interface -> 3 STS3215 wheel servos
+
+wheels -- /base_controller/odom ------.
+BNO055 -- /imu_sensor_broadcaster/imu -+-> ekf_node -> odom->base_footprint TF, /odometry/filtered -> Nav2
+LD06 LiDAR -- /scan -> slam_toolbox or AMCL (map->odom), Nav2 costmaps, collision_monitor
+Gemini 2 -- /gemini2/* (color, depth, /gemini2/scan, IMU)
+```
+
+| Term | Meaning |
+|------|---------|
+| Twist switch | `twist_switch_node` picks the velocity source: joystick (teleop, the start-up state) or Nav2; the **X** button toggles it |
+| Collision monitor | Nav2's `collision_monitor`, placed after the switch: it limits both teleop and Nav2 commands; hold **R1** to disable its predictive stop |
+| Deadman | Hold **L1** for joystick drive commands to be sent |
+| `mission` | Navigation mode: `map` (build a map), `slam` or `amcl` (localize on a saved map, `map_name`) |
+| `fusion_mode` | Which sensors the EKF fuses: `base` (wheel odometry and IMU), `imu` or `odom` |
+| Tray / payload plate | The two interchangeable top plates (see [Robot configurations](#robot-configurations)) |
 
 ## Contents
 
@@ -23,88 +59,86 @@ This repository is a work in progress and includes experimental and AI-generated
 | [`lekiwi_navigation`](lekiwi_navigation/README.md) | Nav2, SLAM (slam_toolbox), localization (AMCL), EKF sensor fusion, maps and waypoint patrol |
 | [`lekiwi_audio`](lekiwi_audio/README.md) | Spoken status announcements (e-stop, mode switching, waypoints, battery) |
 
-These are separate repositories, included as git submodules under `modules/` and `payloads/`:
+Settings live in each package's `config/` folder; the package READMEs list them. These are separate repositories, included as git submodules under `modules/` and `payloads/`:
 
 | Repository | Purpose |
 |------------|---------|
-| [`sts_hardware_interface`](https://github.com/adityakamath/sts_hardware_interface) | `ros2_control` hardware interface for the Feetech STS servos |
-| [`bno055_hardware_interface`](https://github.com/adityakamath/bno055_hardware_interface) | `ros2_control` hardware interface for the BNO055 IMU |
+| [`sts_hardware_interface`](https://github.com/adityakamath/sts_hardware_interface) | `ros2_control` interface for the Feetech STS servos |
+| [`bno055_hardware_interface`](https://github.com/adityakamath/bno055_hardware_interface) | `ros2_control` interface for the BNO055 IMU |
 | [`ldlidar_ros2`](https://github.com/adityakamath/ldlidar_ros2) | LD06 LiDAR driver with bug fixes |
-| [`ina260_battery_monitor`](https://github.com/adityakamath/ina260_battery_monitor) | INA260 battery voltage, current and power, with threshold events |
-| [`mujoco_ros2_plugins`](https://github.com/adityakamath/mujoco_ros2_plugins) | `mujoco_ros2_control` plugins, currently a configurable simulated emergency-stop service (default `/emergency_stop`; `sim:=true` only) |
-| [`pantilt_ros2`](https://github.com/adityakamath/pantilt_ros2) (`payloads/`) | Pan-tilt with a Gemini 2 camera, with its own MuJoCo model |
+| [`ina260_battery_monitor`](https://github.com/adityakamath/ina260_battery_monitor) | INA260 battery monitor, with threshold events |
+| [`mujoco_ros2_plugins`](https://github.com/adityakamath/mujoco_ros2_plugins) | `mujoco_ros2_control` plugins: the simulated `/emergency_stop` service (`sim:=true` only) |
+| [`pantilt_ros2`](https://github.com/adityakamath/pantilt_ros2) (`payloads/`, optional, no longer maintained) | Pan-tilt with a Gemini 2 camera and its own MuJoCo model; see [Pan-tilt payload (legacy)](#pan-tilt-payload-legacy) |
 
 ## Hardware
 
 | Component | Details |
 |-----------|---------|
 | Drive | Three Feetech STS3215 servo motors (IDs 7 left, 8 back, 9 right) on one serial bus at 1 Mbaud |
-| LiDAR | LD06 (the same device as the LD19; the driver is configured with the `LDLiDAR_LD19` product name) |
+| LiDAR | LD06 (the same device as the LD19; the driver's product name is `LDLiDAR_LD19`) |
 | IMU | BNO055 |
 | Battery monitor | INA260 current and voltage sensor |
-| Microphone array | reSpeaker Flex (XVF3800), for the spoken announcements |
-| Controller | A Steam Deck used as a generic joystick (see [Joystick](#joystick)) |
-| Payload | Optional, for example the [pan-tilt](https://github.com/adityakamath/pantilt_ros2) with a Gemini 2 camera |
+| Microphone array | reSpeaker Flex (XVF3800), for the announcements |
 
-### Stable device names (udev)
+### udev rules
 
-Real hardware (not `sim:=true`) needs three USB devices at fixed paths, rather than whichever `/dev/ttyUSB0`-style name the kernel assigns on that boot:
-
-| Symlink | Device | Used by |
-|---------|--------|---------|
-| `/dev/ttyLIDAR` | LD06 LiDAR (CP210x USB-UART) | `lekiwi_bringup/config/laser.yaml` (`port_name`) |
-| `/dev/ttySERVO` | Feetech STS servo bus | `lekiwi_control/config/urdf_config.yaml` (`serial_port`) |
-| reSpeaker Flex ALSA nodes | XVF3800 USB audio | `lekiwi_audio` selects it by ALSA card name; the rule only grants non-root permission and does not rename the card |
-
-Install the rules once per robot, then reconnect the devices or reboot:
+The real robot needs stable device names for the LiDAR, the servo bus and the reSpeaker (details in [`lekiwi_bringup`](lekiwi_bringup/README.md#stable-device-names-udev)). Install the rules once per robot, then reconnect the devices or reboot:
 
 ```bash
 sudo cp lekiwi_bringup/udev/99-lekiwi.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
-Without them, `/dev/ttyLIDAR` and `/dev/ttySERVO` do not exist and the default serial ports fail to open.
-
 ## Installation
 
-Requires [ROS 2](https://docs.ros.org/en/kilted/) (CI-tested on Kilted and Jazzy) with:
+Requires ROS 2 Kilted or Jazzy (`ros2_control`, Nav2, slam_toolbox, robot_localization, laser_filters, `joy` and `joy_teleop` are installed by `rosdep` below). The simulation with `sim:=true` and the camera driver steps are for Kilted.
 
-- [`ros2_control`](https://control.ros.org/) and its standard controllers
-- [Nav2](https://docs.nav2.org/), [slam_toolbox](https://github.com/SteveMacenski/slam_toolbox), [robot_localization](https://github.com/cra-ros-pkg/robot_localization) and [laser_filters](https://github.com/ros-perception/laser_filters)
-- [`joy`](https://github.com/ros-drivers/joystick_drivers) and [`joy_teleop`](https://index.ros.org/p/joy_teleop/)
-
-Clone with the submodules. Before building the default pan-tilt payload, install its dependencies and clone Cloudini and the Orbbec source driver as described in the [pan-tilt installation instructions](payloads/pantilt_ros2/README.md#installation); Kilted does not provide the Orbbec driver through apt. In those instructions, use the documented submodule path for the Orbbec compatibility patch.
+Clone with only the submodules the default configuration needs (leave `pantilt_ros2` uninitialized), install dependencies and build:
 
 ```bash
+source /opt/ros/$ROS_DISTRO/setup.bash
 cd ~/ros2_ws/src
-git clone --recurse-submodules https://github.com/adityakamath/lekiwi_ros2.git
-# Install the pan-tilt dependencies and clone/build OrbbecSDK_ROS2 and Cloudini here.
+git clone https://github.com/adityakamath/lekiwi_ros2.git
+cd lekiwi_ros2
+git submodule update --init modules/sts_hardware_interface modules/bno055_hardware_interface \
+  modules/ldlidar_ros2 modules/ina260_battery_monitor
+git submodule update --init modules/mujoco_ros2_plugins    # only for sim:=true
 cd ~/ros2_ws
-colcon build --packages-up-to lekiwi_bringup
+rosdep install --from-paths src/lekiwi_ros2 --ignore-src -r -y --rosdistro $ROS_DISTRO
+colcon build --symlink-install --packages-up-to lekiwi_bringup
 source install/setup.bash
 ```
 
-Cloudini is built from source for the real camera's optional point cloud.
-
-### Simulation (optional)
-
-`sim:=true` needs the MuJoCo packages:
-
-```bash
-sudo apt install ros-kilted-mujoco-ros2-control ros-kilted-mujoco-ros2-control-plugins
-pip install -r lekiwi_mujoco/requirements.txt    # into the interpreter that ROS launch uses
-```
-
-See the [`lekiwi_mujoco` README](lekiwi_mujoco/README.md) for the full list.
+- `rosdep` needs `sudo rosdep init && rosdep update` once. With `-r` it continues past two messages: `ament_python` has no rosdep rule, and `orbbec_camera` is unresolved until you build the driver (below).
+- `--symlink-install` links the installed URDF, meshes and configs to the source tree, so edits take effect without a rebuild. Without it they are copies that go stale after an edit.
+- **Real camera:** build the Orbbec Gemini 2 driver, see [`lekiwi_bringup`](lekiwi_bringup/README.md#gemini-2-driver-real-robot-only). Apply the two patches given there to the clone, or a workspace-wide `colcon build` fails on it.
+- **Simulation (`sim:=true`):** `sudo apt install ros-kilted-mujoco-ros2-control ros-kilted-mujoco-ros2-control-plugins` and `pip install -r lekiwi_mujoco/requirements.txt`; see [`lekiwi_mujoco`](lekiwi_mujoco/README.md#requirements).
 
 ## Running
 
+Try it in simulation first (no hardware, no camera driver):
+
 ```bash
-ros2 launch lekiwi_bringup lekiwi.launch.py                                   # real robot with the pan-tilt payload
-ros2 launch lekiwi_bringup lekiwi.launch.py payload:=""                       # base only
+ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true      # add mujoco_gui:=true for the viewer, mujoco_scene:=home for a furnished apartment
+```
+
+Then check it is up and drive it, from a second terminal (`source install/setup.bash` first). The command publishes the same message the joystick sends, and has to repeat because the controller stops after 0.5 s without a command:
+
+```bash
+ros2 topic hz /scan                                         # LiDAR; also try /odometry/filtered and /imu_sensor_broadcaster/imu
+ros2 topic pub -r 10 /cmd_vel_teleop geometry_msgs/msg/TwistStamped \
+  "{header: {frame_id: base_link}, twist: {linear: {x: 0.1}}}"
+ros2 topic echo /odometry/filtered --field pose.pose.position   # x increases while it drives
+ros2 service call /emergency_stop std_srvs/srv/SetBool "{data: true}"   # stop all motors (false releases)
+```
+
+On the real robot, install the udev rules above, check the wiring and ports in the [`lekiwi_control` configuration](lekiwi_control/README.md#configuration), and keep the emergency-stop button (**B**) within reach.
+
+```bash
+ros2 launch lekiwi_bringup lekiwi.launch.py                                   # real robot: base with tray and Gemini 2
+ros2 launch lekiwi_bringup lekiwi.launch.py enable_camera:=false              # same, without the camera driver
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=map                      # SLAM mapping
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=amcl map_name:=livingroom1   # localize on a saved map
-ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=home     # MuJoCo simulation
 ```
 
 ### Launch arguments
@@ -113,7 +147,7 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `payload` | `pantilt` | Payload to mount: `""` for the base alone, or a payload name (see [Payloads](#payloads)) |
+| `payload` | `""` | Payload to mount: `""` for the base with tray and Gemini 2, or a payload name (see [Payloads](#payloads)) |
 | `mission` | `""` | Navigation mode: `map` (SLAM mapping), `slam` or `amcl` (localization, needs `map_name`). Empty maps from scratch, or uses AMCL if `map_name` is set |
 | `map_name` | `""` | Map to load, e.g. `livingroom1` |
 | `wp_loops` | `0` | Waypoint patrol passes per start: `0` loops forever, `N>0` runs `N` passes |
@@ -128,11 +162,11 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 | `diagnostics` | `false` | Launch the motor and IMU diagnostics nodes |
 | `joy` | `false` | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |
 
-Payload-specific arguments (`payload:=pantilt`): `enable_camera:=false` retains camera geometry while skipping real or simulated camera publishing. `pointcloud:=true` (off by default; nothing in the stack uses the cloud and it is costly on a Raspberry Pi) enables one colored cloud and Cloudini compression on real hardware; `camera_fps` controls both real RGB/depth rates (15 Hz default, simulation capped at 5 Hz). The driver include is lazy, and simulation does not start the real driver.
+Camera arguments: `enable_camera:=false` skips the real or simulated camera, `camera_fps` sets its rate (15 Hz default, simulation capped at 5 Hz) and `pointcloud:=true` adds a colored point cloud (off by default). See [`lekiwi_bringup`](lekiwi_bringup/README.md#camera).
 
 ### Joystick
 
-Teleoperation is set up for a **Steam Deck** used as a generic joystick, not through Steam Input, so the button and axis numbers are specific to that interface.
+Teleoperation uses a **Steam Deck** as a generic joystick (not through Steam Input). The button and axis numbers below are for that interface.
 
 | Control | Action |
 |---------|--------|
@@ -147,61 +181,51 @@ Teleoperation is set up for a **Steam Deck** used as a generic joystick, not thr
 | Right joystick button (8) | Submit the edited Nav2 target via `/nav2_send_goal` (Nav2 mode only) |
 | Y / A / Settings | Record / toggle / reset a waypoint patrol |
 
-All of these, plus navigation goal outcomes, are announced by `lekiwi_audio` (unless `audio:=false`). To test the patrol announcements without the infinite loop, launch with `wp_loops:=1`.
+`lekiwi_audio` announces these (unless `audio:=false`).
 
-## Configuration
-
-| File | What it sets |
-|------|--------------|
-| [`lekiwi_control/config/urdf_config.yaml`](lekiwi_control/config/urdf_config.yaml) | Servo serial port, motor IDs, mock mode, servo speed profile |
-| [`lekiwi_control/config/control.yaml`](lekiwi_control/config/control.yaml) | Drive controller and controller manager |
-| [`lekiwi_control/config/base_teleop.yaml`](lekiwi_control/config/base_teleop.yaml) | Joystick buttons and axes, and the base's speed limits |
-| [`lekiwi_bringup/config/laser.yaml`](lekiwi_bringup/config/laser.yaml) | LiDAR serial port and settings |
-| [`lekiwi_navigation/config/nav2/`](lekiwi_navigation/config/nav2/) | Nav2, AMCL, slam_toolbox, map saver and waypoint patrol settings |
-| [`lekiwi_navigation/config/robot_localization/`](lekiwi_navigation/config/robot_localization/) | EKF sensor fusion for each `fusion_mode` |
-| [`lekiwi_audio/config/phrases.yaml`](lekiwi_audio/config/phrases.yaml) | The spoken phrases |
-
-The base's speed limits are the joystick axis scales in `base_teleop.yaml`; the drive controller enforces none, so `nav2.yaml`'s `velocity_smoother` must match them.
-
-### Costmap zones
-
-Nav2 no-go and speed-limited zones are supported. The zone masks live under `lekiwi_navigation/maps/<map_name>/filters/` and are saved automatically with each map.
+`joy_teleop` reads `/joy`. Start `joy_node` on this machine with `joy:=true`, or run `ros2 run joy joy_node` on the machine the joystick is plugged into (same `ROS_DOMAIN_ID`). For another gamepad, run `ros2 topic echo /joy`, note which axis or button each control changes, and edit the numbers in [`base_teleop.yaml`](lekiwi_control/config/base_teleop.yaml).
 
 ## Simulation
 
-`sim:=true` runs the same launch files against MuJoCo instead of the hardware, headless by default (`mujoco_gui:=true` opens the viewer and needs a display). The model is generated at launch from the URDF and controller configuration by [`lekiwi_mujoco`](lekiwi_mujoco/README.md), which mounts the payload's own model. The simulated hardware covers the wheels, IMU, LiDAR (`/scan`), the emergency stop, and the payload's joints and sensors (with the pan-tilt, its camera images). The battery monitor and audio are not simulated and are skipped.
-
-Motion control is verified end to end: a single `controller_manager` drives the wheels and the payload together, the IMU publishes real data including gravity, and odometry and TF update correctly. The simulation has not been compared against real hardware. To watch it from another machine, run `foxglove_bridge` and connect [Foxglove](https://foxglove.dev/) to `ws://<host>:8765`.
+`sim:=true` runs the same launch files against MuJoCo instead of the hardware, headless by default. [`lekiwi_mujoco`](lekiwi_mujoco/README.md) generates the model from the URDF; it covers the wheels, IMU, LiDAR, emergency stop and the Gemini 2. The battery monitor and audio are not simulated.
 
 ## Payloads
 
-The base runs on its own (`payload:=""`). Optional payloads, each in its own repository under `payloads/`, mount on top of it; `payload:=<name>` selects one. Currently that is `pantilt` ([pantilt_ros2](https://github.com/adityakamath/pantilt_ros2): pan-tilt + Gemini 2 camera), which is also the reference to copy. Following the same layout, users can add their own payloads, such as the SO-101 arm.
+A payload replaces the tray: the base swaps its top plate for `payload_plate` and the payload mounts on it. Each payload lives in its own repository under `payloads/`; `payload:=<name>` selects it. The SO-101 arm is in progress. To add your own, see [using it on another robot](lekiwi_description/README.md#using-it-on-another-robot).
 
-How a payload is wired in (`<name>` is the `payload` value):
+### Pan-tilt payload (legacy)
 
-1. **Registered** in `_VALID_PAYLOADS` in `lekiwi_bringup/launch/lekiwi.launch.py`, which forwards `payload` to the control launch (which also starts teleop) and the laser launch.
-2. **Description:** the payload repository provides a URDF module with a fixed mount joint; `lekiwi_description/urdf/base_<name>/` combines it with the base.
-3. **Control and teleop:** the payload's own control package supplies its controller (`pantilt_controller.yaml`, which `lekiwi_control` gives to the spawner with `--param-file`) and its servo profile, so nothing is copied into lekiwi and one `controller_manager` still drives the base and the payload. `lekiwi_control` keeps only what depends on the host, the joystick layout in `config/<name>_teleop.yaml`, loaded on top of `base_teleop.yaml`.
-4. **Sensors:** a payload that blocks part of the LiDAR's view adds `lekiwi_bringup/config/<name>_laser_filter.yaml`, which `laser.launch.py` applies automatically.
-5. **Simulation:** the payload's MuJoCo package builds its model from the robot's URDF (for `pantilt`, `pt_mujoco`'s `build_payload_spec`), and `lekiwi_mujoco` attaches it at the URDF's mount joint.
+The pan-tilt runs the wheels in velocity mode and the pan and tilt servos in position mode on one servo bus with [`sts_hardware_interface`](https://github.com/adityakamath/sts_hardware_interface). It is no longer maintained and stays at the commit pinned by the submodule. To use it:
 
-A few launch-file branches still test for `pantilt` explicitly (in `lekiwi.launch.py` and `control.launch.py`), so adding a payload means extending them as well as providing the pieces above.
+1. `git submodule update --init payloads/pantilt_ros2`
+2. Follow the [pan-tilt installation instructions](payloads/pantilt_ros2/README.md#installation).
+3. `colcon build --packages-up-to lekiwi_bringup pt_description pt_control pt_mujoco pt_bringup`
+4. `ros2 launch lekiwi_bringup lekiwi.launch.py payload:=pantilt` (the D-pad pans and tilts)
 
-## Camera
+## Development
 
-The description exports `base_pantilt_gemini2.urdf` in `lekiwi_description/urdf/base_pantilt/`, using PT101. LeKiwi meshes use `../../meshes/`; pantilt meshes use raw GitHub URLs. See [URDF regeneration](lekiwi_description/README.md#regenerating-the-pre-built-urdfs).
+| To do this | Look here |
+|------------|-----------|
+| Change the launch or add a launch argument | `lekiwi_bringup/launch/lekiwi.launch.py` (forwards to `lekiwi_control/launch/control.launch.py` and `lekiwi_navigation/launch/navigation.launch.py`) |
+| Change the robot model | `lekiwi_description/urdf/base/` (`base.urdf.xacro`, `base.module.xacro`, `base.common.xacro`) |
+| Change joystick buttons or speed limits | `lekiwi_control/config/base_teleop.yaml` |
+| Add a payload | `_VALID_PAYLOADS` in `lekiwi_bringup/launch/lekiwi.launch.py` and [using it on another robot](lekiwi_description/README.md#using-it-on-another-robot) |
 
-MuJoCo includes the PT101 with Gemini 2 model, `lekiwi_pt101_gemini2.xml`. See [camera model and regeneration](lekiwi_mujoco/README.md#camera-model).
-
-Real Gemini 2 requires the upstream Orbbec source driver and USB rules described in [pantilt installation](payloads/pantilt_ros2/README.md#installation). Camera-only calibration uses `pt_bringup/gemini2.launch.py`; live acquisition and physical mount calibration still await hardware. Gemini uses `/gemini2/*` in hardware and simulation; real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; simulation also provides a camera-mounted six-axis IMU. Add one colored cloud with `pointcloud:=true`; on real hardware this also starts Cloudini and publishes `/gemini2/depth_registered/points/compressed`. Adjust the shared `camera_fps` or set `enable_camera:=false` to lower the load. See [simulation fidelity](lekiwi_mujoco/README.md#camera-model).
-
-To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
+After editing the URDF, regenerate the pre-built files:
 
 ```bash
-ros2 launch lekiwi_bringup lekiwi.launch.py enable_camera:=false
+python3 lekiwi_description/test/test_urdf_xacro.py --write       # URDFs
+cd lekiwi_mujoco && python3 -m lekiwi_mujoco.build_mujoco_models  # MuJoCo models
 ```
 
-LeKiwi passes `enable_camera` to the camera-only launch in `pt_bringup`, which skips the driver and streaming helpers before resolving camera dependencies when false. Camera geometry remains in the URDF. In simulation, the same flag skips camera rendering and processing while preserving its URDF and MJCF geometry.
+Run the tests from a built and sourced workspace, from the workspace root, after `pip install -r requirements-dev.txt` (lint with `ruff check .`), `pip install -r src/lekiwi_ros2/lekiwi_mujoco/requirements.txt` and `pip install -r src/lekiwi_ros2/lekiwi_audio/requirements-build.txt`:
+
+```bash
+pytest src/lekiwi_ros2/{lekiwi_control,lekiwi_navigation,lekiwi_description,lekiwi_mujoco,lekiwi_audio}/test \
+  src/lekiwi_ros2/lekiwi_bringup/test/test_laser_filter.py
+```
+
+Each package README has its own test notes.
 
 ## License
 

@@ -1,0 +1,6 @@
+# CameraPlugin for the no-payload base (the pan-tilt payload loads pt_mujoco's own copy); its rate comes from camera_fps.
+/**:
+  ros__parameters:
+    mujoco_plugins:
+      mujoco_camera_plugin:
+        type: "mujoco_ros2_control_plugins/CameraPlugin"

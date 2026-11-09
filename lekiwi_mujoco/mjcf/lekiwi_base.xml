@@ -49,6 +49,7 @@
     <mesh name="container_plate_visual" file="../../lekiwi_description/meshes/container_plate.stl"/>
     <mesh name="payload_plate_visual" file="../../lekiwi_description/meshes/payload_plate.stl"/>
     <mesh name="omni_wheel_visual" file="../../lekiwi_description/meshes/omni_wheel_mujoco.stl"/>
+    <mesh name="gemini2" file="../../lekiwi_description/meshes/gemini2.stl"/>
   </asset>
 
   <worldbody>
@@ -650,6 +651,15 @@
           <inertial pos="0 0 0" mass="0.05" diaginertia="1e-05 1e-05 1e-05"/>
           <geom class="marker" mass="0" material="base_charcoal" mesh="respeaker_flex_mic"/>
         </body>
+        <body name="gemini2_link" pos="0.09365 0 0.0723">
+          <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
+          <site name="gemini2_imu" size="0.001" quat="0.5 -0.5 0.5 -0.5"/>
+          <camera name="gemini2_rgb" quat="-0.5 -0.5 0.5 0.5" resolution="640 360" fovy="55"/>
+          <body name="gemini2_link_model_origin" quat="0.5 0.5 0.5 0.5">
+            <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
+            <geom type="mesh" contype="0" conaffinity="0" group="2" rgba="0.15 0.15 0.15 1" mass="0" mesh="gemini2"/>
+          </body>
+        </body>
       </body>
     </frame>
   </worldbody>
@@ -1030,6 +1040,9 @@
     <rangefinder site="lidar-357" name="lidar-357" cutoff="12"/>
     <rangefinder site="lidar-358" name="lidar-358" cutoff="12"/>
     <rangefinder site="lidar-359" name="lidar-359" cutoff="12"/>
+    <accelerometer site="gemini2_imu" name="gemini2_accel"/>
+    <gyro site="gemini2_imu" name="gemini2_gyro"/>
+    <framequat objtype="site" objname="gemini2_imu" name="gemini2_quat"/>
   </sensor>
 
   <custom>

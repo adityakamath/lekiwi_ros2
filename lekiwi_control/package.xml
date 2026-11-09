@@ -22,8 +22,6 @@
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>lekiwi_description</exec_depend>
   <exec_depend>lekiwi_mujoco</exec_depend>
-  <exec_depend>pt_control</exec_depend>
-  <exec_depend>pt_mujoco</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>controller_manager</exec_depend>

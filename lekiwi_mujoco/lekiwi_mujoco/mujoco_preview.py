@@ -3,7 +3,7 @@
 
 On macOS run with mjpython. No waypoint follower or ROS controller is included.
 
-Standalone, no install needed: `python3 -m lekiwi_mujoco.mujoco_preview --variant pt101`,
+Standalone, no install needed: `python3 -m lekiwi_mujoco.mujoco_preview --variant base`,
 run from this package's root dir (-m puts the cwd on sys.path). After `pip install -e .`
 (or a colcon build), the same tool is also `mujoco_preview` on PATH / `ros2 run lekiwi_mujoco
 mujoco_preview`.
@@ -188,7 +188,7 @@ STATUS_LABELS = 'Model\nTime\nStatus'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--variant', choices=['base', 'pt101'], default='pt101')
+    parser.add_argument('--variant', choices=['base', 'pt101'], default='base')
     parser.add_argument('--control-package', type=Path)
     parser.add_argument('--description-package', type=Path)
     parser.add_argument('--pt-package', type=Path)

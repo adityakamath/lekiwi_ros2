@@ -4,12 +4,20 @@
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.common.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.control.xacro"/>
   <xacro:include filename="$(find lekiwi_description)/urdf/base/base.module.xacro"/>
+  <xacro:include filename="$(find lekiwi_description)/urdf/base/camera.module.xacro"/>
 
   <!-- Standalone lekiwi base instantiation -->
   <link name="base_footprint"/>
   <xacro:lekiwi_base_module parent="base_footprint">
     <origin xyz="0 0 ${wheel_radius - wheel_base_offset_z}" rpy="0 0 0"/>
   </xacro:lekiwi_base_module>
+
+  <!-- Static Gemini 2 on the base bracket; same frames as the pan-tilt's camera (gemini2_link, gemini2_imu_frame),
+       so the driver, sim camera and /gemini2/* topics are identical with or without a payload.
+       Nothing here comes from pantilt_ros2. -->
+  <xacro:gemini2_camera parent="base_link">
+    <origin xyz="${gemini2_base_offset_x} 0 ${gemini2_base_offset_z}" rpy="0 0 0"/>
+  </xacro:gemini2_camera>
 
   <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
        $(arg simulation_controllers). Inert (ignored) outside Gazebo, so this is safe to

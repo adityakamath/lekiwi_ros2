@@ -1,6 +1,6 @@
 # LeKiwi MuJoCo
 
-MuJoCo models of LeKiwi (`base`, `pt101`), generated from the URDF and the controller configuration. The package gives you three ways to use them:
+MuJoCo models of LeKiwi (`base`: the tray with a static Gemini 2, the recommended configuration; `pt101`: the legacy pan-tilt payload), generated from the URDF and the controller configuration. The package gives you three ways to use them:
 
 - **Standalone:** a native viewer, a model builder and a benchmark, with no ROS needed.
 - **ROS simulation:** `sim:=true` runs the same launch files as the real robot against the model in `mujoco_ros2_control`.
@@ -21,16 +21,17 @@ MuJoCo models of LeKiwi (`base`, `pt101`), generated from the URDF and the contr
 
 ## Camera model
 
-The pan-tilt model uses the Gemini 2 camera (`lekiwi_pt101_gemini2.xml`); the base-only model has no camera.
+Both models have a Gemini 2: the base model (`lekiwi_base.xml`) has it fixed to the front bracket, and the legacy pan-tilt model (`lekiwi_pt101_gemini2.xml`) has the pan-tilt's own camera on the tilt link. `build_mujoco_models` builds the base model's camera from the URDF and the Gemini 2 mesh in `lekiwi_description`.
 
 ```bash
 python3 -m lekiwi_mujoco.build_mujoco_models
-python3 -m lekiwi_mujoco.mujoco_preview --variant pt101
+python3 -m lekiwi_mujoco.mujoco_preview --variant base
 python3 -m lekiwi_mujoco.benchmark_mujoco --output motion.json
-ros2 launch lekiwi_bringup lekiwi.launch.py payload:=pantilt sim:=true
+ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true                        # base with Gemini 2
+ros2 launch lekiwi_bringup lekiwi.launch.py payload:=pantilt sim:=true       # legacy pan-tilt
 ```
 
-The camera assembly is built from the URDF and the payload's camera-specific subtree. Generated MJCF assets keep the existing relative filesystem paths. Gemini simulation uses `/gemini2/*`. The Gemini profile follows [Orbbec's specifications](https://www.orbbec.com/products/stereo-vision-camera/gemini-2/), [datasheet](https://www.orbbec.com/wp-content/uploads/2023/04/ORBBEC_Datasheet_Gemini-2.pdf), and the [ROS SDK launch configuration](https://github.com/orbbec/OrbbecSDK_ROS2/blob/v2-main/orbbec_camera/launch/gemini2.launch.py):
+The camera assembly is built from the URDF: for the base, by `build_mujoco_models` itself, and for a payload, from the payload's camera-specific subtree. Generated MJCF assets keep the existing relative filesystem paths. Gemini simulation uses `/gemini2/*`. The Gemini profile follows [Orbbec's specifications](https://www.orbbec.com/products/stereo-vision-camera/gemini-2/), [datasheet](https://www.orbbec.com/wp-content/uploads/2023/04/ORBBEC_Datasheet_Gemini-2.pdf), and the [ROS SDK launch configuration](https://github.com/orbbec/OrbbecSDK_ROS2/blob/v2-main/orbbec_camera/launch/gemini2.launch.py):
 
 - RGB: 640×360, nominal 55° vertical / approximately 86° horizontal field of view, upright at the home pose. Rendering is capped at 5 Hz; the shared `camera_fps` argument can lower it further in simulation.
 - Registered depth: ideal depth rendered into the RGB view, with the same intrinsics and `gemini2_color_optical_frame`. `/gemini2/depth/image_raw` is `16UC1` in millimeters; invalid values and depths outside 0.15–10 m are zero. Both color and depth camera-info topics are published.
@@ -38,14 +39,14 @@ The camera assembly is built from the URDF and the payload's camera-specific sub
 - Obstacle scan: `/gemini2/scan` is sliced directly from the registered depth image at the camera center row (0.15–10 m). It does not require a point cloud. The base LiDAR keeps `/scan` for Nav2.
 - IMU: upstream `mujoco_ros2_control` maps a camera-mounted frame quaternion, gyroscope and accelerometer into ROS 2 control sensor interfaces. A second `imu_sensor_broadcaster` publishes `/gemini2/gyro_accel/sample` in `gemini2_accel_gyro_optical_frame` at the 50 Hz controller rate. Its orientation is an ideal simulated pose, unlike the real six-axis camera stream; the camera sensors follow base and pan-tilt motion and include gravity.
 
-This matches the enabled stream types in our real-driver wrapper (color, registered depth, synchronized IMU; IR disabled). The simulated color, depth, scan, and camera IMU start with `enable_camera:=true`; `enable_camera:=false` retains the model but skips the camera plugin and processing nodes. `pointcloud:=true` adds a colored cloud in simulation; on real hardware it enables a colored cloud and Cloudini compression for either camera. Simulation does not run Cloudini. JPEG RGB is always published for remote viewers. The scan uses `depthimage_to_laserscan` directly so it remains available without any cloud conversion. Raw unregistered depth has a wider nominal 91°×66° field of view and is not represented by the registered color view. We do not simulate IR illumination, stereo matching artifacts, rolling shutter, lens distortion, device-specific calibration offsets, IMU bias/noise, exposure controls, temperature, metadata, or device services. Camera and IMU extrinsics are idealized and co-located; they need hardware calibration. `/_gemini2/depth_raw` is the hidden floating-point render input, not an SDK topic. Optional cloud conversion uses hidden `/_gemini2/registered_points` before invalid points are removed.
+This matches the enabled stream types in our real-driver wrapper (color, registered depth, synchronized IMU; IR disabled). The simulated color, depth, scan, and camera IMU start with `enable_camera:=true`; `enable_camera:=false` retains the model but skips the camera plugin and processing nodes. `pointcloud:=true` adds a colored cloud in simulation; on real hardware it enables a colored cloud and Cloudini compression for either camera. Simulation does not run Cloudini. JPEG RGB is always published for remote viewers. The scan comes from `depthimage_to_laserscan` on the depth image and needs no cloud conversion. Raw unregistered depth has a wider nominal 91°×66° field of view and is not represented by the registered color view. We do not simulate IR illumination, stereo matching artifacts, rolling shutter, lens distortion, device-specific calibration offsets, IMU bias/noise, exposure controls, temperature, metadata, or device services. Camera and IMU extrinsics are idealized and co-located; they need hardware calibration. `/_gemini2/depth_raw` is the hidden floating-point render input, not an SDK topic. Optional cloud conversion uses hidden `/_gemini2/registered_points` before invalid points are removed.
 
 An explicit `--model` or `mujoco_model` selects an existing model and must match the chosen camera.
 
 ## Requirements
 
 - Python packages installed into your active Python environment (for ROS simulation, use the interpreter that ROS and colcon use): `pip install -r requirements.txt` (`mujoco`, `numpy`, `xacro`, `PyYAML`). Add `pytest<8` to run the tests.
-- The payload submodule for the pan-tilt models: run `git submodule update --init payloads/pantilt_ros2` from the `lekiwi_ros2` repository root. It provides `pt_description` and `pt_mujoco`.
+- Only for the legacy pan-tilt models, the payload submodule: run `git submodule update --init payloads/pantilt_ros2` from the `lekiwi_ros2` repository root. It provides `pt_description` and `pt_mujoco`.
 - For the ROS simulation only, on Kilted:
   - `sudo apt install ros-kilted-mujoco-ros2-control ros-kilted-mujoco-ros2-control-plugins ros-kilted-mujoco-3d-lidar ros-kilted-laser-filters` (0.1.2 or newer; older releases have no camera or native lidar plugin)
   - [mujoco_ros2_plugins](../modules/mujoco_ros2_plugins/README.md), from the `modules/` submodule, built in the same workspace. It provides the simulated emergency-stop service (default `/emergency_stop`; configurable with `mujoco_plugins.emergency_stop_plugin.service_name`).
@@ -65,13 +66,13 @@ Standalone use does not require a ROS launch or sourcing a ROS workspace.
 
 ```sh
 # macOS
-mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101      # native viewer
+mjpython -m lekiwi_mujoco.mujoco_preview --variant base      # native viewer
 
 # Linux
-python3 -m lekiwi_mujoco.mujoco_preview --variant pt101       # native viewer
+python3 -m lekiwi_mujoco.mujoco_preview --variant base       # native viewer
 
 # Any platform
-python3 -m lekiwi_mujoco.build_mujoco_models --variant pt101 --output /tmp/robot.xml --absolute
+python3 -m lekiwi_mujoco.build_mujoco_models --variant base --output /tmp/robot.xml --absolute
 python3 -m lekiwi_mujoco.benchmark_mujoco --output motion.json
 ```
 
@@ -85,7 +86,7 @@ variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco 
 platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
 as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
-Always build models with `build_mujoco_models` rather than plain xacro: it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model entirely, matching what the real robot's `laser_filters` chain discards - so `mujoco_preview`'s rangefinder rays only ever show the unblocked ~295°, with no separate runtime filtering needed. With no arguments it regenerates both committed models: `lekiwi_base.xml` and `lekiwi_pt101_gemini2.xml`, which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
+Build models with `build_mujoco_models`, not plain xacro; it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model, as the real robot's `laser_filters` chain discards them, so `mujoco_preview` shows only the unblocked ~295°. With no arguments it regenerates both committed models: `lekiwi_base.xml` and `lekiwi_pt101_gemini2.xml`, which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
 
 The viewer draws native LiDAR rays only when they hit geometry. In open space
 (such as outside the maze entrance), missing yellow rays represent no-hit readings,
@@ -98,76 +99,29 @@ import mujoco
 from lekiwi_mujoco.build_mujoco_models import build
 from lekiwi_mujoco.simulation import Simulation
 
-sim = Simulation(mujoco.MjModel.from_xml_path(str(build("pt101", "/tmp/lekiwi.xml", absolute=True))))
+sim = Simulation(mujoco.MjModel.from_xml_path(str(build("base", "/tmp/lekiwi.xml", absolute=True))))
 sim.reset()
-sim.step(10, action=[1., 0., 0., 0., 0.])   # normalized [vx, vy, yaw, pan, tilt] rates
+sim.step(10, action=[1., 0., 0.])   # normalized [vx, vy, yaw] rates (pt101 adds pan and tilt)
 ```
 
-### Test arena
+### Scenes
 
-`arena` is a 4 × 4 m robot test course with a clear 1.3 × 1.3 m central maneuvering
-area. Along the perimeter are three north gates (0.6, 0.8 and 1.0 m clear width,
-marked with one, two and three blue floor ticks), an east slalom, a southwest
-docking pocket with a flared entrance and a 1 m inner width, and a southern pushing area with a 180 g box
-and 60 g ball. The docking pocket opens east. All other obstacles are fixed.
-The dock has a centerline, a robot-center stop line, and a contrasting back-wall
-target. Push the box east into the orange floor target, then reposition south of
-it and push north into the blue target. The lane behind the gates is 0.70 m wide;
-the outer slalom lane has at least 0.60 m clearance.
-Reset restores both movable objects. Prop masses and friction are illustrative.
+`--scene <name>` (standalone) or `mujoco_scene:=<name>` (ROS) selects the environment. Layouts, objects and fixed cameras are described in the [scenes README](mjcf/scenes/README.md).
 
-Warm walls, colored landmarks, and a bounded sand-colored floor distinguish the
-course; the standard blue checkerboard continues outside. Floor markings are
-visual only. Select `arena_top` or `arena_overview` for a view of the entire course.
-
-```sh
-mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene arena
-```
-
-### Home scene
-
-Use `--scene home` with the standalone viewer or `mujoco_scene:=home` with ROS.
-The 8 × 8 m apartment has a living room, kitchen and dining area, an enlarged bedroom, and
-a 2.8 × 2.8 m room in the northwest corner with glass partitions and a 1 m doorway.
-The glass partitions are translucent, solid collision geometry. Low cutaway walls expose the layout from above; doorways, table legs,
-and furniture provide navigation obstacles. The robot starts in the clear central
-hall. `home_overview` and `home_top` are fixed cameras available in the viewer.
-
-Three objects have free joints and can be pushed: a 180 g cardboard box east of
-spawn, an 80 g foam block northwest of spawn, and a 60 g toy ball near the dining
-area. They use low friction; furniture stays fixed. Reset restores the objects as
-well as the robot. The apartment flooring stops at the outer walls, with the standard blue MuJoCo
-checkerboard outside. Rugs and floor finishes are visual only, so they introduce no
-steps or changes in wheel traction. Prop masses and friction are illustrative,
-not calibrated to physical household objects.
-
-```sh
-# macOS standalone apartment
-mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene home
-```
-
-### Maze scene
-
-`--scene maze` opens a 7 × 7-cell maze with 1.12 m clear corridors, multiple
-dead ends, and two 2 × 2-cell clearings (2.32 m clear width). The robot starts
-outside the blue west entrance at `(0, 0)`. Follow the east-pointing entry
-chevrons; the orange exit is on the east boundary at `(9.2, 7.2)`.
-The maze uses warm off-white walls and the home scene’s wood-colored floor finish.
-This finish extends 0.5 m beyond the outer walls; the standard blue
-checkerboard floor continues elsewhere. Clearings use the same floor as corridors.
-All cells are reachable, with a continuous route through the maze. No route is
-painted on the floor. `maze_top` and `maze_overview` provide fixed camera views.
-
-```sh
-mjpython -m lekiwi_mujoco.mujoco_preview --variant pt101 --scene maze
-```
+| Scene | What it is | Preview |
+|-------|------------|---------|
+| `flat` | Standard floor (default) | `mjpython -m lekiwi_mujoco.mujoco_preview --variant base` |
+| `arena` | 4 × 4 m test course with gates, a slalom, a docking pocket and pushable props | `... --scene arena` |
+| `home` | 8 × 8 m furnished apartment with pushable props | `... --scene home` |
+| `maze` | 7 × 7-cell maze with dead ends and clearings | `... --scene maze` |
+| `none` | No scene, or pass a scene MJCF path | |
 
 ### ROS simulation
 
 ```sh
 colcon build --packages-up-to lekiwi_bringup && . install/setup.bash
 ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=home   # full stack, headless
-ros2 launch lekiwi_control control.launch.py ros2_control_hardware_type:=mujoco payload:=pantilt \
+ros2 launch lekiwi_control control.launch.py ros2_control_hardware_type:=mujoco \
     mujoco_headless:=true use_sim_time:=true mujoco_scene:=home            # control only
 ```
 
@@ -188,7 +142,7 @@ For the lightest camera setup, keep the default `pointcloud:=false`, reduce `cam
 | `/mujoco_ros2_control_node/{reset_world,set_free_joint_state,set_pause,step_simulation}` | Reset, teleport the base, pause and single-step the simulation |
 | `/joint_states`, `/imu_sensor_broadcaster/imu`, `/base_controller/odom` | From ros2_control on the simulated hardware |
 
-Notes for control-only runs: `control.launch.py` publishes `odom -> base_footprint` from wheel odometry (`enable_odom_tf:=true`), while `lekiwi.launch.py` turns that off because the EKF publishes it. Without Nav2 nothing consumes `/cmd_vel_presafety`, so publish to `/base_controller/cmd_vel`. The controller enforces no speed limits; teleop scales and Nav2 do. The native LiDAR plugin only loads inside ROS's MuJoCo, so the standalone tools use per-ray rangefinders.
+Notes for control-only runs: `control.launch.py` publishes `odom -> base_footprint` from wheel odometry (`enable_odom_tf:=true`), while `lekiwi.launch.py` turns it off (the EKF publishes it). Without Nav2 nothing consumes `/cmd_vel_presafety`, so publish to `/base_controller/cmd_vel`. The controller enforces no speed limits; teleop scales and Nav2 do. The native LiDAR plugin only loads inside ROS's MuJoCo, so the standalone tools use per-ray rangefinders.
 
 ## Configuration
 
@@ -196,7 +150,8 @@ Notes for control-only runs: `control.launch.py` publishes `odom -> base_footpri
 |------|--------------|
 | `config/mujoco.yaml` | Timestep and solver, contact and roller parameters, wheel actuator gains, wheel servo armature and friction (BAM-identified STS3215), the LiDAR, and the standalone base speed |
 | `config/mujoco_ros2_control_plugins.yaml` | ROS plugins: LiDAR, ground-truth pose, emergency stop and external wrench |
-| `config/mujoco_camera_pantilt.yaml` | Lowers the pan-tilt camera rate for the Raspberry Pi |
+| `config/mujoco_camera_plugin.yaml`, `mujoco_camera_gemini2.yaml` | The camera plugin and the Gemini 2 render camera's topics, for the base (a payload loads its own) |
+| `config/mujoco_camera_pantilt.yaml` | Lowers the legacy pan-tilt camera rate for the Raspberry Pi |
 | `config/mujoco_laser_filter*.yaml` | Laser filter chain, with and without the pan-tilt mask |
 | `mjcf/` | Robot MJCF sources and generated models. Robot geometry, masses and limits are derived from the URDF at build time |
 | `mjcf/scenes/` | `flat.xml` (standard floor), `arena.xml` (4 × 4 m test course), `home.xml` (8 × 8 m apartment), and `maze.xml` (7 × 7 cells). Scene geometry is authored in these files |

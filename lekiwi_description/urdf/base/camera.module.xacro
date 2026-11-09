@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Static Gemini 2 for the no-payload base. Same frames as pantilt_ros2's camera macro
+       (gemini2_link, gemini2_imu_frame, gemini2_link_model_origin), so the driver and /gemini2/* topics
+       are identical with or without a payload; kept here so the base does not depend on pantilt_ros2. -->
+  <xacro:macro name="gemini2_camera" params="parent *origin">
+
+    <material name="gemini2_charcoal">
+      <color rgba="${charcoal_rgba}"/>
+    </material>
+
+    <!-- Camera frame: x forward, z up; the mesh's rear (seat) face is 18.65 mm behind it -->
+    <link name="gemini2_link"/>
+    <joint name="gemini2_link_center_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="gemini2_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <!-- IMU frame (offset and orientation from the camera's own IMU) -->
+    <link name="gemini2_imu_frame"/>
+    <joint name="gemini2_imu_frame_joint" type="fixed">
+      <parent link="gemini2_link"/>
+      <child link="gemini2_imu_frame"/>
+      <origin xyz="-0.008 -0.037945 -0.00079" rpy="${pi} ${pi/2} 0"/>
+    </joint>
+
+    <link name="gemini2_link_model_origin">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/gemini2.stl"/>
+        </geometry>
+        <material name="gemini2_charcoal"><color rgba="${charcoal_rgba}"/></material>
+      </visual>
+    </link>
+    <joint name="gemini2_link_model_origin_joint" type="fixed">
+      <parent link="gemini2_link"/>
+      <child link="gemini2_link_model_origin"/>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 ${pi/2}"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

@@ -569,3 +569,26 @@ def test_gemini_intrinsics_and_camera_mounted_imu(variant):
     optical = data.site_xmat[site].reshape(3, 3)
     render = data.cam_xmat[camera].reshape(3, 3)
     np.testing.assert_allclose(optical, render @ np.diag([1, -1, -1]), atol=1e-6)
+
+
+def test_static_gemini_on_the_base_is_independent_of_pantilt_ros2(monkeypatch):
+    for name in ('PT_DESCRIPTION_SHARE', 'PT_MUJOCO_SHARE', 'PT_CONTROL_SHARE'):
+        monkeypatch.setenv(name, '/nonexistent')
+    from lekiwi_mujoco.build_mujoco_models import build_robot_spec
+    model = build_robot_spec('base').compile()
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    camera = model.camera('gemini2_rgb').id
+    base = data.body('base_link')
+    rotation = base.xmat.reshape(3, 3)
+    assert np.allclose(rotation.T @ (data.cam_xpos[camera] - base.xpos), [0.09365, 0, 0.0723], atol=1e-6)
+    assert np.allclose(rotation.T @ -data.cam_xmat[camera].reshape(3, 3)[:, 2], [1, 0, 0], atol=1e-6)
+    assert model.cam_resolution[camera].tolist() == [640, 360]
+    for name in ('gemini2_quat', 'gemini2_accel', 'gemini2_gyro'):
+        assert model.sensor(name).id >= 0
+
+
+def test_the_pantilt_model_has_one_gemini_camera_not_two():
+    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101_gemini2.xml'))
+    assert [model.camera(i).name for i in range(model.ncam)].count('gemini2_rgb') == 1
+    assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, 'tilt_link') >= 0

@@ -102,6 +102,33 @@ class TestBaseUrdf:
             f"xacro reported errors:\n{self.stderr}"
 
 
+class TestBaseStaticGemini2:
+    """The no-payload base carries its own Gemini 2 on the front bracket, independent of pantilt_ros2."""
+
+    def setup_method(self):
+        self.stdout, _, self.rc = _xacro(_URDF_BASE, _BASE_ARGS)
+        self.root = ET.fromstring(self.stdout)
+
+    def test_camera_frames_and_mount(self):
+        links = {link.get('name') for link in self.root.findall('link')}
+        assert {'gemini2_link', 'gemini2_imu_frame', 'gemini2_link_model_origin'} <= links
+        joint = self.root.find("joint[@name='gemini2_link_center_joint']")
+        assert joint.find('parent').get('link') == 'base_link'
+        assert [float(v) for v in joint.find('origin').get('xyz').split()] == pytest.approx([0.09365, 0, 0.0723])
+
+    def test_camera_comes_from_lekiwi_description_only(self):
+        assert 'pt_description' not in self.stdout and 'pantilt' not in self.stdout
+        mesh = self.root.find("link[@name='gemini2_link_model_origin']/visual/geometry/mesh").get('filename')
+        assert mesh == 'package://lekiwi_description/meshes/gemini2.stl'
+        assert os.path.isfile(os.path.join(_PKG_SRC, 'meshes', 'gemini2.stl'))
+
+    def test_pantilt_variant_has_only_the_tilt_camera(self):
+        stdout, _, _ = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
+        root = ET.fromstring(stdout)
+        joints = root.findall("joint[@name='gemini2_link_center_joint']")
+        assert len(joints) == 1 and joints[0].find('parent').get('link') == 'tilt_link'
+
+
 # ── base_pantilt URDF ─────────────────────────────────────────────────────────
 
 class TestBasePantiltUrdf:

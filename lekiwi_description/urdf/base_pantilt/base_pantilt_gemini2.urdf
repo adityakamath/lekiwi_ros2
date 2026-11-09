@@ -188,7 +188,9 @@
       <geometry>
         <mesh filename="../../meshes/lekiwi_base.stl"/>
       </geometry>
-      <material name="base_light_grey"/>
+      <material name="base_light_grey">
+        <color rgba="0.8 0.8 0.8 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
@@ -208,7 +210,9 @@
       <geometry>
         <mesh filename="../../meshes/payload_plate.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
@@ -228,7 +232,9 @@
       <geometry>
         <mesh filename="../../meshes/ld06_lidar.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
@@ -277,7 +283,9 @@
       <geometry>
         <mesh filename="../../meshes/bno055_imu.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -351,7 +359,9 @@
       <geometry>
         <mesh filename="../../meshes/respeaker_flex_mic.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -371,7 +381,9 @@
       <geometry>
         <mesh filename="../../meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -391,7 +403,9 @@
       <geometry>
         <mesh filename="../../meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -411,7 +425,9 @@
       <geometry>
         <mesh filename="../../meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>

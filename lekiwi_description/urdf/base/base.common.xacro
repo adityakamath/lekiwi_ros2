@@ -24,6 +24,12 @@
   <!-- Top plate drop from the plate meshes' CAD origin: plate underside (z=94.5 mm) onto the standoff tops (z=87.5 mm) -->
   <xacro:property name="plate_base_offset_z" value="-0.007"/>
 
+  <!-- Static Gemini 2 (no-payload config) on the base's front bracket, from lekiwi_base.stl: the bracket's
+       front face is at x=75 mm with two 2.7 mm holes 45 mm apart at z=72.3 mm, the same pattern as the
+       pan-tilt's tilt_joint_gemini2.stl. gemini2_link sits 18.65 mm ahead of the rear (seat) face. -->
+  <xacro:property name="gemini2_base_offset_x" value="0.09365"/>
+  <xacro:property name="gemini2_base_offset_z" value="0.0723"/>
+
   <!-- LD06 laser offsets from base_link -->
   <xacro:property name="laser_base_offset_x" value="-0.045042"/>
   <xacro:property name="laser_base_offset_z" value="0.0915"/>

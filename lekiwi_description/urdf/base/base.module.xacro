@@ -30,7 +30,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/lekiwi_base.stl"/>
         </geometry>
-        <material name="base_light_grey"/>
+        <material name="base_light_grey"><color rgba="${light_grey_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
@@ -51,7 +51,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/${plate_mesh}.stl"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
@@ -72,7 +72,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/ld06_lidar.stl"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="${laser_offset_rx} 0 0"/>
@@ -124,7 +124,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -175,7 +175,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/respeaker_flex_mic.stl"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -196,7 +196,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -217,7 +217,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -238,7 +238,7 @@
         <geometry>
           <mesh filename="package://lekiwi_description/meshes/omni_wheel.stl" scale="${wheel_mesh_scale} ${wheel_mesh_scale} ${wheel_mesh_scale}"/>
         </geometry>
-        <material name="base_charcoal"/>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>

@@ -121,10 +121,10 @@ def launch_setup(context):
         f' internal_control_period:={_cfg["internal_control_period"]}'
         f' imu:={str(imu).lower()}'
     )
+    xacro_cmd += f' enable_camera:={str(enable_camera).lower()}'
     if payload == 'pantilt':
         pt_cfg = yaml.safe_load(open(f'{pkg_pt_control}/config/urdf_config.yaml'))
         xacro_cmd += (
-            f' enable_camera:={str(enable_camera).lower()}'
             f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
             f' pantilt_internal_max_vel:={pt_cfg["internal_max_vel"]}'
             f' pantilt_internal_max_acc:={pt_cfg["internal_max_acc"]}'
@@ -174,16 +174,20 @@ def launch_setup(context):
             robot_description,
             f'{pkg_ctrl}/config/control.yaml',
             *([f'{pkg_ctrl}/config/gemini2_imu_broadcaster.yaml']
-              if payload == 'pantilt' and enable_camera else []),
+              if enable_camera else []),
             f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
-            *([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
-               f'{pkg_pt_mujoco}/config/mujoco_camera_gemini2.yaml',
-               f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml']
-              if payload == 'pantilt' and enable_camera else []),
+            # Camera plugin: from pt_mujoco with the pan-tilt, lekiwi_mujoco's own copy without a payload.
+            *(([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
+                f'{pkg_pt_mujoco}/config/mujoco_camera_gemini2.yaml',
+                f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml']
+               if payload == 'pantilt' else
+               [f'{pkg_mujoco}/config/mujoco_camera_plugin.yaml',
+                f'{pkg_mujoco}/config/mujoco_camera_gemini2.yaml'])
+              if enable_camera else []),
             {'use_sim_time': True},
             *([{'mujoco_plugins': {'mujoco_camera_plugin':
                    {'camera_publish_rate': render_fps}}}]
-              if payload == 'pantilt' and enable_camera else []),
+              if enable_camera else []),
             odom_tf_params,
         ],
         output='both',
@@ -205,7 +209,7 @@ def launch_setup(context):
             parameters=[f'{pkg_mujoco}/config/{filter_file}', {'use_sim_time': True}],
             remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
         ))
-        if payload == 'pantilt' and enable_camera:
+        if enable_camera:
             sim_nodes.extend([
                 Node(
                     package='lekiwi_mujoco', executable='gemini2_depth',
@@ -302,7 +306,7 @@ def launch_setup(context):
                  arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
                             '--controller-manager-timeout', '30'], output='both'),
         )
-    if hw_type == 'mujoco' and payload == 'pantilt' and enable_camera:
+    if hw_type == 'mujoco' and enable_camera:
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
                  arguments=['gemini2_imu_broadcaster', '-c', '/controller_manager',
@@ -404,7 +408,7 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start simulated camera publishing; geometry remains selected.'),
         DeclareLaunchArgument('pointcloud', default_value='false',
-                              description='[pantilt simulation] Publish one colored cloud (real hardware uses pt_bringup Cloudini compression when enabled).'),
+                              description='[simulation] Publish one colored cloud (real hardware uses pt_bringup Cloudini compression when enabled).'),
         DeclareLaunchArgument('camera_fps', default_value='15.0',
                               description='Camera frame rate in Hz; simulation is capped at 5 Hz.'),
         DeclareLaunchArgument(

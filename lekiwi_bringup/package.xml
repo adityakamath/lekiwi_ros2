@@ -23,7 +23,11 @@
   <exec_depend>ldlidar_ros2</exec_depend>
   <exec_depend>ina260_battery_monitor</exec_depend>
   <exec_depend>laser_filters</exec_depend>
-  <exec_depend>pt_bringup</exec_depend>
+  <exec_depend>orbbec_camera</exec_depend>
+  <exec_depend>depthimage_to_laserscan</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>compressed_image_transport</exec_depend>
+  <exec_depend>compressed_depth_image_transport</exec_depend>
   <exec_depend>diagnostic_aggregator</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>

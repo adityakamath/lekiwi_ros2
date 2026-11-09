@@ -61,7 +61,7 @@ class TestLekiwiBringupValidation:
                               ['payload:=invalid_payload'])
         assert 'Unknown payload' in output or 'RuntimeError' in output or 'invalid_payload' in output
 
-    def test_pointcloud_without_pantilt_rejected(self):
+    def test_empty_payload_argument_is_malformed(self):
         output, _ = _dry_run('lekiwi_bringup', 'lekiwi.launch.py',
                               ['payload:=', 'pointcloud:=true'])
         # Empty payload is also rejected as malformed - either way launch fails.
@@ -213,3 +213,38 @@ def test_camera_enable_is_forwarded_and_driver_is_lazy(enabled, sim, monkeypatch
         monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
         source.get_launch_description(context)
         assert source.location.endswith('gemini2.launch.py')
+
+
+def test_no_payload_is_the_default_and_uses_its_own_camera_launch(monkeypatch):
+    """The recommended base + static Gemini 2 starts lekiwi_bringup's driver launch and never needs pantilt_ros2."""
+    import importlib.util
+    from pathlib import Path
+    from launch import LaunchContext, LaunchDescription
+    from launch.actions import DeclareLaunchArgument
+    from launch_ros.substitutions import FindPackageShare
+
+    path = Path(__file__).resolve().parents[1] / 'launch/lekiwi.launch.py'
+    spec = importlib.util.spec_from_file_location('lekiwi_default_payload_test', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    context = LaunchContext()
+    for action in module.generate_launch_description().entities:
+        if isinstance(action, DeclareLaunchArgument):
+            action.execute(context)
+    assert context.launch_configurations['payload'] == ''
+    context.launch_configurations.update(sim='false', laser='false', audio='false',
+                                         battery_monitor='false', diagnostics='false')
+    lookups = []
+
+    def find(self, package):
+        lookups.append(package)
+        assert not package.startswith('pt_'), f'no-payload launch must not look up {package}'
+        return '/unused/' + package
+
+    monkeypatch.setattr(FindPackageShare, 'find', find)
+    actions = module.launch_setup(context)
+    source = actions[-1].launch_description_source
+    monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
+    source.get_launch_description(context)
+    assert source.location == '/unused/lekiwi_bringup/launch/gemini2.launch.py'
+    assert not any(name.startswith('pt_') for name in lookups)

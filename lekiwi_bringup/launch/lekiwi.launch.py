@@ -2,8 +2,9 @@
 """Launch the LeKiwi robot system.
 
 The 'payload' argument selects which hardware payload is present:
-  ""        — base drive + navigation + laser [no pan-tilt camera]
-  "pantilt" — base + pan-tilt + selected camera + navigation + laser [default]
+  ""        — base (tray) with the static Gemini 2 + navigation + laser [default, recommended]
+  "pantilt" — base with the payload plate + pan-tilt and its Gemini 2 + navigation + laser
+              [legacy, no longer maintained; needs the pantilt_ros2 submodule]
 
 'imu'/'laser'/'audio'/'battery_monitor' (all default true) each gate one optional physical
 sensor's launch include - see their own DeclareLaunchArgument descriptions below."""
@@ -71,10 +72,6 @@ def launch_setup(context):
         raise RuntimeError(
             f"[lekiwi.launch.py] Unknown payload '{payload}'. "
             f"Valid values: {sorted(_VALID_PAYLOADS)}"
-        )
-    if pointcloud and payload != 'pantilt':
-        raise RuntimeError(
-            "[lekiwi.launch.py] pointcloud:=true requires payload:=pantilt."
         )
     if not imu and fusion_mode in ('base', 'imu'):
         raise RuntimeError(
@@ -168,14 +165,21 @@ def launch_setup(context):
             'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
         }))
 
+    # The Gemini 2 is on every configuration: the pan-tilt's own driver launch with the payload, and
+    # lekiwi_bringup's own without one (pantilt_ros2 is then not needed at all).
     if payload == 'pantilt':
-        pkg_pantilt = FindPackageShare('pt_bringup').perform(context)
-        camera = include(pkg_pantilt, 'launch/gemini2.launch.py', {
+        camera = include(FindPackageShare('pt_bringup').perform(context), 'launch/gemini2.launch.py', {
             'enable_camera': str(enable_camera).lower(),
             'pointcloud': str(pointcloud).lower(),
             'camera_fps': str(int(float(LaunchConfiguration('camera_fps').perform(context)))),
         })
-        actions.append(camera)
+    else:
+        camera = include(pkg_bringup, 'launch/gemini2.launch.py', {
+            'enable_camera': str(enable_camera).lower(),
+            'pointcloud': str(pointcloud).lower(),
+            'camera_fps': str(int(float(LaunchConfiguration('camera_fps').perform(context)))),
+        })
+    actions.append(camera)
 
     return actions
 
@@ -185,8 +189,9 @@ def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument(
             'payload',
-            default_value='pantilt',
-            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
+            default_value='',
+            description='Hardware payload: "" for the base with its static Gemini 2 (default), '
+                        '"pantilt" for the legacy pan-tilt (needs the pantilt_ros2 submodule)',
         ),
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start the selected real or simulated camera; false retains geometry.'),

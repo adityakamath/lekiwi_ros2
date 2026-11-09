@@ -76,10 +76,12 @@ jobs:
 
       - name: colcon build
         # --packages-ignore is required, not optional cleanup: lekiwi_bringup/lekiwi_control's
-        # package.xml declare pt_control/pt_bringup/ldlidar_ros2/sts_hardware_interface/
-        # bno055_hardware_interface/ina260_battery_monitor as dependencies, and colcon discovers them on
-        # disk via their submodules even with --packages-select - then fails trying to source
-        # their (never-built) install output unless explicitly ignored. Each has its own CI already.
+        # package.xml declare ldlidar_ros2/sts_hardware_interface/bno055_hardware_interface/
+        # ina260_battery_monitor as dependencies, and colcon discovers them on disk via their
+        # submodules even with --packages-select - then fails trying to source their (never-built)
+        # install output unless explicitly ignored. The pan-tilt packages are no longer declared
+        # as dependencies (the payload is optional), but pt_control/pt_bringup are still ignored here
+        # for the same reason when their submodule is checked out. Each has its own CI already.
         run: |
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           # mujoco_ros2_plugins (C++, needs mujoco_ros2_control_plugins) is built on kilted only.

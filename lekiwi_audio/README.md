@@ -17,7 +17,7 @@ Spoken status announcements for LeKiwi. A node watches the robot's services and 
 
 - ROS 2 Kilted with `rclpy`, `std_srvs`, `action_msgs` and `service_msgs`, and `aplay` (`sudo apt install alsa-utils`).
 - `pip install -r requirements.txt` (PyYAML) into the interpreter that ROS uses.
-- A speaker. On LeKiwi this is the reSpeaker Flex; install the udev rule as described in the [repository README](../README.md#stable-device-names-udev).
+- A speaker. On LeKiwi this is the reSpeaker Flex; install the udev rule as described in the [repository README](../lekiwi_bringup/README.md#stable-device-names-udev).
 - Only to re-render the clips after editing `phrases.yaml`: `pip install -r requirements-build.txt` (`kokoro-onnx`, `onnxruntime`, `soundfile`, `numpy`). The Kokoro model files (about 116 MB) are downloaded on the first render and are not committed.
 
 ## Running
@@ -59,7 +59,7 @@ To change what is said, edit the text in `phrases.yaml` and rebuild the package 
 
 ## How it works
 
-The node needs no hard-coded service names. It listens to each service's introspection topic (`<service>/_service_event`) and to the Nav2 `_action/status` topics, and plays the clip for the phrase configured for that outcome. Late joiners hear the current state of the e-stop, mode, waypoint and battery services, so a restart does not go silent. Clips are named after a short hash of the phrase text, so rendering is incremental and the node finds the right file without a manifest.
+The node listens to each service's introspection topic (`<service>/_service_event`) and to the Nav2 `_action/status` topics, and plays the clip for the phrase configured for that outcome. When it starts it announces the current state of the e-stop, mode, waypoint and battery services. Clips are named after a short hash of the phrase text; rendering skips clips that already exist.
 
 ## Tests
 

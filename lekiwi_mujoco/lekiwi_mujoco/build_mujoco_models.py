@@ -98,6 +98,31 @@ def attach_payload(spec, variant, urdf, payload_limits, packages):
     spec.attach(payload, prefix='', frame=frame)
 
 
+def add_static_camera(spec, urdf, packages):
+    """No-payload Gemini 2 on the base bracket: frames from the URDF, camera/IMU like pt_mujoco's gemini2 subtree.
+
+    With the pan-tilt payload the camera comes from pt_mujoco instead, so this is base-only.
+    """
+    mount = spec.body('base_link').add_body(name='gemini2_link')
+    set_origin(mount, urdf.find("joint[@name='gemini2_link_center_joint']/origin"))
+    model = mount.add_body(name='gemini2_link_model_origin')
+    set_origin(model, urdf.find("joint[@name='gemini2_link_model_origin_joint']/origin"))
+    spec.add_mesh(name='gemini2', file=str(packages['lekiwi_description'] / 'meshes/gemini2.stl'))
+    geom = model.add_geom(type=mujoco.mjtGeom.mjGEOM_MESH, meshname='gemini2', contype=0, conaffinity=0,
+                          group=2, mass=0, rgba=[0.15, 0.15, 0.15, 1.0])
+    set_origin(geom, urdf.find("link[@name='gemini2_link_model_origin']/visual/origin"))
+    # Gemini 2 16:9 RGB profile, nominal V55/H86; right is the frame's -Y and up its +Z (as in pt_mujoco).
+    camera = mount.add_camera(name='gemini2_rgb', fovy=55, resolution=[640, 360])
+    camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_XYAXES
+    camera.alt.xyaxes = [0, -1, 0, 0, 0, 1]
+    # Ideal co-located six-axis IMU in optical axes; device extrinsics need calibration.
+    mount.add_site(name='gemini2_imu', size=[0.001, 0, 0], quat=[0.5, -0.5, 0.5, -0.5])
+    for name, kind in (('gemini2_accel', mujoco.mjtSensor.mjSENS_ACCELEROMETER),
+                       ('gemini2_gyro', mujoco.mjtSensor.mjSENS_GYRO),
+                       ('gemini2_quat', mujoco.mjtSensor.mjSENS_FRAMEQUAT)):
+        spec.add_sensor(name=name, type=kind, objtype=mujoco.mjtObj.mjOBJ_SITE, objname='gemini2_imu')
+
+
 def sync_velocity_limits(spec, urdf, config):
     """Embed the wheel command limits and metadata so the viewer needs only the generated XML."""
     simulation = yaml.safe_load((SIM_PACKAGE / 'config/mujoco.yaml').read_text())
@@ -142,6 +167,8 @@ def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_
         spec.sensor('gemini2_accelerometer').name = 'gemini2_accel'
         spec.add_sensor(name='gemini2_quat', type=mujoco.mjtSensor.mjSENS_FRAMEQUAT,
                         objtype=mujoco.mjtObj.mjOBJ_SITE, objname='gemini2_imu')
+    if variant == 'base':
+        add_static_camera(spec, urdf, packages)
     sync_velocity_limits(spec, urdf, config)
     configure_physics(spec)
     return spec

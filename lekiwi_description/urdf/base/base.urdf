@@ -4,6 +4,7 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="lekiwi">
+  <!-- camera sensor interfaces only when streaming is enabled -->
   <!-- Fusion mode: NDOF, NDOF_FMC_OFF, IMUPLUS -->
   <!-- [0-254]; 0 = disable proportional ACC -->
   <!-- Base operating mode -->
@@ -137,7 +138,9 @@
       <geometry>
         <mesh filename="../../meshes/lekiwi_base.stl"/>
       </geometry>
-      <material name="base_light_grey"/>
+      <material name="base_light_grey">
+        <color rgba="0.8 0.8 0.8 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
@@ -157,7 +160,9 @@
       <geometry>
         <mesh filename="../../meshes/container_plate.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
@@ -177,7 +182,9 @@
       <geometry>
         <mesh filename="../../meshes/ld06_lidar.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0"/>
@@ -226,7 +233,9 @@
       <geometry>
         <mesh filename="../../meshes/bno055_imu.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -300,7 +309,9 @@
       <geometry>
         <mesh filename="../../meshes/respeaker_flex_mic.stl"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -320,7 +331,9 @@
       <geometry>
         <mesh filename="../../meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -340,7 +353,9 @@
       <geometry>
         <mesh filename="../../meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -360,7 +375,9 @@
       <geometry>
         <mesh filename="../../meshes/omni_wheel.stl" scale="1.0 1.0 1.0"/>
       </geometry>
-      <material name="base_charcoal"/>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -433,6 +450,39 @@
     <origin rpy="0 1.5707963267948966 -1.0471975511965976" xyz="0.06611950000000001 -0.11452233337105037 0.01036"/>
     <axis xyz="0 0 1"/>
     <limit effort="2.942" velocity="4.433204476989503"/>
+  </joint>
+  <material name="gemini2_charcoal">
+    <color rgba="0.15 0.15 0.15 1.0"/>
+  </material>
+  <!-- Camera frame: x forward, z up; the mesh's rear (seat) face is 18.65 mm behind it -->
+  <link name="gemini2_link"/>
+  <joint name="gemini2_link_center_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gemini2_link"/>
+    <origin rpy="0 0 0" xyz="0.09365 0 0.0723"/>
+  </joint>
+  <!-- IMU frame (offset and orientation from the camera's own IMU) -->
+  <link name="gemini2_imu_frame"/>
+  <joint name="gemini2_imu_frame_joint" type="fixed">
+    <parent link="gemini2_link"/>
+    <child link="gemini2_imu_frame"/>
+    <origin rpy="3.141592653589793 1.5707963267948966 0" xyz="-0.008 -0.037945 -0.00079"/>
+  </joint>
+  <link name="gemini2_link_model_origin">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="../../meshes/gemini2.stl"/>
+      </geometry>
+      <material name="gemini2_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="gemini2_link_model_origin_joint" type="fixed">
+    <parent link="gemini2_link"/>
+    <child link="gemini2_link_model_origin"/>
+    <origin rpy="1.5707963267948966 0 1.5707963267948966" xyz="0 0 0"/>
   </joint>
   <!-- Gazebo simulation: spawns controller_manager inside the gz_sim process, loading
        $(arg simulation_controllers). Inert (ignored) outside Gazebo, so this is safe to
