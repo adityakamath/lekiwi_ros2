@@ -57,7 +57,7 @@ def _call_service(node, client, data):
     req = SetBool.Request()
     req.data = data
     future = client.call_async(req)
-    rclpy.spin_until_future_complete(node, future, timeout_sec=5.0)
+    rclpy.spin_until_future_complete(node, future, timeout_sec=20.0)
     return future.result()
 
 

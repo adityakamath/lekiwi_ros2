@@ -49,6 +49,8 @@ jobs:
 
       - name: Install ROS dependencies
         run: |
+          # Retry transient apt download failures.
+          echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
           apt-get update && apt-get install -y --no-install-recommends \
             python3-pip python3-pil python3-yaml git \
             ros-${{ matrix.ros_distro }}-ament-index-python \
