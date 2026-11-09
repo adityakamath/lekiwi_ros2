@@ -168,6 +168,8 @@ The payload's own package builds its model from the robot's URDF (for the pan-ti
 
 ## Tests
 
+The `pt101` model tests skip when `pantilt_ros2` is not installed.
+
 ```sh
 # From this package directory
 python3 -m pytest test -q

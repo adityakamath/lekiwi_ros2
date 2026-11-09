@@ -92,4 +92,4 @@ In `mujoco` mode the launch file uses `mujoco_ros2_control`'s own control node, 
 pytest test -q
 ```
 
-The tests check the configuration files against each other (speed limits, joystick mappings, toggle services), the support nodes, the teleop and payload wiring in the launch files, and that the launch files' arguments are consistent.
+The tests check the configuration files against each other (speed limits, joystick mappings, toggle services), the support nodes, the teleop and payload wiring in the launch files, and that the launch files' arguments are consistent. The pan-tilt launch tests skip when `pantilt_ros2` is not installed.

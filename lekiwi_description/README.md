@@ -93,4 +93,4 @@ A few launch-file branches still test for `pantilt` explicitly (in `lekiwi.launc
 pytest test -q
 ```
 
-The tests expand every xacro file with mock hardware arguments, check that the output is valid XML with the expected links, joints and interfaces, and check that the pre-built URDFs are not stale.
+The tests expand every xacro file with mock hardware arguments, check that the output is valid XML with the expected links, joints and interfaces, and check that `base.urdf` is not stale. The pan-tilt tests (`base_pantilt`) skip when `pantilt_ros2` is not installed.

@@ -226,7 +226,7 @@ pytest src/lekiwi_ros2/{lekiwi_control,lekiwi_navigation,lekiwi_description,leki
   src/lekiwi_ros2/lekiwi_bringup/test/test_laser_filter.py
 ```
 
-Each package README has its own test notes.
+Tests that need the legacy `pantilt_ros2` payload are marked `pantilt` and skip when it is not installed, so the suite passes in the default setup without it. CI runs everything in both the no-payload and the pantilt configuration. Each package README has its own test notes.
 
 ## License
 
