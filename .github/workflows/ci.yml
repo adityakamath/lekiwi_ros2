@@ -88,7 +88,8 @@ jobs:
         # package.xml declare ldlidar_ros2/sts_hardware_interface/bno055_hardware_interface/
         # ina260_battery_monitor as dependencies, and colcon discovers them on disk via their
         # submodules even with --packages-select - then fails trying to source their (never-built)
-        # install output unless explicitly ignored. The pan-tilt packages are no longer declared
+        # install output unless explicitly ignored. OrbbecSDK_ROS2 (lekiwi_bringup's camera driver)
+        # is ignored the same way. The pan-tilt packages are no longer declared
         # as dependencies (the payload is optional), but pt_control/pt_bringup are still ignored here
         # for the same reason when their submodule is checked out. Each has its own CI already.
         run: |
@@ -101,6 +102,7 @@ jobs:
             lekiwi_control lekiwi_navigation lekiwi_description lekiwi_mujoco lekiwi_bringup lekiwi_audio \
             $PT $ESTOP \
             --packages-ignore pt_control pt_bringup \
+              orbbec_camera orbbec_camera_msgs orbbec_description \
               sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor $SKIP
 
       - name: mujoco_ros2_plugins tests

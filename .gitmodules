@@ -16,3 +16,7 @@
 [submodule "modules/mujoco_ros2_plugins"]
 	path = modules/mujoco_ros2_plugins
 	url = https://github.com/adityakamath/mujoco_ros2_plugins.git
+[submodule "modules/OrbbecSDK_ROS2"]
+	path = modules/OrbbecSDK_ROS2
+	url = https://github.com/orbbec/OrbbecSDK_ROS2.git
+	ignore = dirty

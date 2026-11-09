@@ -88,7 +88,7 @@ In simulation only the first three run: the simulated LiDAR and camera come from
 
 ## Gemini 2 driver (real robot only)
 
-Build [OrbbecSDK_ROS2](https://github.com/orbbec/OrbbecSDK_ROS2) from source in the same workspace (Kilted has no apt package). Two patches from this repository are applied to the clone: `orbbec-kilted-qos.patch` moves an example node to the current `rclcpp::QoS` API, and `orbbec-kilted-werror.patch` stops Kilted's `message_filters` deprecation warnings from failing the build (the package compiles with `-Werror`). Once both are applied, a plain `colcon build` of the workspace builds it.
+Build [OrbbecSDK_ROS2](https://github.com/orbbec/OrbbecSDK_ROS2) from source (Kilted has no apt package). It is the submodule `modules/OrbbecSDK_ROS2`, pinned to a tested commit. Two patches from this repository are applied to it: `orbbec-kilted-qos.patch` moves an example node to the current `rclcpp::QoS` API, and `orbbec-kilted-werror.patch` stops Kilted's `message_filters` deprecation warnings from failing the build (the package compiles with `-Werror`). Once both are applied, a plain `colcon build` of the workspace builds it. The submodule is configured with `ignore = dirty`, so the applied patches do not show up as changes.
 
 ```bash
 sudo apt-get update
@@ -97,13 +97,12 @@ sudo apt-get install libgflags-dev nlohmann-json3-dev libgoogle-glog-dev libdw-d
   ros-kilted-image-publisher ros-kilted-camera-info-manager ros-kilted-diagnostic-updater \
   ros-kilted-statistics-msgs ros-kilted-xacro ros-kilted-depthimage-to-laserscan
 
-cd ~/ros2_ws/src
-git clone --branch v2-main https://github.com/orbbec/OrbbecSDK_ROS2.git
-git -C OrbbecSDK_ROS2 checkout 8e7cad2bfa2c4a6ac4e779be99c64e72166043af
-git -C OrbbecSDK_ROS2 apply ../lekiwi_ros2/lekiwi_bringup/patches/orbbec-kilted-qos.patch \
-  ../lekiwi_ros2/lekiwi_bringup/patches/orbbec-kilted-werror.patch
+cd ~/ros2_ws/src/lekiwi_ros2
+git submodule update --init modules/OrbbecSDK_ROS2
+git -C modules/OrbbecSDK_ROS2 apply ../../lekiwi_bringup/patches/orbbec-kilted-qos.patch \
+  ../../lekiwi_bringup/patches/orbbec-kilted-werror.patch
 cd ~/ros2_ws
-rosdep install --from-paths src/OrbbecSDK_ROS2 --ignore-src -r -y --rosdistro kilted
+rosdep install --from-paths src/lekiwi_ros2/modules/OrbbecSDK_ROS2 --ignore-src -r -y --rosdistro kilted
 CMAKE_BUILD_PARALLEL_LEVEL=2 colcon build \
   --packages-select orbbec_camera_msgs orbbec_description orbbec_camera \
   --executor sequential --symlink-install \
@@ -114,7 +113,7 @@ source install/setup.bash
 Then install the [Orbbec USB rules](https://github.com/orbbec/OrbbecSDK_ROS2#registration-script-required) and reconnect the camera:
 
 ```bash
-sudo cp src/OrbbecSDK_ROS2/orbbec_camera/scripts/99-obsensor-libusb.rules /etc/udev/rules.d/
+sudo cp src/lekiwi_ros2/modules/OrbbecSDK_ROS2/orbbec_camera/scripts/99-obsensor-libusb.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=usb
 ```

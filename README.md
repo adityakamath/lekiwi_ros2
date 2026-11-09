@@ -68,6 +68,7 @@ Settings live in each package's `config/` folder; the package READMEs list them.
 | [`ldlidar_ros2`](https://github.com/adityakamath/ldlidar_ros2) | LD06 LiDAR driver with bug fixes |
 | [`ina260_battery_monitor`](https://github.com/adityakamath/ina260_battery_monitor) | INA260 battery monitor, with threshold events |
 | [`mujoco_ros2_plugins`](https://github.com/adityakamath/mujoco_ros2_plugins) | `mujoco_ros2_control` plugins: the simulated `/emergency_stop` service (`sim:=true` only) |
+| [`OrbbecSDK_ROS2`](https://github.com/orbbec/OrbbecSDK_ROS2) | Orbbec's ROS 2 driver for the Gemini 2 (upstream, needed only for the real camera; patched, see [`lekiwi_bringup`](lekiwi_bringup/README.md#gemini-2-driver-real-robot-only)) |
 | [`pantilt_ros2`](https://github.com/adityakamath/pantilt_ros2) (`payloads/`, optional, no longer maintained) | Pan-tilt with a Gemini 2 camera and its own MuJoCo model; see [Pan-tilt payload (legacy)](#pan-tilt-payload-legacy) |
 
 ## Hardware
@@ -111,7 +112,7 @@ source install/setup.bash
 
 - `rosdep` needs `sudo rosdep init && rosdep update` once. With `-r` it continues past two messages: `ament_python` has no rosdep rule, and `orbbec_camera` is unresolved until you build the driver (below).
 - `--symlink-install` links the installed URDF, meshes and configs to the source tree, so edits take effect without a rebuild. Without it they are copies that go stale after an edit.
-- **Real camera:** build the Orbbec Gemini 2 driver, see [`lekiwi_bringup`](lekiwi_bringup/README.md#gemini-2-driver-real-robot-only). Apply the two patches given there to the clone, or a workspace-wide `colcon build` fails on it.
+- **Real camera:** build the Orbbec Gemini 2 driver, see [`lekiwi_bringup`](lekiwi_bringup/README.md#gemini-2-driver-real-robot-only). Initialize `modules/OrbbecSDK_ROS2` and apply the two patches given there, or a workspace-wide `colcon build` fails on it.
 - **Simulation (`sim:=true`):** `sudo apt install ros-kilted-mujoco-ros2-control ros-kilted-mujoco-ros2-control-plugins` and `pip install -r lekiwi_mujoco/requirements.txt`; see [`lekiwi_mujoco`](lekiwi_mujoco/README.md#requirements).
 
 ## Running
