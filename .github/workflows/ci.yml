@@ -22,13 +22,16 @@ jobs:
         run: ruff check .
 
   test:
-    name: pytest (ros:${{ matrix.ros_distro }})
+    name: pytest (ros:${{ matrix.ros_distro }}, ${{ matrix.payload }})
     # rclpy and the ROS message packages the test suite needs aren't on PyPI, so this
     # runs inside a ROS image instead of alongside the pip-only lint job above.
     strategy:
       fail-fast: false
       matrix:
         ros_distro: [kilted, jazzy, lyrical]
+        # none: the default base with its static Gemini 2, built without pantilt_ros2.
+        # pantilt: the legacy pan-tilt payload, with pantilt_ros2 checked out and built.
+        payload: [none, pantilt]
     runs-on: ubuntu-latest
     container: ros:${{ matrix.ros_distro }}
     timeout-minutes: 15
@@ -37,6 +40,12 @@ jobs:
         with:
           submodules: true
           path: src/lekiwi_ros2
+
+      - name: Remove pantilt_ros2 (no-payload configuration)
+        # The checkout above fetches every submodule; the default configuration must build and
+        # pass without pantilt_ros2 present at all.
+        if: matrix.payload == 'none'
+        run: find src/lekiwi_ros2/payloads/pantilt_ros2 -mindepth 1 -delete
 
       - name: Install ROS dependencies
         run: |
@@ -86,9 +95,11 @@ jobs:
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           # mujoco_ros2_plugins (C++, needs mujoco_ros2_control_plugins) is built on kilted only.
           if [ "${{ matrix.ros_distro }}" = kilted ]; then ESTOP=mujoco_ros2_plugins; SKIP=; else ESTOP=; SKIP=mujoco_ros2_plugins; fi
+          # The pan-tilt packages are built only in the pantilt configuration.
+          if [ "${{ matrix.payload }}" = pantilt ]; then PT="pt_description pt_mujoco"; else PT=; fi
           colcon build --packages-select \
             lekiwi_control lekiwi_navigation lekiwi_description lekiwi_mujoco lekiwi_bringup lekiwi_audio \
-            pt_description pt_mujoco $ESTOP \
+            $PT $ESTOP \
             --packages-ignore pt_control pt_bringup \
               sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor $SKIP
 
@@ -101,10 +112,12 @@ jobs:
           colcon test-result --verbose
 
       - name: pytest
-        # lekiwi_bringup's own test (test_launch_args.py) is excluded: it launches the full
-        # default payload stack end-to-end, which pulls in pt_bringup - and pt_bringup needs
-        # cloudini, point_cloud_interfaces, and depthai-ros, none of which are plain apt
-        # packages here. Everything else is self-contained and needs only the packages above.
+        # Tests that need pantilt_ros2 are skipped (marker `pantilt`) in the no-payload
+        # configuration, and run in the pantilt one. lekiwi_bringup's own test
+        # (test_launch_args.py) is excluded: it launches the full stack end-to-end, which needs the
+        # Orbbec driver, and in the pantilt configuration pt_bringup, which needs cloudini,
+        # point_cloud_interfaces and depthai-ros - none are plain apt packages here.
+        # Everything else is self-contained and needs only the packages above.
         run: |
           . /opt/ros/${{ matrix.ros_distro }}/setup.sh
           . install/setup.sh
@@ -129,11 +142,12 @@ jobs:
           cd src/lekiwi_ros2 && basedpyright lekiwi_control/lekiwi_control
 
   mujoco:
-    name: MuJoCo models and keyboard (${{ matrix.os }})
+    name: MuJoCo models and keyboard (${{ matrix.os }}, ${{ matrix.payload }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        payload: [none, pantilt]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     permissions:
@@ -143,6 +157,9 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
+      - name: Remove pantilt_ros2 (no-payload configuration)
+        if: matrix.payload == 'none'
+        run: find payloads/pantilt_ros2 -mindepth 1 -delete
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

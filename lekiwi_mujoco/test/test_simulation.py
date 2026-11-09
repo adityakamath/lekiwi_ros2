@@ -9,8 +9,8 @@ from lekiwi_mujoco.simulation import Simulation
 
 
 @pytest.fixture(scope='module')
-def model():
-    return mujoco.MjModel.from_xml_path(str(Path(__file__).resolve().parents[1] / 'mjcf/lekiwi_pt101_gemini2.xml'))
+def model(pantilt):
+    return mujoco.MjModel.from_xml_path(str(Path(__file__).resolve().parents[1] / 'mjcf/lekiwi_pt101.xml'))
 
 
 def same(a, b):

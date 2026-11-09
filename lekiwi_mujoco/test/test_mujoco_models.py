@@ -20,7 +20,7 @@ def runtime_from_file(path, settle=True):
     return runtime
 
 MODELS = [('base', 'gemini2', 'lekiwi_base.xml')] + [
-    (variant, camera, f'lekiwi_{variant}_{camera}.xml')
+    (variant, camera, f'lekiwi_{variant}.xml')
     for variant in ('pt101',) for camera in ('gemini2',)
 ]
 VARIANTS = [filename for _, _, filename in MODELS]
@@ -164,7 +164,7 @@ def test_payload_frames_and_visual_meshes_match_urdf(variant, pan, tilt):
             remaining.remove(joint)
             progress = True
         assert progress, 'Disconnected URDF joint tree'
-    runtime = runtime_from_file(PACKAGE / 'mjcf' / f'lekiwi_{variant}_{camera}.xml', settle=False)
+    runtime = runtime_from_file(PACKAGE / 'mjcf' / f'lekiwi_{variant}.xml', settle=False)
     model, data = runtime.model, runtime.data
     for name, value in [('shoulder_pan_joint', pan), ('tilt_joint', tilt)]:
         data.qpos[model.joint(name).qposadr[0]] = value
@@ -231,6 +231,7 @@ def test_limits_regenerate_from_edited_configuration_and_urdf(tmp_path, monkeypa
     assert root.find("actuator/general[@name='left_wheel_joint']").get('ctrlrange') == '-0.9 0.9'
 
 
+@pytest.mark.pantilt
 def test_payload_control_package_overrides_velocity_and_position_limits(tmp_path, monkeypatch):
     import shutil
     import yaml
@@ -446,6 +447,7 @@ def test_urdf_inertial_origin_and_tensor_are_preserved(parameter_workspace):
     assert np.allclose(orientation @ np.diag(model.body_inertia[body]) @ orientation.T, r @ tensor @ r.T)
 
 
+@pytest.mark.pantilt
 def test_payload_mass_changes_and_new_camera_inertia(parameter_workspace):
     import shutil
     from lekiwi_mujoco.build_mujoco_models import build_robot_spec
@@ -468,6 +470,7 @@ def test_payload_mass_changes_and_new_camera_inertia(parameter_workspace):
     assert model.body('gemini2_link_model_origin').mass[0] == pytest.approx(.2)
 
 
+@pytest.mark.pantilt
 def test_payload_is_mounted_from_pt_mujoco_at_the_urdf_mount(parameter_workspace):
     from lekiwi_mujoco.build_mujoco_models import build_robot_spec
     spec = build_robot_spec('pt101', pt_package=PACKAGE.parent / 'payloads/pantilt_ros2/pt_description')
@@ -489,6 +492,7 @@ def _expanded_urdf(variant):
     return ET.tostring(urdf)
 
 
+@pytest.mark.pantilt
 def test_payload_servo_parameters_come_from_pt_mujoco_not_lekiwi(parameter_workspace, tmp_path, monkeypatch):
     import shutil
     import yaml
@@ -512,21 +516,24 @@ def test_payload_servo_parameters_come_from_pt_mujoco_not_lekiwi(parameter_works
     assert model.joint('left_wheel_joint').armature[0] == pytest.approx(.032460)
 
 
+@pytest.mark.pantilt
 def test_payload_joint_names_are_shared_with_pt_mujoco():
     from lekiwi_mujoco import simulation
     from pt_mujoco import simulation as payload
     assert simulation.payload_names() == payload.PAYLOAD == ('shoulder_pan_joint', 'tilt_joint')
 
 
+@pytest.mark.pantilt
 def test_the_base_simulation_runs_without_pt_mujoco_and_a_payload_model_says_why_it_cannot(monkeypatch):
     import mujoco
     from lekiwi_mujoco import simulation
     monkeypatch.setattr(simulation, 'payload_names', lambda: None)
     simulation.Simulation(mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_base.xml')))
     with pytest.raises(ValueError, match='pt_mujoco is not available'):
-        simulation.Simulation(mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101_gemini2.xml')))
+        simulation.Simulation(mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101.xml')))
 
 
+@pytest.mark.pantilt
 def test_pantilt_camera_rate_overrides_pt_mujoco_only_in_rate():
     import yaml
     payload = yaml.safe_load((PACKAGE.parent / 'payloads/pantilt_ros2/pt_mujoco/config/mujoco_ros2_control_plugins.yaml').read_text())
@@ -547,7 +554,7 @@ def test_missing_mount_joint_is_rejected(parameter_workspace):
 
 @pytest.mark.parametrize('variant', ['pt101'])
 def test_gemini_intrinsics_and_camera_mounted_imu(variant):
-    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf' / f'lekiwi_{variant}_gemini2.xml'))
+    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf' / f'lekiwi_{variant}.xml'))
     data = mujoco.MjData(model)
     camera = model.camera('gemini2_rgb').id
     assert model.cam_resolution[camera].tolist() == [640, 360]
@@ -588,7 +595,8 @@ def test_static_gemini_on_the_base_is_independent_of_pantilt_ros2(monkeypatch):
         assert model.sensor(name).id >= 0
 
 
+@pytest.mark.pantilt
 def test_the_pantilt_model_has_one_gemini_camera_not_two():
-    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101_gemini2.xml'))
+    model = mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101.xml'))
     assert [model.camera(i).name for i in range(model.ncam)].count('gemini2_rgb') == 1
     assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, 'tilt_link') >= 0

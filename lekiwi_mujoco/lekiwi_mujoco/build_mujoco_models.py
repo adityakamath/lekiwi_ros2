@@ -352,7 +352,7 @@ def main():
         build(args.variant, args.output, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar)
     else:
         for variant in ('base', 'pt101'):
-            filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_gemini2.xml'
+            filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}.xml'
             print(build(variant, SIM_PACKAGE / 'mjcf' / filename, args.absolute, args.pt_package,
                         scene=args.scene, control_dir=args.control_package,
                         description_dir=args.description_package, lidar=args.lidar))

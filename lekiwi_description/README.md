@@ -12,7 +12,7 @@ URDF/xacro models of LeKiwi: the standalone base with its tray and static Gemini
 | `urdf/base/base.common.xacro` | Geometry constants: colours, wheel geometry and component offsets |
 | `urdf/base/base.control.xacro` | The `<ros2_control>` block for the wheels and IMU, and the xacro arguments below |
 | `urdf/base_pantilt/` | The base with the pan-tilt: the same files, plus the pan-tilt module from `pt_description` and a combined `<ros2_control>` block for the shared servo bus |
-| `urdf/*/*.urdf` | Pre-generated base (tray and Gemini 2) and PT101/Gemini 2 pan-tilt URDFs |
+| `urdf/base/base.urdf` | Pre-generated base (tray and Gemini 2) URDF |
 | `meshes/` | STL files for the base, the two top plates (`container_plate`, `payload_plate`), Gemini 2, wheels, LiDAR, IMU and microphone array (`*_mujoco.stl` are simplified for the simulation). The files hold geometry only; colours are set in the URDF |
 
 ## Requirements
@@ -66,9 +66,9 @@ base_footprint
     └── pantilt_base_link               ← base_pantilt only; the pan-tilt, with its own gemini2_link, hangs off this mount
 ```
 
-## Regenerating the pre-built URDFs
+## Regenerating the pre-built URDF
 
-The checked-in files are `urdf/base/base.urdf` and `urdf/base_pantilt/base_pantilt_gemini2.urdf`, which uses PT101. These files are for tools that want plain URDF. LeKiwi meshes, including the Gemini 2, use `../../meshes/` paths, while pan-tilt meshes use `https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/`. Runtime Xacro retains `package://` mesh URIs. Regenerate them after any xacro change:
+The checked-in `urdf/base/base.urdf` is for tools that want plain URDF. Its meshes use `../../meshes/` paths; runtime Xacro keeps `package://` mesh URIs. There is no pre-built pan-tilt URDF; expand `base_pantilt.urdf.xacro` yourself (see Running). Regenerate `base.urdf` after any xacro change:
 
 ```bash
 python3 test/test_urdf_xacro.py --write

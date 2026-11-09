@@ -197,7 +197,7 @@ def main():
     parser.add_argument('--island-colors', action='store_true', help='Debug constraint islands instead of displaying robot materials')
     parser.add_argument('--telemetry', type=Path, help='Optional live model-state JSON')
     args = parser.parse_args()
-    filename = 'lekiwi_base.xml' if args.variant == 'base' else f'lekiwi_{args.variant}_gemini2.xml'
+    filename = 'lekiwi_base.xml' if args.variant == 'base' else f'lekiwi_{args.variant}.xml'
     # Keep generated files alive for the viewer lifetime; mesh paths are absolute.
     generated = TemporaryDirectory(prefix='lekiwi_preview_') if args.model is None else None
     path = (args.model.resolve() if args.model else

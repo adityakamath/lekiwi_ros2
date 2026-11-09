@@ -214,7 +214,7 @@ The pan-tilt runs the wheels in velocity mode and the pan and tilt servos in pos
 After editing the URDF, regenerate the pre-built files:
 
 ```bash
-python3 lekiwi_description/test/test_urdf_xacro.py --write       # URDFs
+python3 lekiwi_description/test/test_urdf_xacro.py --write       # urdf/base/base.urdf
 cd lekiwi_mujoco && python3 -m lekiwi_mujoco.build_mujoco_models  # MuJoCo models
 ```
 

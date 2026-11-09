@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 
+@pytest.mark.pantilt
 @pytest.mark.parametrize('enabled,cloud', [
     ('true', 'false'), ('true', 'true'), ('false', 'true'),
 ])
@@ -71,10 +72,10 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
 
 @pytest.mark.parametrize('payload,hw_type,diagnostics,expected_joints', [
     ('', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']),
-    ('pantilt', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint',
-                                 'shoulder_pan_joint', 'tilt_joint']),
-    ('pantilt', 'real', 'false', None),
-    ('pantilt', 'mujoco', 'true', None),  # MuJoCo joints export no voltage/temperature/current
+    pytest.param('pantilt', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint',
+                                             'shoulder_pan_joint', 'tilt_joint'], marks=pytest.mark.pantilt),
+    pytest.param('pantilt', 'real', 'false', None, marks=pytest.mark.pantilt),
+    pytest.param('pantilt', 'mujoco', 'true', None, marks=pytest.mark.pantilt),  # MuJoCo joints export no voltage/temperature/current
 ])
 def test_state_interfaces_broadcaster_for_motor_diagnostics(
         payload, hw_type, diagnostics, expected_joints, monkeypatch):

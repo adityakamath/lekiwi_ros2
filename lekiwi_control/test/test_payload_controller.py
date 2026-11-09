@@ -1,12 +1,14 @@
 """The pan-tilt controller is spawned from pt_control's own parameter file, not merged into lekiwi's."""
 from pathlib import Path
 
+import pytest
 import yaml
 
 SOURCE = Path(__file__).resolve().parents[1]
 PAYLOAD = SOURCE.parent / 'payloads/pantilt_ros2/pt_control'
 
 
+@pytest.mark.pantilt
 def test_the_payload_ships_its_controller_and_lekiwi_has_no_copy():
     config = yaml.safe_load((PAYLOAD / 'config/pantilt_controller.yaml').read_text())['pantilt_controller']['ros__parameters']
     assert config['type'] == 'forward_command_controller/ForwardCommandController'

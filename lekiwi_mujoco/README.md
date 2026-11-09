@@ -21,7 +21,7 @@ MuJoCo models of LeKiwi (`base`: the tray with a static Gemini 2, the recommende
 
 ## Camera model
 
-Both models have a Gemini 2: the base model (`lekiwi_base.xml`) has it fixed to the front bracket, and the legacy pan-tilt model (`lekiwi_pt101_gemini2.xml`) has the pan-tilt's own camera on the tilt link. `build_mujoco_models` builds the base model's camera from the URDF and the Gemini 2 mesh in `lekiwi_description`.
+Both models have a Gemini 2: the base model (`lekiwi_base.xml`) has it fixed to the front bracket, and the legacy pan-tilt model (`lekiwi_pt101.xml`) has the pan-tilt's own camera on the tilt link. `build_mujoco_models` builds the base model's camera from the URDF and the Gemini 2 mesh in `lekiwi_description`.
 
 ```bash
 python3 -m lekiwi_mujoco.build_mujoco_models
@@ -86,7 +86,7 @@ variant. The same tools are also installed as commands (`ros2 run lekiwi_mujoco 
 platform. The installed `mujoco_preview` command only works on Linux; on macOS, always launch it
 as `mjpython -m lekiwi_mujoco.mujoco_preview` instead.
 
-Build models with `build_mujoco_models`, not plain xacro; it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model, as the real robot's `laser_filters` chain discards them, so `mujoco_preview` shows only the unblocked ~295°. With no arguments it regenerates both committed models: `lekiwi_base.xml` and `lekiwi_pt101_gemini2.xml`, which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
+Build models with `build_mujoco_models`, not plain xacro; it takes the payload frames, inertias and limits from the URDF. `--scene` selects the environment (`flat`, `arena`, `home`, `maze`, `none` or a scene file) and `--lidar` the LiDAR model (`rangefinder` or `plugin`). With `pt101`, the rangefinders in the payload's blind arc (`config/mujoco_laser_filter_pantilt.yaml`'s mask) are removed from the model, as the real robot's `laser_filters` chain discards them, so `mujoco_preview` shows only the unblocked ~295°. With no arguments it regenerates both committed models, `lekiwi_base.xml` and `lekiwi_pt101.xml` (the latter needs `pantilt_ros2`), which you should do after changes to robot URDF, physics config or robot MJCF sources. These committed models use `flat`; scene-only edits are loaded when the viewer rebuilds the selected scene at launch. If using `--model`, rebuild that model explicitly.
 
 The viewer draws native LiDAR rays only when they hit geometry. In open space
 (such as outside the maze entrance), missing yellow rays represent no-hit readings,

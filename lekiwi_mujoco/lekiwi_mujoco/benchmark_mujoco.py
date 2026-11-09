@@ -24,7 +24,7 @@ def benchmark(directory):
                 ('left', [0, .15, 0]), ('right', [0, -.15, 0]),
                 ('ccw', [0, 0, .5]), ('cw', [0, 0, -.5])]
     for variant in ['base', 'pt101']:
-        name = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_gemini2.xml'
+        name = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}.xml'
         runtime = Simulation(mujoco.MjModel.from_xml_path(str(directory / name)))
         for motion, command in commands:
             runtime.reset()
@@ -49,7 +49,7 @@ def main():
     args = parser.parse_args()
     with TemporaryDirectory(prefix='lekiwi_benchmark_') as directory:
         for variant in ('base', 'pt101'):
-            filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}_gemini2.xml'
+            filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}.xml'
             build(variant, Path(directory) / filename, absolute=True, control_dir=args.control_package,
                   description_dir=args.description_package, pt_package=args.pt_package)
         result = {'updated': benchmark(Path(directory))}

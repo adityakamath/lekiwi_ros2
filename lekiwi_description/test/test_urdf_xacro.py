@@ -42,13 +42,9 @@ _PANTILT_ARGS = _BASE_ARGS + [
 # pantilt.joints.xacro's macro defaults (single source of truth).
 
 
-_PT_MESHES_URL = 'https://raw.githubusercontent.com/adityakamath/pantilt_ros2/main/pt_description/meshes/'
-
-
 def _portable(xml):
-    """Pre-built URDFs point at the local meshes by relative path and at the pan-tilt meshes by GitHub URL."""
-    xml = xml.replace('package://lekiwi_description/meshes/', '../../meshes/')
-    return xml.replace('package://pt_description/meshes/', _PT_MESHES_URL)
+    """The pre-built base.urdf points at the local meshes by relative path."""
+    return xml.replace('package://lekiwi_description/meshes/', '../../meshes/')
 
 
 def _xacro(xacro_file, args):
@@ -122,6 +118,7 @@ class TestBaseStaticGemini2:
         assert mesh == 'package://lekiwi_description/meshes/gemini2.stl'
         assert os.path.isfile(os.path.join(_PKG_SRC, 'meshes', 'gemini2.stl'))
 
+    @pytest.mark.pantilt
     def test_pantilt_variant_has_only_the_tilt_camera(self):
         stdout, _, _ = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
         root = ET.fromstring(stdout)
@@ -131,6 +128,7 @@ class TestBaseStaticGemini2:
 
 # ── base_pantilt URDF ─────────────────────────────────────────────────────────
 
+@pytest.mark.pantilt
 class TestBasePantiltUrdf:
     def setup_method(self):
         self.stdout, self.stderr, self.rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
@@ -269,6 +267,7 @@ class TestBaseUrdfMujocoImu:
             "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
 
 
+@pytest.mark.pantilt
 class TestBasePantiltUrdfInterfaces:
     """Pan/tilt joints must expose position command interface."""
 
@@ -297,7 +296,7 @@ class TestBasePantiltUrdfInterfaces:
 
 class TestPrebuiltUrdfConsistency:
     """
-    The committed .urdf files should be regenerated when xacro sources change.
+    The committed base.urdf should be regenerated when xacro sources change.
     This test regenerates them with mock args and checks for meaningful differences
     (ignoring the path comment line that always differs).
     """
@@ -319,25 +318,10 @@ class TestPrebuiltUrdfConsistency:
         assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
             'base.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
-    def test_base_pantilt_urdf_not_stale(self):
-        prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt_gemini2.urdf')
-        if not os.path.exists(prebuilt):
-            pytest.fail("Missing base_pantilt_gemini2.urdf")
-        generated, _, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
-        assert rc == 0
-        root = ET.fromstring(generated)
-        assert root.find("link[@name='gemini2_link']") is not None
-        assert root.find("link[@name='oak_link']") is None
-        camera_joint = root.find("joint[@name='gemini2_link_center_joint']")
-        assert camera_joint.find('parent').get('link') == 'tilt_link'
-        with open(prebuilt) as f:
-            existing = f.read()
-        assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
-            'base_pantilt_gemini2.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
-
 
 # ── EEPROM tuning that reaches each motor on the shared bus ─────────────────────
 
+@pytest.mark.pantilt
 class TestSharedBusTuning:
     """One hardware block owns the bus: wheels keep the aggressive tuning, the pan-tilt keeps its own."""
 
@@ -367,21 +351,8 @@ class TestSharedBusTuning:
         assert len(self.rc.findall('hardware')) == 1
 
 
-# ── pan-tilt URDF ─────────────────────────────────────────────────────────────
-
-class TestPrebuiltPantiltUrdfAssets:
-    """The PT101 pan-tilt URDF must parse successfully."""
-
-    def test_pantilt_parses(self):
-        xml, stderr, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
-        assert rc == 0, f"xacro failed for the pan-tilt URDF:\n{stderr}"
-        assert "/gemini2.stl" in xml
-        assert "/tilt_joint_gemini2.stl" in xml
-
-
 if __name__ == '__main__' and '--write' in sys.argv:
     models = [('base', 'base', 'base', _BASE_ARGS)]
-    models += [('base_pantilt', 'base_pantilt', 'base_pantilt_gemini2', _PANTILT_ARGS)]
     for folder, source, name, args in models:
         result = subprocess.run(['xacro', f'{folder}/{source}.urdf.xacro'] + args, cwd=os.path.join(_PKG_SRC, 'urdf'),
                                 capture_output=True, text=True, check=True)
@@ -389,6 +360,7 @@ if __name__ == '__main__' and '--write' in sys.argv:
             out.write(_portable(result.stdout))
 
 
+@pytest.mark.pantilt
 @pytest.mark.parametrize('enabled', ['true', 'false'])
 def test_sim_camera_imu_interface_follows_enable_camera(enabled):
     xml, errors, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS + [
