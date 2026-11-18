@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ReSpeaker microphone array, control board and speaker, with their mounts. Fitted when has_respeaker is set; uses base_link and the shared constants. -->
+  <xacro:macro name="lekiwi_respeaker_module">
+    <!-- Respeaker flex mic link -->
+    <link name="mic_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/respeaker_flex_mic.stl"/>
+        </geometry>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/respeaker_flex_mic.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <!-- Respeaker flex mic fixed joint -->
+    <joint name="mic_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="mic_link"/>
+      <origin xyz="${mic_base_offset_x} 0 ${mic_base_offset_z}" rpy="0 0 0"/>
+    </joint>
+
+    <xacro:lekiwi_base_component name="respeaker_board" mesh="respeaker_board_assembly"
+                                 material="base_light_grey" rgba="${light_grey_rgba}"/>
+    <xacro:lekiwi_base_component name="speaker" mesh="speaker_assembly"
+                                 material="base_light_grey" rgba="${light_grey_rgba}"/>
+  </xacro:macro>
+
+</robot>

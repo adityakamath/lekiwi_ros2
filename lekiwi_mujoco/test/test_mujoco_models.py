@@ -265,10 +265,9 @@ def test_urdf_mass_edits_replace_every_base_mass(parameter_workspace):
     import re
     from lekiwi_mujoco.build_mujoco_models import build_robot_spec
     before = build_robot_spec().compile()
-    module = parameter_workspace / 'urdf/base.module.xacro'
-    text = re.sub(r'<mass value="([0-9.]+)"/>',
-                  lambda match: f'<mass value="{float(match[1]) * 1.5}"/>', module.read_text())
-    module.write_text(text)
+    for module in (parameter_workspace / 'urdf').glob('*.module.xacro'):
+        module.write_text(re.sub(r'<mass value="([0-9.]+)"/>',
+                                 lambda match: f'<mass value="{float(match[1]) * 1.5}"/>', module.read_text()))
     after = build_robot_spec().compile()
     assert after.body_mass.sum() == pytest.approx(1.5 * before.body_mass.sum())
     for name in ('base_link', 'laser_link', 'imu_link', 'mic_link'):

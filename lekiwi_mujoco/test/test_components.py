@@ -81,14 +81,19 @@ def test_native_plugins_follow_present_sensor_frames(tmp_path, components, expec
     assert {node.get('name') for node in root.findall('sensor/plugin')} == expected
 
 
-@pytest.mark.parametrize('tof', [True, False])
-def test_sensor_plate_is_permanent(tof, tmp_path):
+@pytest.mark.parametrize('lidar,tof,expected', [
+    (True, True, True),
+    (True, False, True),
+    (False, True, True),
+    (False, False, False),
+])
+def test_sensor_plate_follows_either_sensor(lidar, tof, expected, tmp_path):
     config = tmp_path / 'hardware.yaml'
-    config.write_text(yaml.safe_dump({'sparkfun_sensor': tof}))
+    config.write_text(yaml.safe_dump({'lidar': lidar, 'sparkfun_sensor': tof}))
     spec = builder.build_robot_spec(hardware_config=config)
     urdf, _ = builder.expand_urdf({'lekiwi_description': DESCRIPTION}, builder.control_package(), config)
-    assert (urdf.find("link[@name='lidar_plate_link']") is not None) is True
-    assert (spec.body('lidar_plate_link') is not None) is True
+    assert (urdf.find("link[@name='lidar_plate_link']") is not None) is expected
+    assert (spec.body('lidar_plate_link') is not None) is expected
     for name in ('ld06_lidar_plate_link', 'sparkfun_sensor_plate_link'):
         assert urdf.find(f"link[@name='{name}']") is None
         assert spec.body(name) is None
@@ -124,13 +129,12 @@ def test_enabled_imu_keeps_its_body_and_sensors(tmp_path):
     assert [s.name for s in spec.sensors if s.name.startswith('bno055_')]
 
 
-def test_disabling_all_optional_assemblies_keeps_fixed_hardware(tmp_path):
+def test_disabling_all_optional_assemblies_keeps_only_the_base(tmp_path):
     from lekiwi_mujoco.hardware_config import HARDWARE_DEFAULTS
     config = tmp_path / 'hardware.yaml'
     config.write_text(yaml.safe_dump(dict.fromkeys(HARDWARE_DEFAULTS, False)))
     spec = builder.build_robot_spec(hardware_config=config)
-    assert spec.body('lidar_plate_link') is not None
-    for name in ('laser_link', 'laser_frame', 'imu_link', 'imu_frame', 'tof_link', 'mic_link', 'speaker_link', 'respeaker_board_link',
+    for name in ('lidar_plate_link', 'laser_link', 'laser_frame', 'imu_link', 'imu_frame', 'tof_link', 'mic_link', 'speaker_link', 'respeaker_board_link',
                  'gemini2_link', 'gemini2_mount_link', 'tray_link', 'rpi5_case_link'):
         assert spec.body(name) is None
     spec.compile()

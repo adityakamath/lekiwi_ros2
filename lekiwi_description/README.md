@@ -7,7 +7,8 @@ Base URDF and split component meshes, including the tray and optional sensors.
 | Path | Purpose |
 |------|---------|
 | `urdf/base.urdf.xacro` | The standalone base: a `base_footprint` root, the base module and the static Gemini 2 |
-| `urdf/base.module.xacro` | The base's links and joints as a `lekiwi_base_module` macro |
+| `urdf/base.module.xacro` | The base's links and joints as a `lekiwi_base_module` macro, including the Pi case, tray and shared sensor plate |
+| `urdf/ld06.module.xacro`, `bno055.module.xacro`, `vl53l5cx.module.xacro`, `respeaker.module.xacro` | One macro per sensor assembly, called from the base module when its `hardware.yaml` switch is on |
 | `urdf/base.common.xacro` | Geometry constants: colours, wheel geometry and the mounting offsets of the LiDAR, IMU, microphones, ToF imager and Gemini 2 |
 | `urdf/gemini2.module.xacro` | Fixed Gemini 2 mesh and camera frames |
 | `urdf/base.control.xacro` | The `<ros2_control>` block for the wheels and IMU, and the xacro arguments below |
@@ -114,13 +115,13 @@ shelf: true
 
 | Setting | Effect |
 | --- | --- |
-| `lidar` | LD19/LD06 LiDAR and its frames; the shared mounting plate always stays. `false` also stops SLAM, Nav2 and the collision monitor |
+| `lidar` | LD19/LD06 LiDAR and its frames; the shared mounting plate stays while the ToF sensor is on. `false` also stops SLAM, Nav2 and the collision monitor |
 | `imu` | BNO055 IMU, its frames and controller; `false` needs `fusion_mode:=odom` |
 | `battery_monitor` | INA260 battery monitor and events (real robot only) |
 | `shelf` | Tray and shelf spacers |
 | `rpi5` | Raspberry Pi 5 case; false removes the case for a replacement computer |
 | `respeaker` | Microphone, control board, speaker, and all their mounts |
-| `sparkfun_sensor` | VL53L5CX only; the shared mounting plate always stays |
+| `sparkfun_sensor` | VL53L5CX only; the shared mounting plate stays while the LiDAR is on |
 | `gemini2` | Base Gemini 2 and mount, plus camera streaming |
 
 The switches are independent. Each assembly's links, mounts and joints live in
@@ -139,10 +140,10 @@ and mount. An explicit pre-built `mujoco_model` must match the selected hardware
 Base inertia remains a lumped estimate when fixed mounts are removed.
 
 `lidar_plate_assembly.stl` combines the LiDAR and SparkFun mounting plates in
-one fixed link that stays when either sensor is disabled.
+one fixed link that stays while either sensor is enabled and is removed when both are disabled.
 
 The SparkFun sensor and Gemini 2 currently have one supported model each. To add
-another sensor on the permanent plate, replace its sensor mesh/frame and driver
+another sensor on the shared plate, replace its sensor mesh/frame and driver
 integration together. A replacement camera needs its own mesh, mount, frames and
 driver configuration; disabling `gemini2` removes both camera and mount. No
 replacement model choices are exposed until their assets and drivers are added.

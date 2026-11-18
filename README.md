@@ -27,7 +27,7 @@ to match the fitted hardware, then launch normally. All switches default to `tru
 | `battery_monitor` | INA260 battery monitor and events (real robot only) |
 | `rpi5` | Raspberry Pi 5 case mesh |
 | `respeaker` | Microphone, control board, speaker, mounts and real-robot audio announcements |
-| `sparkfun_sensor` | VL53L5CX and ToF processing; the shared mounting plate always stays |
+| `sparkfun_sensor` | VL53L5CX and ToF processing; the shared mounting plate stays while the LiDAR is on |
 | `gemini2` | Gemini 2, mount and camera processing |
 | `shelf` | Tray and shelf spacers together |
 
@@ -213,7 +213,7 @@ Teleoperation uses a **Steam Deck** as a generic joystick (not through Steam Inp
 | To do this | Look here |
 |------------|-----------|
 | Change the launch or add a launch argument | `lekiwi_bringup/launch/lekiwi.launch.py` (forwards to `lekiwi_control/launch/control.launch.py` and `lekiwi_navigation/launch/navigation.launch.py`) |
-| Change the robot model | `lekiwi_description/urdf/` (`base.urdf.xacro`, `base.module.xacro`, `base.common.xacro`) |
+| Change the robot model | `lekiwi_description/urdf/` (`base.urdf.xacro`, `base.module.xacro`, the per-sensor `*.module.xacro` files, `base.common.xacro`) |
 | Move or re-orient a sensor (LiDAR, IMU, microphones, ToF imager, camera) | the offsets in `lekiwi_description/urdf/base.common.xacro`, then regenerate (below) |
 | Change joystick buttons or speed limits | `lekiwi_control/config/base_teleop.yaml` |
 

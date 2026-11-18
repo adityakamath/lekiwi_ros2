@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- LD06 LiDAR, its frames and the Gazebo scan sensor. Fitted when has_lidar is set; uses base_link and the shared constants. -->
+  <xacro:macro name="lekiwi_ld06_module">
+  <!-- LD06 and mounting plate -->
+  <!-- LD06 laser link -->
+  <link name="laser_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="${laser_offset_rx} 0 0"/>
+      <geometry>
+        <mesh filename="package://lekiwi_description/meshes/ld06_lidar.stl"/>
+      </geometry>
+      <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="${laser_offset_rx} 0 0"/>
+      <geometry>
+        <mesh filename="package://lekiwi_description/meshes/ld06_lidar.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.2"/>
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <!-- Laser frame -->
+  <link name="laser_frame"/>
+
+  <!-- Values measured off the real /scan topic, not the datasheet. gz_frame_id matches
+         ldlidar_ros2_node's real "laser_frame" so TF resolves the same in sim (gz-sensors#306). -->
+  <gazebo reference="laser_frame">
+    <sensor name="lidar" type="gpu_lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>scan</topic>
+      <gz_frame_id>laser_frame</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>452</samples>
+            <resolution>1</resolution>
+            <min_angle>0.0</min_angle>
+            <max_angle>6.283185307179586</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.02</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- laser fixed joint -->
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_link"/>
+    <origin xyz="${laser_base_offset_x} 0 ${laser_base_offset_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- laser_frame fixed joint -->
+  <joint name="laser_frame_joint" type="fixed">
+    <parent link="laser_link"/>
+    <child link="laser_frame"/>
+    <origin xyz="0 0 ${laser_frame_offset_z}" rpy="0 0 0"/>
+  </joint>
+  </xacro:macro>
+
+</robot>

@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- SparkFun VL53L5CX ToF imager and its frames. Fitted when has_sparkfun_sensor is set; uses base_link and the shared constants. -->
+  <xacro:macro name="lekiwi_vl53l5cx_module">
+    <!-- SparkFun VL53L5CX ToF link -->
+    <link name="tof_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/sparkfun_vl53l5cx.stl"/>
+        </geometry>
+        <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/sparkfun_vl53l5cx.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.005"/>
+        <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <!-- ToF frame -->
+    <link name="tof_frame"/>
+
+    <!-- ToF fixed joint -->
+    <joint name="tof_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="tof_link"/>
+      <origin xyz="${tof_base_offset_x} ${tof_base_offset_y} ${tof_base_offset_z}" rpy="0 0 ${tof_offset_rz}"/>
+    </joint>
+
+    <!-- tof_frame fixed joint -->
+    <joint name="tof_frame_joint" type="fixed">
+      <parent link="tof_link"/>
+      <child link="tof_frame"/>
+      <origin xyz="${tof_frame_offset_x} ${tof_frame_offset_y} ${tof_frame_offset_z}" rpy="0 0 ${tof_frame_offset_rz}"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

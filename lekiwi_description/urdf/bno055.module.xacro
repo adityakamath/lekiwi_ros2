@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- BNO055 IMU, its frame and the Gazebo IMU sensor. Fitted when has_imu is set; uses base_link and the shared constants. -->
+  <xacro:macro name="lekiwi_bno055_module">
+  <!-- BNO055 IMU link -->
+  <link name="imu_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
+      </geometry>
+      <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://lekiwi_description/meshes/bno055_imu.stl"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <!-- IMU frame -->
+  <link name="imu_frame"/>
+
+  <!-- Bridges to imu_sensor_broadcaster's own topic so EKF needs no sim/real reconfig;
+         imu_sensor_broadcaster itself isn't spawned in gazebo mode, to avoid racing this. -->
+  <gazebo reference="imu_frame">
+    <sensor name="imu" type="imu">
+      <pose>0 0 0 0 0 0</pose>
+      <topic>imu_sensor_broadcaster/imu</topic>
+      <gz_frame_id>imu_frame</gz_frame_id>
+      <update_rate>50</update_rate>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.00316</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01414</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+  <!-- IMU fixed joint -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="${imu_base_offset_x} 0 ${imu_base_offset_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- imu_frame fixed joint -->
+  <joint name="imu_frame_joint" type="fixed">
+    <parent link="imu_link"/>
+    <child link="imu_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  </xacro:macro>
+
+</robot>

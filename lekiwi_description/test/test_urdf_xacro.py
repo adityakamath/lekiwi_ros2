@@ -182,6 +182,8 @@ _CAMERA_LINKS = {'gemini2_link', 'gemini2_imu_frame', 'gemini2_link_model_origin
     ({'rpi5': False}, {'rpi5_case_link'}, _LASER_LINKS | _AUDIO_LINKS),
     ({'imu': False}, _IMU_LINKS, _LASER_LINKS | _AUDIO_LINKS | _TOF_LINKS | _CAMERA_LINKS),
     ({'lidar': False}, _LASER_LINKS, _IMU_LINKS | _AUDIO_LINKS | _TOF_LINKS | _CAMERA_LINKS | {'lidar_plate_link'}),
+    ({'sparkfun_sensor': False}, _TOF_LINKS, _LASER_LINKS | {'lidar_plate_link'}),
+    ({'lidar': False, 'sparkfun_sensor': False}, _LASER_LINKS | _TOF_LINKS | {'lidar_plate_link'}, {'base_link'}),
     ({'respeaker': False}, _AUDIO_LINKS, _LASER_LINKS | _TOF_LINKS | _CAMERA_LINKS),
     ({'gemini2': False}, _CAMERA_LINKS, _AUDIO_LINKS | _TOF_LINKS),
     ({'shelf': False}, {'tray_link'}, _AUDIO_LINKS | _LASER_LINKS),

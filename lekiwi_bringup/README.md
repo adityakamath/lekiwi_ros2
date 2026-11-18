@@ -208,7 +208,7 @@ With the default profile, the LiDAR, BNO055 IMU and (on the real robot) battery 
 path passes through the collision monitor. `lidar: false` skips the LiDAR driver, SLAM, Nav2 and the collision monitor, leaving only the EKF; commands then go straight to the base. `imu: false` needs `fusion_mode:=odom`. `battery_monitor: false` skips the battery nodes.
 
 The SparkFun sensor and Gemini 2 currently have one supported model each. To add
-another sensor on the permanent plate, replace its sensor mesh/frame and driver
+another sensor on the shared plate, replace its sensor mesh/frame and driver
 integration together. A replacement camera needs its own mesh, mount, frames and
 driver configuration; disabling `gemini2` removes both camera and mount. No
 replacement model choices are exposed until their assets and drivers are added.
