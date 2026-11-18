@@ -3,7 +3,6 @@
 import importlib.util
 from pathlib import Path
 
-import pytest
 from launch import LaunchContext
 from launch.actions import DeclareLaunchArgument, GroupAction, OpaqueFunction
 from launch_ros.actions import LoadComposableNodes, Node

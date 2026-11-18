@@ -4,6 +4,8 @@
   <!-- One hardware file is shared by bringup, URDF and simulation. -->
   <!-- The integration layer passes hardware_config; this package owns no robot profile. -->
   <xacro:property name="hardware" value="${xacro.load_yaml('$(arg hardware_config)')}"/>
+  <xacro:property name="has_lidar" value="${hardware.get('lidar', True)}"/>
+  <xacro:property name="has_imu" value="${hardware.get('imu', True)}"/>
   <xacro:property name="has_rpi5" value="${hardware.get('rpi5', True)}"/>
   <xacro:property name="has_respeaker" value="${hardware.get('respeaker', True)}"/>
   <xacro:property name="has_sparkfun_sensor" value="${hardware.get('sparkfun_sensor', True)}"/>

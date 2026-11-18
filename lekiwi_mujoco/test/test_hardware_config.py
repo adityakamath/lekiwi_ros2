@@ -16,13 +16,22 @@ def test_partial_profile_keeps_groups_independent(tmp_path):
     assert load_hardware_config(path) == expected
 
 
-@pytest.mark.parametrize('contents', ['lidar: false', 'imu: false', 'battery_monitor: false', 'speaker: false', 'respeaker: "false"',
-                                     'shelf: 0', 'imu: 0', 'battery_monitor: \"false\"', '- lidar', ''])
+@pytest.mark.parametrize('contents', ['lidar: 0', 'lidar: "false"', 'speaker: false', 'respeaker: "false"',
+                                     'shelf: 0', 'imu: 0', 'imu: "false"', 'battery_monitor: \"false\"', '- lidar', ''])
 def test_invalid_hardware_config_is_rejected(tmp_path, contents):
     path = tmp_path / 'hardware.yaml'
     path.write_text(contents)
     with pytest.raises(ValueError):
         load_hardware_config(path)
+
+
+@pytest.mark.parametrize('group', ['lidar', 'imu', 'battery_monitor'])
+def test_lidar_imu_and_battery_monitor_can_be_disabled_independently(group, tmp_path):
+    path = tmp_path / 'hardware.yaml'
+    path.write_text(f'{group}: false\n')
+    expected = HARDWARE_DEFAULTS.copy()
+    expected[group] = False
+    assert load_hardware_config(path) == expected
 
 
 def test_builder_uses_hardware_file_without_a_model_selector(tmp_path, monkeypatch):

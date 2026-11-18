@@ -213,6 +213,8 @@ def test_gemini2_cloudini_compressor_only_with_pointcloud(monkeypatch):
     ('respeaker', {'audio.launch.py'}, {'laser.launch.py', 'tof.launch.py'}),
     ('gemini2', {'gemini2.launch.py'}, {'laser.launch.py', 'tof.launch.py'}),
     ('shelf', set(), {'laser.launch.py', 'tof.launch.py', 'audio.launch.py'}),
+    ('battery_monitor', {'battery_monitor.launch.py'}, {'laser.launch.py', 'tof.launch.py', 'audio.launch.py'}),
+    ('lidar', {'laser.launch.py'}, {'tof.launch.py', 'audio.launch.py', 'battery_monitor.launch.py'}),
 ])
 def test_hardware_config_controls_independent_driver_includes(disabled, absent_includes, retained_includes, tmp_path, monkeypatch):
     import importlib.util
@@ -286,8 +288,69 @@ def test_robot_composition_and_fusion_come_only_from_hardware_file( tmp_path, mo
     assert 'gemini2.launch.py' in source.location
 
 
+def test_disabled_lidar_runs_only_the_ekf_and_skips_the_driver(tmp_path, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    import yaml
+    from launch import LaunchContext, LaunchDescription
+    from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+    from launch_ros.substitutions import FindPackageShare
+
+    path = Path(__file__).resolve().parents[1] / 'launch/lekiwi.launch.py'
+    spec = importlib.util.spec_from_file_location('lidar_off_test', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    context = LaunchContext()
+    for action in module.generate_launch_description().entities:
+        if isinstance(action, DeclareLaunchArgument):
+            action.execute(context)
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'lidar': False}))
+    context.launch_configurations.update(hardware_config=str(config))
+    monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: '/unused/' + package)
+    includes = {}
+    for action in module.launch_setup(context):
+        if isinstance(action, IncludeLaunchDescription):
+            source = action.launch_description_source
+            monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
+            source.get_launch_description(context)
+            includes[Path(source.location).name] = dict(action.launch_arguments)
+    assert {'ekf.launch.py', 'control.launch.py'} <= includes.keys()
+    assert not {'navigation.launch.py', 'laser.launch.py'} & includes.keys()
+    assert includes['ekf.launch.py']['fusion_mode'] == 'base'
+
+
+@pytest.mark.parametrize('fusion_mode,allowed', [('base', False), ('imu', False), ('odom', True)])
+def test_disabled_imu_requires_wheel_odometry_fusion(fusion_mode, allowed, tmp_path, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    import yaml
+    from launch import LaunchContext
+    from launch.actions import DeclareLaunchArgument
+    from launch_ros.substitutions import FindPackageShare
+
+    path = Path(__file__).resolve().parents[1] / 'launch/lekiwi.launch.py'
+    spec = importlib.util.spec_from_file_location('imu_fusion_test', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    context = LaunchContext()
+    for action in module.generate_launch_description().entities:
+        if isinstance(action, DeclareLaunchArgument):
+            action.execute(context)
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'imu': False}))
+    context.launch_configurations.update(hardware_config=str(config), fusion_mode=fusion_mode)
+    monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: '/unused/' + package)
+    if allowed:
+        actions = module.launch_setup(context)
+        assert dict(actions[1].launch_arguments)['fusion_mode'] == 'odom'
+    else:
+        with pytest.raises(RuntimeError, match='fusion_mode:=odom'):
+            module.launch_setup(context)
+
+
 @pytest.mark.parametrize('sim', [True, False])
-def test_permanent_sensors_and_navigation_launch(sim, tmp_path, monkeypatch):
+def test_navigation_and_default_sensors_launch(sim, tmp_path, monkeypatch):
     import importlib.util
     from pathlib import Path
     import yaml
@@ -377,6 +440,9 @@ def test_simulated_camera_rates_are_configured_in_yaml():
 @pytest.mark.parametrize('settings,sim,expected', [
     ({}, False, {'motors', 'imu', 'battery', 'patrol'}),
     ({}, True, {'patrol'}),
+    ({'imu': False}, False, {'motors', 'battery', 'patrol'}),
+    ({'battery_monitor': False}, False, {'motors', 'imu', 'patrol'}),
+    ({'lidar': False}, False, {'motors', 'imu', 'battery'}),
 ])
 def test_diagnostic_analyzers_follow_enabled_sources(settings, sim, expected, tmp_path, monkeypatch):
     import importlib.util
@@ -396,6 +462,8 @@ def test_diagnostic_analyzers_follow_enabled_sources(settings, sim, expected, tm
     config = tmp_path / 'hardware.yaml'
     config.write_text(yaml.safe_dump(settings))
     context.launch_configurations.update(hardware_config=str(config), diagnostics='true', sim=str(sim).lower())
+    if settings.get('imu') is False:
+        context.launch_configurations['fusion_mode'] = 'odom'
     nodes = []
     original = module.Node
 

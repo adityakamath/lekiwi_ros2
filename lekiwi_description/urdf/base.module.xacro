@@ -79,9 +79,10 @@
                                    material="base_light_grey" rgba="${light_grey_rgba}"/>
     </xacro:if>
 
-    <!-- Permanent shared LiDAR/SparkFun mount. -->
+    <!-- Shared LiDAR/SparkFun mount; stays fitted when either sensor is removed. -->
     <xacro:lekiwi_base_component name="lidar_plate" mesh="lidar_plate_assembly"
                                  material="base_light_grey" rgba="${light_grey_rgba}"/>
+    <xacro:if value="${has_lidar}">
     <!-- LD06 and mounting plate -->
     <!-- LD06 laser link -->
     <link name="laser_link">
@@ -148,6 +149,7 @@
       <child link="laser_frame"/>
       <origin xyz="0 0 ${laser_frame_offset_z}" rpy="0 0 0"/>
     </joint>
+    </xacro:if>
     <!-- reSpeaker, control board, speaker and mounts -->
     <xacro:if value="${has_respeaker}">
       <!-- Respeaker flex mic link -->
@@ -258,6 +260,7 @@
     </xacro:if>
 
     <!-- BNO055 IMU -->
+    <xacro:if value="${has_imu}">
     <!-- BNO055 IMU link -->
     <link name="imu_link">
       <visual>
@@ -320,6 +323,7 @@
       <child link="imu_frame"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
     </joint>
+    </xacro:if>
     <!-- Left wheel link -->
     <link name="left_wheel_link">
       <visual>

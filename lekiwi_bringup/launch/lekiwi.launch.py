@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch the LeKiwi base and upgrades selected in hardware.yaml."""
+"""Launch the LeKiwi base and the assemblies selected in hardware.yaml."""
 
 
 import tempfile
@@ -52,6 +52,12 @@ def launch_setup(context):
     tof, audio = (hardware[name] for name in ('sparkfun_sensor', 'respeaker'))
     enable_camera = enable_camera and hardware['gemini2']
 
+    if not hardware['imu'] and fusion_mode in ('base', 'imu'):
+        raise RuntimeError(
+            f"[lekiwi.launch.py] imu: false in the hardware file requires fusion_mode:=odom "
+            f"(fusion_mode:={fusion_mode!r} needs the BNO055)."
+        )
+
     if sim:
         # Running in MuJoCo implies sim time and mock hardware - forced here defensively
         # rather than relying solely on control.launch.py's mujoco branch never opening the real port.
@@ -86,15 +92,22 @@ def launch_setup(context):
         control_args['mujoco_scene'] = mujoco_scene
     control = include(pkg_control, 'launch/control.launch.py', control_args)
 
-    nav = include(pkg_nav,     'launch/navigation.launch.py', {
-        'fusion_mode':  fusion_mode,
-        'mission':      mission,
-        'map_name':     map_name,
-        'use_sim_time': use_sim_time,
-        'diagnostics':  str(diagnostics).lower(),
-        'wp_loops':     wp_loops,
-        'use_composition': use_composition,
-    })
+    if hardware['lidar']:
+        nav = include(pkg_nav, 'launch/navigation.launch.py', {
+            'fusion_mode':  fusion_mode,
+            'mission':      mission,
+            'map_name':     map_name,
+            'use_sim_time': use_sim_time,
+            'diagnostics':  str(diagnostics).lower(),
+            'wp_loops':     wp_loops,
+            'use_composition': use_composition,
+        })
+    else:
+        # SLAM, Nav2 and the collision monitor need /scan; only the odometry EKF runs.
+        nav = include(pkg_nav, 'launch/ekf.launch.py', {
+            'fusion_mode':  fusion_mode,
+            'use_sim_time': use_sim_time,
+        })
 
     actions = [control, nav]
 
@@ -103,9 +116,9 @@ def launch_setup(context):
         analyzer_file = f'{pkg_bringup}/config/diagnostic_aggregator.yaml'
         enabled_analyzers = {
             'motors': not sim,
-            'imu': not sim,
-            'battery': not sim,
-            'patrol': True,
+            'imu': hardware['imu'] and not sim,
+            'battery': hardware['battery_monitor'] and not sim,
+            'patrol': hardware['lidar'],
         }
         if any(enabled_analyzers.values()):
             if not all(enabled_analyzers.values()):
@@ -131,7 +144,8 @@ def launch_setup(context):
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
 
-    actions.append(include(pkg_bringup, 'launch/laser.launch.py'))
+    if hardware['lidar']:
+        actions.append(include(pkg_bringup, 'launch/laser.launch.py'))
 
     if tof:
         # Its start-up stalls the shared I2C bus, so wait until the controllers are active.
@@ -152,10 +166,11 @@ def launch_setup(context):
     # this same launch tree's shared LaunchConfiguration namespace, and a generic name
     # here would silently resolve to nav2's value instead of this package's own default
     # (found the hard way - see battery_monitor.launch.py's own module docstring).
-    pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
-    actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
-        'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
-    }))
+    if hardware['battery_monitor']:
+        pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
+        actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
+            'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
+        }))
 
     # Start the fitted Gemini 2 via the local driver launch.
     if hardware['gemini2']:
@@ -173,7 +188,7 @@ def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument('hardware_config',
                               default_value=PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'hardware.yaml']),
-                              description='Optional robot assemblies; LiDAR, IMU and battery monitoring are permanent.'),
+                              description='Optional robot assemblies.'),
 
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start the selected real or simulated camera; false retains geometry.'),

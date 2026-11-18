@@ -93,6 +93,5 @@ pytest test -q
 
 Configure robot composition only in
 [`lekiwi_bringup/config/hardware.yaml`](../lekiwi_bringup/config/hardware.yaml).
-It selects optional assemblies. LiDAR, IMU and battery monitoring are permanent. Launch
-normally after editing it; no hardware flags are needed. See
+It selects the fitted assemblies. Launch normally after editing it; no hardware flags are needed. See
 [Configure the robot](../lekiwi_description/README.md#configure-the-robot).

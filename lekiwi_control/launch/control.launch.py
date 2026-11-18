@@ -140,12 +140,16 @@ def launch_setup(context):
 
     # Remove plugin entries for absent devices as well as their processing nodes.
     sensor_plugins = f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml'
-    if hw_type == 'mujoco' and not hardware['sparkfun_sensor']:
+    if hw_type == 'mujoco' and not (hardware['sparkfun_sensor'] and hardware['lidar']):
         with open(sensor_plugins) as stream:
             plugin_config = yaml.safe_load(stream)
         plugins = plugin_config['/**']['ros__parameters']['mujoco_plugins']
         lidar_plugin = plugins['mujoco_3d_lidar_plugin']
-        lidar_plugin.pop('tof', None)
+        for name in ('lidar', 'tof'):
+            if not hardware['lidar' if name == 'lidar' else 'sparkfun_sensor']:
+                lidar_plugin.pop(name, None)
+        if not {'lidar', 'tof'} & lidar_plugin.keys():
+            plugins.pop('mujoco_3d_lidar_plugin')
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_sensors_', delete=False) as stream:
             yaml.safe_dump(plugin_config, stream)
             sensor_plugins = stream.name
@@ -178,14 +182,15 @@ def launch_setup(context):
     sim_nodes = []
     if hw_type == 'mujoco':
         filter_file = 'mujoco_laser_filter.yaml'
-        sim_nodes.append(Node(
-            package='laser_filters',
-            executable='scan_to_scan_filter_chain',
-            name='laser_scan_filter_chain',
-            output='log',
-            parameters=[f'{pkg_mujoco}/config/{filter_file}', {'use_sim_time': True}],
-            remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
-        ))
+        if hardware['lidar']:
+            sim_nodes.append(Node(
+                package='laser_filters',
+                executable='scan_to_scan_filter_chain',
+                name='laser_scan_filter_chain',
+                output='log',
+                parameters=[f'{pkg_mujoco}/config/{filter_file}', {'use_sim_time': True}],
+                remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
+            ))
         if hardware['sparkfun_sensor']:
             sim_nodes.append(Node(
                 package='lekiwi_mujoco', executable='tof_pointcloud',
@@ -262,6 +267,8 @@ def launch_setup(context):
             f'{pkg_ctrl}/config/twist_switch.yaml',
             f'{pkg_ctrl}/config/collision_toggle.yaml',
             {'use_sim_time': use_sim_time},
+            # Without a LiDAR there is no collision monitor, so commands go straight to the base.
+            *([] if hardware['lidar'] else [{'output_topic': '/base_controller/cmd_vel'}]),
         ],
     )
 
@@ -270,12 +277,12 @@ def launch_setup(context):
              arguments=['base_controller', '-c', '/controller_manager',
                         '--controller-manager-timeout', '30'], output='both'),
     ]
-    # Spawn only when the hardware file includes the BNO055.
-    extra_spawner_nodes.append(
-        Node(package='controller_manager', executable='spawner',
-             arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
-                        '--controller-manager-timeout', '30'], output='both'),
-    )
+    if hardware['imu']:
+        extra_spawner_nodes.append(
+            Node(package='controller_manager', executable='spawner',
+                 arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
+                            '--controller-manager-timeout', '30'], output='both'),
+        )
     if hw_type == 'mujoco' and enable_camera:
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
@@ -332,6 +339,7 @@ def launch_setup(context):
 
     if diagnostics and hw_type != 'mujoco':
         actions.append(TimerAction(period=3.0, actions=[motor_diagnostics]))
+    if diagnostics and hw_type != 'mujoco' and hardware['imu']:
         actions.append(TimerAction(
             period=3.0,
             actions=[Node(
@@ -354,7 +362,7 @@ def generate_launch_description():
     declared_arguments = [
         DeclareLaunchArgument('hardware_config',
                               default_value=PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'hardware.yaml']),
-                              description='Optional robot assemblies; LiDAR, IMU and battery monitoring are permanent.'),
+                              description='Optional robot assemblies.'),
 
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start simulated camera publishing; geometry remains selected.'),

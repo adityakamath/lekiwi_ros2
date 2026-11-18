@@ -22,14 +22,16 @@ to match the fitted hardware, then launch normally. All switches default to `tru
 
 | Setting | Controls |
 |---------|----------|
+| `lidar` | LD19/LD06 LiDAR; `false` also skips SLAM, Nav2 and the collision monitor, which need `/scan`, so only the EKF runs |
+| `imu` | BNO055 IMU; `false` needs `fusion_mode:=odom` |
+| `battery_monitor` | INA260 battery monitor and events (real robot only) |
 | `rpi5` | Raspberry Pi 5 case mesh |
 | `respeaker` | Microphone, control board, speaker, mounts and real-robot audio announcements |
 | `sparkfun_sensor` | VL53L5CX and ToF processing; the shared mounting plate always stays |
 | `gemini2` | Gemini 2, mount and camera processing |
 | `shelf` | Tray and shelf spacers together |
 
-The switches are independent. LiDAR, BNO055 IMU and battery monitoring are always fitted.
-Bringup passes the selected file to control, Xacro and
+The switches are independent. Bringup passes the selected file to control, Xacro and
 MuJoCo generation. Missing keys use defaults; unknown keys and non-boolean values
 are rejected. For another profile, use `hardware_config:=/path/to/hardware.yaml`.
 Runtime options such as `sim`, `mission`, `pointcloud` and `joy` remain launch arguments.
@@ -178,7 +180,7 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 | `diagnostics` | `false` | Launch the motor and IMU diagnostics nodes |
 | `joy` | `false` | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |
 
-LiDAR, BNO055 IMU and battery monitoring are permanent. Full navigation and the collision-monitor velocity path are always launched by bringup; real sensor drivers and battery monitoring are skipped in simulation.
+Which sensors are fitted comes from `hardware.yaml`. With the default profile, bringup launches full navigation and the collision-monitor velocity path; real sensor drivers and battery monitoring are skipped in simulation. Without a LiDAR (`lidar: false`) only the EKF runs and commands go straight to the base. Without an IMU (`imu: false`) use `fusion_mode:=odom`.
 
 Camera arguments: `enable_camera:=false` skips the real or simulated camera, `pointcloud:=true` adds a colored point cloud (off by default). Real camera rates are configured in `lekiwi_bringup/config/gemini2.yaml` (color 15 FPS, depth 5 FPS; the camera's own IMU is off by default); simulation renders at 5 Hz. See [`lekiwi_bringup`](lekiwi_bringup/README.md#camera).
 

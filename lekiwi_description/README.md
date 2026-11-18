@@ -99,9 +99,12 @@ ros2 launch lekiwi_bringup lekiwi.launch.py
 ```
 
 That file is the single source for robot composition in bringup, control, Xacro
-and generated MuJoCo models. LiDAR, BNO055 IMU and battery monitoring are permanent and have no hardware switches.
+and generated MuJoCo models.
 
 ```yaml
+lidar: true
+imu: true
+battery_monitor: true
 rpi5: true
 respeaker: true
 sparkfun_sensor: true
@@ -111,6 +114,9 @@ shelf: true
 
 | Setting | Effect |
 | --- | --- |
+| `lidar` | LD19/LD06 LiDAR and its frames; the shared mounting plate always stays. `false` also stops SLAM, Nav2 and the collision monitor |
+| `imu` | BNO055 IMU, its frames and controller; `false` needs `fusion_mode:=odom` |
+| `battery_monitor` | INA260 battery monitor and events (real robot only) |
 | `shelf` | Tray and shelf spacers |
 | `rpi5` | Raspberry Pi 5 case; false removes the case for a replacement computer |
 | `respeaker` | Microphone, control board, speaker, and all their mounts |
@@ -133,7 +139,7 @@ and mount. An explicit pre-built `mujoco_model` must match the selected hardware
 Base inertia remains a lumped estimate when fixed mounts are removed.
 
 `lidar_plate_assembly.stl` combines the LiDAR and SparkFun mounting plates in
-one permanent fixed link, even when the SparkFun sensor is disabled.
+one fixed link that stays when either sensor is disabled.
 
 The SparkFun sensor and Gemini 2 currently have one supported model each. To add
 another sensor on the permanent plate, replace its sensor mesh/frame and driver

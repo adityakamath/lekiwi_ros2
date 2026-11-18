@@ -419,7 +419,6 @@
     <child link="tray_link"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
   </joint>
-  <!-- BNO055 IMU -->
   <!-- BNO055 IMU link -->
   <link name="imu_link">
     <visual>

@@ -180,7 +180,7 @@ ros2 launch lekiwi_bringup lekiwi.launch.py enable_camera:=false
 
 ## Checking CPU use
 
-A bare `lekiwi.launch.py` command reads `hardware.yaml` and starts the configured hardware plus navigation. The default file selects base-only mode with every optional group enabled and LiDAR, IMU and battery monitoring always present. `fusion_mode` defaults to `base` (wheel odometry and IMU); the IMU and LiDAR are always present.
+A bare `lekiwi.launch.py` command reads `hardware.yaml` and starts the configured hardware plus navigation. The default file enables every group. `fusion_mode` defaults to `base` (wheel odometry and IMU); set `fusion_mode:=odom` when `imu: false`.
 
 On the robot, wait for startup to settle, then list the busiest processes and the running nodes:
 
@@ -197,16 +197,15 @@ Look for `orbbec_camera`, `slam_toolbox`, `nav2_container` (all the Nav2 nodes w
 pytest test -q
 ```
 
-The tests check launch arguments, hardware-profile forwarding, permanent LiDAR/IMU/navigation and real battery startup, camera processing and explicit LiDAR filter paths without starting hardware drivers.
+The tests check launch arguments, hardware-profile forwarding, the LiDAR, IMU and battery switches, navigation and real battery startup, camera processing and explicit LiDAR filter paths without starting hardware drivers.
 
 Configure robot composition only in
 [`config/hardware.yaml`](config/hardware.yaml).
-It selects optional assemblies. LiDAR, IMU and battery monitoring are permanent. Launch
-normally after editing it; no hardware flags are needed. See
+It selects the fitted assemblies. Launch normally after editing it; no hardware flags are needed. See
 [Configure the robot](../lekiwi_description/README.md#configure-the-robot).
 
-LiDAR, BNO055 IMU and real-robot battery monitoring always run. The velocity
-path always passes through the collision monitor.
+With the default profile, the LiDAR, BNO055 IMU and (on the real robot) battery monitoring run, and the velocity
+path passes through the collision monitor. `lidar: false` skips the LiDAR driver, SLAM, Nav2 and the collision monitor, leaving only the EKF; commands then go straight to the base. `imu: false` needs `fusion_mode:=odom`. `battery_monitor: false` skips the battery nodes.
 
 The SparkFun sensor and Gemini 2 currently have one supported model each. To add
 another sensor on the permanent plate, replace its sensor mesh/frame and driver

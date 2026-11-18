@@ -94,14 +94,43 @@ def test_sensor_plate_is_permanent(tof, tmp_path):
         assert spec.body(name) is None
 
 
+def test_disabled_lidar_removes_its_bodies_but_keeps_the_shared_plate(tmp_path):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'lidar': False}))
+    spec = builder.build_robot_spec(hardware_config=config)
+    for name in ('laser_link', 'laser_frame'):
+        assert spec.body(name) is None
+    assert spec.body('lidar_plate_link') is not None
+    assert spec.body('tof_link') is not None
+    assert not [s.name for s in spec.sensors if s.name.startswith('lidar-')]
+    spec.compile()
+
+
+def test_disabled_imu_removes_its_body_and_sensors(tmp_path):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'imu': False}))
+    spec = builder.build_robot_spec(hardware_config=config)
+    assert spec.body('imu_link') is None
+    assert not [s.name for s in spec.sensors if s.name.startswith('bno055_')]
+    assert spec.body('laser_link') is not None
+    spec.compile()
+
+
+def test_enabled_imu_keeps_its_body_and_sensors(tmp_path):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'imu': True}))
+    spec = builder.build_robot_spec(hardware_config=config)
+    assert spec.body('imu_link') is not None
+    assert [s.name for s in spec.sensors if s.name.startswith('bno055_')]
+
+
 def test_disabling_all_optional_assemblies_keeps_fixed_hardware(tmp_path):
     from lekiwi_mujoco.hardware_config import HARDWARE_DEFAULTS
     config = tmp_path / 'hardware.yaml'
     config.write_text(yaml.safe_dump(dict.fromkeys(HARDWARE_DEFAULTS, False)))
     spec = builder.build_robot_spec(hardware_config=config)
-    for name in ('laser_link', 'laser_frame', 'imu_link', 'imu_frame', 'lidar_plate_link'):
-        assert spec.body(name) is not None
-    for name in ('tof_link', 'mic_link', 'speaker_link', 'respeaker_board_link',
+    assert spec.body('lidar_plate_link') is not None
+    for name in ('laser_link', 'laser_frame', 'imu_link', 'imu_frame', 'tof_link', 'mic_link', 'speaker_link', 'respeaker_board_link',
                  'gemini2_link', 'gemini2_mount_link', 'tray_link', 'rpi5_case_link'):
         assert spec.body(name) is None
     spec.compile()

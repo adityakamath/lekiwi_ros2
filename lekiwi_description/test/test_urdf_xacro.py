@@ -174,11 +174,14 @@ if __name__ == '__main__' and '--write' in sys.argv:
 _AUDIO_LINKS = {'mic_link', 'respeaker_board_link', 'speaker_link'}
 _TOF_LINKS = {'tof_link', 'tof_frame'}
 _LASER_LINKS = {'laser_link', 'laser_frame'}
+_IMU_LINKS = {'imu_link', 'imu_frame'}
 _CAMERA_LINKS = {'gemini2_link', 'gemini2_imu_frame', 'gemini2_link_model_origin', 'gemini2_mount_link'}
 
 
 @pytest.mark.parametrize('settings,removed,retained', [
     ({'rpi5': False}, {'rpi5_case_link'}, _LASER_LINKS | _AUDIO_LINKS),
+    ({'imu': False}, _IMU_LINKS, _LASER_LINKS | _AUDIO_LINKS | _TOF_LINKS | _CAMERA_LINKS),
+    ({'lidar': False}, _LASER_LINKS, _IMU_LINKS | _AUDIO_LINKS | _TOF_LINKS | _CAMERA_LINKS | {'lidar_plate_link'}),
     ({'respeaker': False}, _AUDIO_LINKS, _LASER_LINKS | _TOF_LINKS | _CAMERA_LINKS),
     ({'gemini2': False}, _CAMERA_LINKS, _AUDIO_LINKS | _TOF_LINKS),
     ({'shelf': False}, {'tray_link'}, _AUDIO_LINKS | _LASER_LINKS),
@@ -246,7 +249,22 @@ def test_tray_assembly_follows_shelf_setting(tmp_path, shelf):
 
 
 @pytest.mark.parametrize('backend', ['real', 'mujoco'])
-def test_imu_interfaces_are_always_present(tmp_path, backend):
+def test_disabled_imu_has_no_links_or_control_interfaces(tmp_path, backend):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'imu': False}))
+    stdout, stderr, rc = _xacro(_URDF_BASE, _BASE_ARGS + [
+        f'hardware_config:={config}', f'ros2_control_hardware_type:={backend}'])
+    assert rc == 0, stderr
+    root = ET.fromstring(stdout)
+    assert root.find("ros2_control/sensor[@name='bno055']") is None
+    assert root.find("ros2_control[@name='lekiwi_imu']") is None
+    assert root.find("gazebo[@reference='imu_frame']") is None
+    assert not {'imu_link', 'imu_frame'} & {link.get('name') for link in root.findall('link')}
+    assert not {'imu_joint', 'imu_frame_joint'} & {joint.get('name') for joint in root.findall('joint')}
+
+
+@pytest.mark.parametrize('backend', ['real', 'mujoco'])
+def test_imu_interfaces_are_present_by_default(tmp_path, backend):
     config = tmp_path / 'hardware.yaml'
     config.write_text(yaml.safe_dump({'respeaker': False}))
     stdout, stderr, rc = _xacro(_URDF_BASE, _BASE_ARGS + [

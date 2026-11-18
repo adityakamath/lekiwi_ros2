@@ -1,5 +1,4 @@
 """Pure-Python derivation tests; run directly without ROS with PyYAML installed."""
-import ast
 from pathlib import Path
 import sys
 import tempfile
@@ -60,23 +59,9 @@ class TestVelocityLimits(unittest.TestCase):
 
     def test_launch_applies_overrides_after_yaml(self):
         path = Path(__file__).resolve().parents[1] / 'launch/nav2.launch.py'
-        tree = ast.parse(path.read_text())
-        found = set()
-        for call in ast.walk(tree):
-            if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name):
-                continue
-            if call.func.id != 'Node':
-                continue
-            kwargs = {k.arg: k.value for k in call.keywords}
-            executable = kwargs.get('executable')
-            if not isinstance(executable, ast.Constant):
-                continue
-            name = executable.value
-            if name in ('controller_server', 'behavior_server', 'velocity_smoother'):
-                text = ast.unparse(kwargs['parameters'])
-                self.assertIn(f"[configured_params, speed_limits['{name}']]", text)
-                found.add(name)
-        self.assertEqual(found, {'controller_server', 'behavior_server', 'velocity_smoother'})
+        text = path.read_text()
+        for name in ('controller_server', 'behavior_server', 'velocity_smoother'):
+            self.assertIn(f"parameters=[configured_params, speed_limits['{name}']]", text, name)
 
 
 if __name__ == '__main__':

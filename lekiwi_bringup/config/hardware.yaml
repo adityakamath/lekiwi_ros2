@@ -1,11 +1,10 @@
 # Robot hardware. Edit this file, then launch normally.
 
-# Independent optional assemblies.
+lidar: true           # LD19/LD06 LiDAR; false also skips SLAM, Nav2 and the collision monitor, which need /scan
+imu: true             # BNO055 IMU; false requires fusion_mode:=odom
+battery_monitor: true # INA260 battery monitor (real hardware only)
 rpi5: true            # Raspberry Pi 5 case; false removes it for an alternative computer
 respeaker: true       # Microphone, control board, speaker, and their mounts
 sparkfun_sensor: true # Sparkfun sensor (Default: VL53L5CX) only; its mount is permanent
 gemini2: true         # Gemini 2 and its base mount
 shelf: true           # Tray and shelf spacers
-
-# LiDAR, BNO055 IMU and INA260 battery monitoring are permanent hardware.
-# The shared LiDAR/SparkFun mounting plate always remains fitted.

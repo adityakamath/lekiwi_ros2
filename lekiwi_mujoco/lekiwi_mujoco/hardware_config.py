@@ -5,7 +5,7 @@ import yaml
 
 from lekiwi_mujoco.paths import package_share
 
-HARDWARE_GROUPS = ('respeaker', 'sparkfun_sensor', 'gemini2', 'shelf', 'rpi5')
+HARDWARE_GROUPS = ('lidar', 'imu', 'battery_monitor', 'respeaker', 'sparkfun_sensor', 'gemini2', 'shelf', 'rpi5')
 HARDWARE_DEFAULTS = dict.fromkeys(HARDWARE_GROUPS, True)
 
 

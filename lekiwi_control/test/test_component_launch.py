@@ -23,7 +23,7 @@ def _launch(overrides, tmp_path):
     return module, context, config
 
 
-@pytest.mark.parametrize('disabled', [None, 'respeaker', 'sparkfun_sensor', 'gemini2', 'shelf', 'rpi5'])
+@pytest.mark.parametrize('disabled', [None, 'lidar', 'imu', 'respeaker', 'sparkfun_sensor', 'gemini2', 'shelf', 'rpi5'])
 def test_hardware_file_reaches_xacro(disabled, tmp_path, monkeypatch):
     module, context, config = _launch({disabled: False} if disabled else {}, tmp_path)
     commands = []
@@ -43,6 +43,8 @@ def test_hardware_file_reaches_xacro(disabled, tmp_path, monkeypatch):
 
 @pytest.mark.parametrize('settings,expected', [
     ({'sparkfun_sensor': False}, {'lidar'}),
+    ({'lidar': False}, {'tof'}),
+    ({'lidar': False, 'sparkfun_sensor': False}, set()),
 ])
 def test_simulation_uses_same_file_and_only_present_sensor_plugins(settings, expected, tmp_path, monkeypatch):
     module, context, config = _launch(settings, tmp_path)
@@ -92,6 +94,42 @@ def test_profile_path_with_spaces_reaches_xacro(tmp_path, monkeypatch):
     assert f'hardware_config:={spaced}' in args
     result = subprocess.run(args, capture_output=True, text=True, check=True)
     assert ET.fromstring(result.stdout).find("link[@name='gemini2_link']") is None
+
+
+@pytest.mark.parametrize('lidar', [True, False])
+def test_without_a_lidar_commands_go_straight_to_the_base(lidar, tmp_path, monkeypatch):
+    module, context, _ = _launch({'lidar': lidar}, tmp_path)
+    nodes = []
+    original = module.Node
+
+    def record(**kwargs):
+        nodes.append(kwargs)
+        return original(**kwargs)
+
+    monkeypatch.setattr(module, 'Node', record)
+    module.launch_setup(context)
+    support = next(node for node in nodes if node.get('executable') == 'control_support_node')
+    overrides = [p for p in support['parameters'] if isinstance(p, dict) and 'output_topic' in p]
+    assert overrides == ([] if lidar else [{'output_topic': '/base_controller/cmd_vel'}])
+
+
+@pytest.mark.parametrize('imu', [True, False])
+def test_imu_broadcaster_and_diagnostics_follow_the_imu_setting(imu, tmp_path, monkeypatch):
+    module, context, _ = _launch({'imu': imu}, tmp_path)
+    context.launch_configurations.update(diagnostics='true')
+    nodes = []
+    original = module.Node
+
+    def record(**kwargs):
+        nodes.append(kwargs)
+        return original(**kwargs)
+
+    monkeypatch.setattr(module, 'Node', record)
+    module.launch_setup(context)
+    spawned = {node['arguments'][0] for node in nodes if node.get('executable') == 'spawner'}
+    assert ('imu_sensor_broadcaster' in spawned) == imu
+    assert 'base_controller' in spawned
+    assert any(node.get('name') == 'bno055_diagnostics' for node in nodes) == imu
 
 
 def test_simulation_does_not_start_physical_diagnostic_nodes(tmp_path, monkeypatch):

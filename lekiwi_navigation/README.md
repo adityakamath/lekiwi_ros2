@@ -17,11 +17,11 @@ Navigation for LeKiwi: sensor fusion, mapping, localization, path planning and p
 
 ## Requirements
 
-ROS 2 Kilted with `navigation2`, `nav2_bringup`, `slam_toolbox` and `robot_localization`, and Pillow (`python3-pil`) for the map saver. Full navigation expects `/scan`, `/base_controller/odom` and the permanent BNO055 IMU, and sends velocity commands through `lekiwi_control`'s twist switch and collision monitor path.
+ROS 2 Kilted with `navigation2`, `nav2_bringup`, `slam_toolbox` and `robot_localization`, and Pillow (`python3-pil`) for the map saver. Full navigation expects `/scan`, `/base_controller/odom` and the BNO055 IMU, and sends velocity commands through `lekiwi_control`'s twist switch and collision monitor path.
 
 ## Running
 
-`lekiwi_bringup` always starts full navigation with the permanent LiDAR and BNO055 IMU. The default EKF fuses wheel odometry and IMU; `fusion_mode` remains a runtime debugging override. [`hardware.yaml`](../lekiwi_bringup/config/hardware.yaml) controls optional assemblies only.
+`lekiwi_bringup` starts full navigation when the profile has a LiDAR, and only the EKF when `lidar: false`. The default EKF fuses wheel odometry and IMU; with `imu: false` set `fusion_mode:=odom`, and `fusion_mode` remains a runtime override. [`hardware.yaml`](../lekiwi_bringup/config/hardware.yaml) selects the fitted assemblies.
 
 To run full navigation on its own:
 

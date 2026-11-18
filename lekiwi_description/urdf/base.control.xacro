@@ -160,7 +160,8 @@
          each block is an isolated HardwareInfo, so lekiwi_imu below couldn't see them. -->
     <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'mujoco'}">
       <!-- mujoco_type=imu maps to base_subtree.xml's bno055_quat/gyro/accel MJCF sensors -
-           same state_interfaces as the real block below (duplicated), for the permanent BNO055. -->
+           same state_interfaces as the real block below (duplicated), for the BNO055. -->
+      <xacro:if value="${has_imu}">
       <sensor name="bno055">
         <param name="mujoco_type">imu</param>
         <state_interface name="orientation.x"/>
@@ -174,6 +175,7 @@
         <state_interface name="linear_acceleration.y"/>
         <state_interface name="linear_acceleration.z"/>
       </sensor>
+      </xacro:if>
       <!-- The Gemini camera IMU uses the upstream MuJoCo ros2_control IMU mapping. -->
       <xacro:if value="${'$(arg enable_camera)' == 'true' and has_gemini2}">
         <sensor name="gemini2">
@@ -201,7 +203,7 @@
   <!-- ROS 2 CONTROL -->
   <!-- Real hardware only - gazebo bridges its own IMU sensor instead (base.module.xacro),
        mujoco hosts its sensor inside lekiwi_base above. -->
-  <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real'}">
+  <xacro:if value="${'$(arg ros2_control_hardware_type)' == 'real' and has_imu}">
     <ros2_control name="lekiwi_imu" type="sensor">
       <hardware>
         <plugin>bno055_hardware_interface/BNO055HardwareInterface</plugin>
