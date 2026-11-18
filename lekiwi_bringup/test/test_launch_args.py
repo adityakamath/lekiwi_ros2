@@ -451,6 +451,10 @@ def test_diagnostic_analyzers_follow_enabled_sources(settings, sim, expected, tm
     from launch import LaunchContext
     from launch.actions import DeclareLaunchArgument
 
+    from launch_ros.substitutions import FindPackageShare
+    monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: str(Path(__file__).resolve().parents[1])
+                        if package == 'lekiwi_bringup' else '/unused/' + package)
+
     path = Path(__file__).resolve().parents[1] / 'launch/lekiwi.launch.py'
     spec = importlib.util.spec_from_file_location('diagnostic_source_audit', path)
     module = importlib.util.module_from_spec(spec)
