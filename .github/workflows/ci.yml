@@ -79,7 +79,7 @@ jobs:
       - name: colcon build
         # --packages-ignore is required, not optional cleanup: lekiwi_bringup/lekiwi_control's
         # package.xml declare ldlidar_ros2/sts_hardware_interface/bno055_hardware_interface/
-        # ina260_battery_monitor as dependencies, and colcon discovers them on disk via their
+        # ina260_battery_monitor/tof_imager_ros as dependencies, and colcon discovers them on disk via their
         # submodules even with --packages-select - then fails trying to source their (never-built)
         # install output unless explicitly ignored. OrbbecSDK_ROS2 is ignored for the same reason.
         run: |
@@ -91,7 +91,7 @@ jobs:
             $ESTOP \
             --packages-ignore \
               orbbec_camera orbbec_camera_msgs orbbec_description \
-              sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor $SKIP
+              sts_hardware_interface bno055_hardware_interface ldlidar_ros2 ina260_battery_monitor tof_imager_ros $SKIP
 
       - name: mujoco_ros2_plugins tests
         if: matrix.ros_distro == 'kilted'
