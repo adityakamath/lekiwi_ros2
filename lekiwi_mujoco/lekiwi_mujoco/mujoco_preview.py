@@ -3,7 +3,7 @@
 
 On macOS run with mjpython. No waypoint follower or ROS controller is included.
 
-Standalone, no install needed: `python3 -m lekiwi_mujoco.mujoco_preview --variant base`,
+Standalone, no install needed: `python3 -m lekiwi_mujoco.mujoco_preview`,
 run from this package's root dir (-m puts the cwd on sys.path). After `pip install -e .`
 (or a colcon build), the same tool is also `mujoco_preview` on PATH / `ros2 run lekiwi_mujoco
 mujoco_preview`.
@@ -63,15 +63,11 @@ class KeyboardControl:
         self.base_limits = self.control.base_limits
         self.wheel_limits = self.control.wheel_limits
         self.kinematics = self.control.kinematics
-        self.payload_limits = self.control.payload_limits
         self.active = False
         self.estop = False
 
     def enforce_limits(self, data, dt):
         self.control.apply(data, data.ctrl.copy(), dt)
-
-    def reset_targets(self, data):
-        self.control.reset_targets(data)
 
     def stop(self, data):
         data.ctrl[self.wheels] = 0
@@ -80,7 +76,7 @@ class KeyboardControl:
     def set_estop(self, data, active):
         """Match the real robot's emergency stop: torque disabled on every motor via
         mjDSBL_ACTUATION, same as sts_hardware_interface's real EnableTorque(motor, 0)
-        and mujoco_ros2_plugins/EmergencyStopPlugin. Wheels and payload drift/coast
+        and mujoco_ros2_plugins/EmergencyStopPlugin. Wheels drift/coast
         freely rather than locking or holding."""
         self.estop = active
         if active:
@@ -90,20 +86,14 @@ class KeyboardControl:
 
     def update(self, data, held, dt):
         held = {ord(chr(k).upper()) if 97 <= k <= 122 else k for k in held}
-        alt = bool(held & {glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT})
         shift = bool(held & {glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT})
         forward = int(glfw.KEY_UP in held) - int(glfw.KEY_DOWN in held)
         lateral = int(glfw.KEY_LEFT in held) - int(glfw.KEY_RIGHT in held)
         command = self.base_limits * [forward, 0 if shift else lateral, lateral if shift else 0]
-        if alt:
-            command[:] = 0
-        moving = not alt and bool(forward or lateral)
-        if moving or self.active or alt:
+        moving = bool(forward or lateral)
+        if moving or self.active:
             data.ctrl[self.wheels] = self.control.wheel_speeds(command)
         self.active = moving
-        if alt:
-            rates = {'shoulder_pan_joint': lateral, 'tilt_joint': forward}
-            self.control.integrate_payload(data, [rates[name] for name in self.payload_limits], dt)
 
 
 class HeldKeys:
@@ -113,7 +103,7 @@ class HeldKeys:
     Unbound keys and focus notifications are forwarded to MuJoCo's callbacks.
     """
     BOUND = {glfw.KEY_UP, glfw.KEY_DOWN, glfw.KEY_LEFT, glfw.KEY_RIGHT,
-             glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT, glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT,
+             glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT,
              glfw.KEY_SPACE, *map(ord, 'XP')}
 
     def __init__(self):
@@ -181,28 +171,24 @@ class HeldKeys:
 # fields render as left/right-aligned columns, not one run-on wrapped line.
 CONTROL_LABELS_BASE = 'Drive\nStrafe\nRotate\nE-Stop\nReset\nPause'
 CONTROL_VALUES_BASE = 'Up/Down\nLeft/Right\nShift + Left/Right\nSpace\nX\nP'
-CONTROL_LABELS_PAYLOAD = 'Drive\nStrafe\nRotate\nPan\nTilt\nE-Stop\nReset\nPause'
-CONTROL_VALUES_PAYLOAD = 'Up/Down\nLeft/Right\nShift + Left/Right\nAlt + Left/Right\nAlt + Up/Down\nSpace\nX\nP'
 STATUS_LABELS = 'Model\nTime\nStatus'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--variant', choices=['base', 'pt101'], default='base')
     parser.add_argument('--control-package', type=Path)
     parser.add_argument('--description-package', type=Path)
-    parser.add_argument('--pt-package', type=Path)
     parser.add_argument('--scene', default='flat', help='flat, arena, home (apartment), maze, none, or scene MJCF path')
     parser.add_argument('--model', type=Path, help='Use an explicit prebuilt XML and its embedded limits instead of regenerating')
     parser.add_argument('--island-colors', action='store_true', help='Debug constraint islands instead of displaying robot materials')
     parser.add_argument('--telemetry', type=Path, help='Optional live model-state JSON')
     args = parser.parse_args()
-    filename = 'lekiwi_base.xml' if args.variant == 'base' else f'lekiwi_{args.variant}.xml'
+    filename = 'lekiwi_base.xml'
     # Keep generated files alive for the viewer lifetime; mesh paths are absolute.
     generated = TemporaryDirectory(prefix='lekiwi_preview_') if args.model is None else None
     path = (args.model.resolve() if args.model else
-            build(args.variant, Path(generated.name) / filename, absolute=True, scene=args.scene, control_dir=args.control_package,
-                  description_dir=args.description_package, pt_package=args.pt_package))
+            build(Path(generated.name) / filename, absolute=True, scene=args.scene, control_dir=args.control_package,
+                  description_dir=args.description_package))
     model = mujoco.MjModel.from_xml_path(str(path))
     simulation = Simulation(model)
     simulation.reset()
@@ -212,9 +198,7 @@ def main():
     trail = Trail()
     paused = False
     frames = 0
-    control_labels, control_values = ((CONTROL_LABELS_PAYLOAD, CONTROL_VALUES_PAYLOAD)
-                                       if simulation.robot.payload else
-                                       (CONTROL_LABELS_BASE, CONTROL_VALUES_BASE))
+    control_labels, control_values = CONTROL_LABELS_BASE, CONTROL_VALUES_BASE
     if args.telemetry:
         args.telemetry.parent.mkdir(parents=True, exist_ok=True)
     with mujoco.viewer.launch_passive(model, data, key_callback=keys.bootstrap) as viewer:
@@ -224,8 +208,6 @@ def main():
             viewer.cam.azimuth = 135
             viewer.cam.elevation = -22
             viewer.opt.geomgroup[3] = 0  # Hide collision proxies, keep CAD visuals.
-            # The payload's blind arc is baked out of the model itself (mask_payload_lidar,
-            # applied at build time), so MuJoCo's own native rendering is already correct.
             viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = True
         print(f'Native viewer ready: {path}', flush=True)
         for label, value in zip(control_labels.split('\n'), control_values.split('\n')):

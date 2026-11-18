@@ -12,13 +12,14 @@ import sys
 import xml.etree.ElementTree as ET
 
 import pytest
+import yaml
 
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-_URDF_BASE = os.path.join(_PKG_SRC, 'urdf', 'base', 'base.urdf.xacro')
-_URDF_PANTILT = os.path.join(_PKG_SRC, 'urdf', 'base_pantilt', 'base_pantilt.urdf.xacro')
+_URDF_BASE = os.path.join(_PKG_SRC, 'urdf', 'base.urdf.xacro')
 
 # Mock hardware args matching urdf_config.yaml defaults so the xacro parses cleanly.
 _BASE_ARGS = [
+    'hardware_config:=' + os.path.join(_PKG_SRC, '..', 'lekiwi_bringup', 'config', 'hardware.yaml'),
     'base_controller_config:=' + os.path.join(_PKG_SRC, '..', 'lekiwi_control', 'config', 'control.yaml'),
     'serial_port:=/dev/ttySERVO',
     'use_mock:=true',
@@ -34,17 +35,9 @@ _BASE_ARGS = [
     'internal_acc_coeff:=100',
 ]
 
-_PANTILT_ARGS = _BASE_ARGS + [
-    'proportional_vel_max:=0',
-]
-# Motor IDs, step-centering, and joint limits are not passed here - they're
-# pt_description's own physical-calibration constants, baked into
-# pantilt.joints.xacro's macro defaults (single source of truth).
-
-
 def _portable(xml):
     """The pre-built base.urdf points at the local meshes by relative path."""
-    return xml.replace('package://lekiwi_description/meshes/', '../../meshes/')
+    return xml.replace('package://lekiwi_description/meshes/', '../meshes/')
 
 
 def _xacro(xacro_file, args):
@@ -58,48 +51,20 @@ def _xacro(xacro_file, args):
 
 # ── base URDF ────────────────────────────────────────────────────────────────
 
-class TestBaseUrdf:
-    def setup_method(self):
-        self.stdout, self.stderr, self.rc = _xacro(_URDF_BASE, _BASE_ARGS)
-
-    def test_xacro_exits_cleanly(self):
-        assert self.rc == 0, f"xacro failed:\n{self.stderr}"
-
-    def test_output_is_valid_xml(self):
-        assert self.stdout.strip(), "xacro produced empty output"
-        try:
-            ET.fromstring(self.stdout)
-        except ET.ParseError as e:
-            pytest.fail(f"base.urdf.xacro output is not valid XML: {e}")
-
-    def test_robot_element_present(self):
-        root = ET.fromstring(self.stdout)
-        assert root.tag == 'robot', f"Root element should be 'robot', got '{root.tag}'"
-
-    def test_base_link_present(self):
-        root = ET.fromstring(self.stdout)
-        link_names = [link.get('name') for link in root.findall('link')]
-        assert 'base_link' in link_names or 'base_footprint' in link_names, \
-            "Expected base_link or base_footprint in URDF"
-
-    def test_wheel_joints_present(self):
-        root = ET.fromstring(self.stdout)
-        joint_names = [j.get('name') for j in root.findall('joint')]
-        for joint in ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint'):
-            assert joint in joint_names, f"Missing wheel joint '{joint}' in base URDF"
-
-    def test_ros2_control_block_present(self):
-        root = ET.fromstring(self.stdout)
-        assert root.find('ros2_control') is not None, \
-            "base URDF must contain a ros2_control block"
-
-    def test_no_xacro_warnings(self):
-        assert 'ERROR' not in self.stderr.upper(), \
-            f"xacro reported errors:\n{self.stderr}"
+def test_robot_structure():
+    stdout, stderr, rc = _xacro(_URDF_BASE, _BASE_ARGS)
+    assert rc == 0, stderr
+    root = ET.fromstring(stdout)
+    assert root.tag == 'robot'
+    links = {link.get('name') for link in root.findall('link')}
+    assert {'base_link', 'base_footprint'} <= links
+    joints = {joint.get('name') for joint in root.findall('joint')}
+    assert {'left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint'} <= joints
+    assert root.find("ros2_control[@name='lekiwi_base']") is not None
 
 
 class TestBaseStaticGemini2:
-    """The no-payload base carries its own Gemini 2 on the front bracket, independent of pantilt_ros2."""
+    """The base carries a static Gemini 2 on the front camera mount."""
 
     def setup_method(self):
         self.stdout, _, self.rc = _xacro(_URDF_BASE, _BASE_ARGS)
@@ -113,59 +78,9 @@ class TestBaseStaticGemini2:
         assert [float(v) for v in joint.find('origin').get('xyz').split()] == pytest.approx([0.09365, 0, 0.0723])
 
     def test_camera_comes_from_lekiwi_description_only(self):
-        assert 'pt_description' not in self.stdout and 'pantilt' not in self.stdout
         mesh = self.root.find("link[@name='gemini2_link_model_origin']/visual/geometry/mesh").get('filename')
         assert mesh == 'package://lekiwi_description/meshes/gemini2.stl'
         assert os.path.isfile(os.path.join(_PKG_SRC, 'meshes', 'gemini2.stl'))
-
-    @pytest.mark.pantilt
-    def test_pantilt_variant_has_only_the_tilt_camera(self):
-        stdout, _, _ = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
-        root = ET.fromstring(stdout)
-        joints = root.findall("joint[@name='gemini2_link_center_joint']")
-        assert len(joints) == 1 and joints[0].find('parent').get('link') == 'tilt_link'
-
-
-# ── base_pantilt URDF ─────────────────────────────────────────────────────────
-
-@pytest.mark.pantilt
-class TestBasePantiltUrdf:
-    def setup_method(self):
-        self.stdout, self.stderr, self.rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
-
-    def test_xacro_exits_cleanly(self):
-        assert self.rc == 0, f"xacro failed:\n{self.stderr}"
-
-    def test_output_is_valid_xml(self):
-        assert self.stdout.strip(), "xacro produced empty output"
-        try:
-            ET.fromstring(self.stdout)
-        except ET.ParseError as e:
-            pytest.fail(f"base_pantilt.urdf.xacro output is not valid XML: {e}")
-
-    def test_robot_element_present(self):
-        root = ET.fromstring(self.stdout)
-        assert root.tag == 'robot'
-
-    def test_pantilt_joints_present(self):
-        root = ET.fromstring(self.stdout)
-        joint_names = [j.get('name') for j in root.findall('joint')]
-        for joint in ('shoulder_pan_joint', 'tilt_joint'):
-            assert joint in joint_names, f"Missing pantilt joint '{joint}' in base_pantilt URDF"
-
-    def test_wheel_joints_still_present(self):
-        root = ET.fromstring(self.stdout)
-        joint_names = [j.get('name') for j in root.findall('joint')]
-        for joint in ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint'):
-            assert joint in joint_names, f"Missing wheel joint '{joint}' in base_pantilt URDF"
-
-    def test_ros2_control_block_present(self):
-        root = ET.fromstring(self.stdout)
-        assert root.find('ros2_control') is not None
-
-    def test_no_xacro_errors(self):
-        assert 'ERROR' not in self.stderr.upper(), \
-            f"xacro reported errors:\n{self.stderr}"
 
 
 # ── ros2_control interface structure ─────────────────────────────────────────
@@ -218,78 +133,7 @@ class TestBaseUrdfInterfaces:
 
     def test_gazebo_imu_sensor_present(self):
         assert self.root.find('.//gazebo[@reference="imu_frame"]/sensor[@name="imu"]') is not None, \
-            "Gazebo imu_frame sensor should be present when imu:=true"
-
-
-class TestBaseUrdfNoImu:
-    """imu:=false must omit all IMU sensor blocks but keep lekiwi_base intact."""
-
-    def setup_method(self):
-        stdout, _, _ = _xacro(_URDF_BASE, _BASE_ARGS + ['imu:=false'])
-        self.root = ET.fromstring(stdout)
-
-    def test_imu_sensor_block_absent(self):
-        assert self.root.find('ros2_control[@name="lekiwi_imu"]') is None, \
-            "ros2_control block 'lekiwi_imu' should be absent when imu:=false"
-
-    def test_base_sensor_block_still_present(self):
-        assert self.root.find('ros2_control[@name="lekiwi_base"]') is not None, \
-            "ros2_control block 'lekiwi_base' should still be present when imu:=false"
-
-    def test_gazebo_imu_sensor_absent(self):
-        assert self.root.find('.//gazebo[@reference="imu_frame"]/sensor[@name="imu"]') is None, \
-            "Gazebo imu_frame sensor should be absent when imu:=false"
-
-
-class TestBaseUrdfMujocoImu:
-    """mujoco hardware type must gate its own bno055 sensor block on imu, like real hardware."""
-
-    def _render(self, imu):
-        stdout, stderr, rc = _xacro(
-            _URDF_BASE, _BASE_ARGS + ['ros2_control_hardware_type:=mujoco', f'imu:={imu}'])
-        assert rc == 0, f"xacro failed:\n{stderr}"
-        return ET.fromstring(stdout)
-
-    def test_mujoco_bno055_sensor_present_when_imu_true(self):
-        root = self._render('true')
-        rc = root.find('ros2_control[@name="lekiwi_base"]')
-        assert rc.find('.//sensor[@name="bno055"]') is not None, \
-            "mujoco lekiwi_base block should contain a bno055 sensor when imu:=true"
-        assert rc.find('.//sensor[@name="lidar"]') is None, \
-            "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
-
-    def test_mujoco_bno055_sensor_absent_when_imu_false(self):
-        root = self._render('false')
-        rc = root.find('ros2_control[@name="lekiwi_base"]')
-        assert rc.find('.//sensor[@name="bno055"]') is None, \
-            "mujoco lekiwi_base block should omit the bno055 sensor when imu:=false"
-        assert rc.find('.//sensor[@name="lidar"]') is None, \
-            "the legacy rangefinder lidar block is gone (native lidar plugin instead)"
-
-
-@pytest.mark.pantilt
-class TestBasePantiltUrdfInterfaces:
-    """Pan/tilt joints must expose position command interface."""
-
-    def setup_method(self):
-        stdout, _, _ = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
-        self.root = ET.fromstring(stdout)
-
-    def test_pantilt_command_interfaces_are_position(self):
-        # shoulder_pan_joint and tilt_joint live in a separate ros2_control block from wheels.
-        all_rc = self.root.findall('ros2_control')
-        pantilt_joints = {}
-        for rc in all_rc:
-            for j in rc.findall('.//joint'):
-                name = j.get('name')
-                if name in ('shoulder_pan_joint', 'tilt_joint'):
-                    pantilt_joints[name] = j
-        assert len(pantilt_joints) == 2, \
-            f"Expected shoulder_pan_joint and tilt_joint in ros2_control, found: {list(pantilt_joints)}"
-        for name, j in pantilt_joints.items():
-            cmd_ifaces = [i.get('name') for i in j.findall('command_interface')]
-            assert 'position' in cmd_ifaces, \
-                f"Joint '{name}' must have position command interface"
+            "Gazebo imu_frame sensor should be present with the default hardware profile"
 
 
 # ── Stale pre-built .urdf consistency check ───────────────────────────────────
@@ -307,9 +151,8 @@ class TestPrebuiltUrdfConsistency:
         return re.sub(r'<!--.*?-->', '', xml_str, flags=re.DOTALL).strip()
 
     def test_base_urdf_not_stale(self):
-        prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base', 'base.urdf')
-        if not os.path.exists(prebuilt):
-            pytest.skip("base.urdf not present; nothing to compare against")
+        prebuilt = os.path.join(_PKG_SRC, 'urdf', 'base.urdf')
+        assert os.path.isfile(prebuilt), 'The checked-in base.urdf is missing'
         generated, _, rc = _xacro(_URDF_BASE, _BASE_ARGS)
         assert rc == 0
         with open(prebuilt) as f:
@@ -319,59 +162,101 @@ class TestPrebuiltUrdfConsistency:
             'base.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
 
-# ── EEPROM tuning that reaches each motor on the shared bus ─────────────────────
-
-@pytest.mark.pantilt
-class TestSharedBusTuning:
-    """One hardware block owns the bus: wheels keep the aggressive tuning, the pan-tilt keeps its own."""
-
-    def setup_method(self):
-        stdout, _, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS)
-        assert rc == 0
-        self.rc = ET.fromstring(stdout).find('ros2_control[@name="lekiwi_base"]')
-
-    def _params(self, joint):
-        return {p.get('name'): p.text.strip() for p in self.rc.find(f'joint[@name="{joint}"]').findall('param')}
-
-    def test_wheels_use_the_aggressive_tuning_and_ids_7_8_9(self):
-        for joint, motor in (('left_wheel_joint', '7'), ('back_wheel_joint', '8'), ('right_wheel_joint', '9')):
-            params = self._params(joint)
-            assert params['motor_id'] == motor
-            assert (params['internal_max_vel'], params['internal_max_acc'], params['internal_acc_coeff']) == ('254', '254', '100')
-
-    def test_pantilt_joints_use_the_modules_own_tuning_and_ids_1_2(self):
-        for joint, motor in (('shoulder_pan_joint', '1'), ('tilt_joint', '2')):
-            params = self._params(joint)
-            assert params['motor_id'] == motor
-            assert (params['internal_max_vel'], params['internal_max_acc'], params['internal_acc_coeff']) == ('65', '50', '0')
-
-    def test_bus_level_settings_stay_in_the_one_hardware_block(self):
-        hardware = {p.get('name'): p.text.strip() for p in self.rc.find('hardware').findall('param')}
-        assert hardware['serial_port'] == '/dev/ttySERVO' and hardware['proportional_vel_max'] == '0'
-        assert len(self.rc.findall('hardware')) == 1
-
-
 if __name__ == '__main__' and '--write' in sys.argv:
-    models = [('base', 'base', 'base', _BASE_ARGS)]
-    for folder, source, name, args in models:
-        result = subprocess.run(['xacro', f'{folder}/{source}.urdf.xacro'] + args, cwd=os.path.join(_PKG_SRC, 'urdf'),
-                                capture_output=True, text=True, check=True)
-        with open(os.path.join(_PKG_SRC, 'urdf', folder, f'{name}.urdf'), 'w') as out:
-            out.write(_portable(result.stdout))
+    result = subprocess.run(['xacro', 'base.urdf.xacro'] + _BASE_ARGS,
+                            cwd=os.path.join(_PKG_SRC, 'urdf'),
+                            capture_output=True, text=True, check=True)
+    with open(os.path.join(_PKG_SRC, 'urdf', 'base.urdf'), 'w') as out:
+        out.write(_portable(result.stdout))
 
 
-@pytest.mark.pantilt
-@pytest.mark.parametrize('enabled', ['true', 'false'])
-def test_sim_camera_imu_interface_follows_enable_camera(enabled):
-    xml, errors, rc = _xacro(_URDF_PANTILT, _PANTILT_ARGS + [
-        'ros2_control_hardware_type:=mujoco', f'enable_camera:={enabled}',
-    ])
-    assert rc == 0, errors
-    root = ET.fromstring(xml)
-    sensor = root.find('ros2_control[@name="lekiwi_base"]/sensor[@name="gemini2"]')
-    assert (sensor is not None) == (enabled == 'true')
-    assert root.find('ros2_control[@name="lekiwi_base"]/sensor[@name="oak"]') is None
+# Hardware presence must remove whole assemblies, without dangling TF references.
+_AUDIO_LINKS = {'mic_link', 'respeaker_board_link', 'speaker_link'}
+_TOF_LINKS = {'tof_link', 'tof_frame'}
+_LASER_LINKS = {'laser_link', 'laser_frame'}
+_CAMERA_LINKS = {'gemini2_link', 'gemini2_imu_frame', 'gemini2_link_model_origin', 'gemini2_mount_link'}
+
+
+@pytest.mark.parametrize('settings,removed,retained', [
+    ({'rpi5': False}, {'rpi5_case_link'}, _LASER_LINKS | _AUDIO_LINKS),
+    ({'respeaker': False}, _AUDIO_LINKS, _LASER_LINKS | _TOF_LINKS | _CAMERA_LINKS),
+    ({'gemini2': False}, _CAMERA_LINKS, _AUDIO_LINKS | _TOF_LINKS),
+    ({'shelf': False}, {'tray_link'}, _AUDIO_LINKS | _LASER_LINKS),
+    ({'sparkfun_sensor': False}, _TOF_LINKS, _AUDIO_LINKS | _LASER_LINKS),
+    ({'respeaker': False, 'gemini2': False, 'shelf': False, 'sparkfun_sensor': False},
+     _AUDIO_LINKS | _TOF_LINKS | _CAMERA_LINKS |
+     {'tray_link'},
+     _LASER_LINKS | {'imu_link', 'imu_frame', 'base_link', 'base_footprint', 'rpi5_case_link', 'left_wheel_link', 'back_wheel_link', 'right_wheel_link'}),
+])
+def test_hardware_presence_removes_complete_assemblies(settings, removed, retained, tmp_path):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump(settings))
+    stdout, stderr, rc = _xacro(_URDF_BASE, _BASE_ARGS + [f'hardware_config:={config}'])
+    assert rc == 0, stderr
+    root = ET.fromstring(stdout)
+    links = {link.get('name') for link in root.findall('link')}
+    assert not removed & links
+    assert retained <= links
+    for joint in root.findall('joint'):
+        assert joint.find('parent').get('link') in links
+        assert joint.find('child').get('link') in links
+    for gazebo in root.findall('gazebo[@reference]'):
+        assert gazebo.get('reference') in links
+
+
+def test_disabled_gemini2_has_no_simulated_control_sensor(tmp_path):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text('gemini2: false\n')
+    stdout, stderr, rc = _xacro(_URDF_BASE, _BASE_ARGS + [
+        f'hardware_config:={config}', 'ros2_control_hardware_type:=mujoco'])
+    assert rc == 0, stderr
+    assert ET.fromstring(stdout).find("ros2_control/sensor[@name='gemini2']") is None
+
+
+@pytest.mark.parametrize('shelf', ['true', 'false'])
+def test_tray_assembly_follows_shelf_setting(tmp_path, shelf):
+    wrapper = tmp_path / 'plate.xacro'
+    wrapper.write_text(f'''<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="test">
+      <xacro:include filename="{_PKG_SRC}/urdf/base.module.xacro"/>
+      <xacro:property name="theta" value="${{2*pi/3}}"/>
+      <xacro:property name="max_torque_nm" value="3"/>
+      <xacro:property name="max_velocity_rads" value="10"/>
+      <link name="base_footprint"/>
+      <xacro:lekiwi_base_module parent="base_footprint">
+        <origin xyz="0 0 0"/>
+      </xacro:lekiwi_base_module>
+    </robot>''')
+    config = tmp_path / 'hardware.yaml'
+    config.write_text('shelf: ' + shelf + '\n')
+    stdout, stderr, rc = _xacro(str(wrapper), _BASE_ARGS + [f'hardware_config:={config}'])
+    assert rc == 0, stderr
+    root = ET.fromstring(stdout)
+    has_tray = shelf == 'true'
+    meshes = {m.get('filename').split('/')[-1] for m in root.findall('.//visual/geometry/mesh')}
+    assert ('tray_assembly.stl' in meshes) == has_tray
+    plate = root.find("link[@name='tray_link']")
+    assert (plate is not None) == has_tray
+    if plate is not None:
+        offset = root.find("joint[@name='tray_joint']/origin").get('xyz')
+        assert list(map(float, offset.split())) == pytest.approx([0, 0, 0])
+    links = {link.get('name') for link in root.findall('link')}
+    for joint in root.findall('joint'):
+        assert joint.find('parent').get('link') in links
+        assert joint.find('child').get('link') in links
+
+
+@pytest.mark.parametrize('backend', ['real', 'mujoco'])
+def test_imu_interfaces_are_always_present(tmp_path, backend):
+    config = tmp_path / 'hardware.yaml'
+    config.write_text(yaml.safe_dump({'respeaker': False}))
+    stdout, stderr, rc = _xacro(_URDF_BASE, _BASE_ARGS + [
+        f'hardware_config:={config}', f'ros2_control_hardware_type:={backend}'])
+    assert rc == 0, stderr
+    root = ET.fromstring(stdout)
+    sensor = root.find("ros2_control/sensor[@name='bno055']")
+    assert (sensor is not None) is True
+    assert (root.find("ros2_control[@name='lekiwi_imu']") is not None) == (backend == 'real')
+    assert (root.find("gazebo[@reference='imu_frame']") is not None) is True
     if sensor is not None:
-        params = {param.get('name'): param.text for param in sensor.findall('param')}
-        assert params['mujoco_type'] == 'imu'
-        assert params['mujoco_sensor_name'] == 'gemini2'
+        names = {entry.get('name') for entry in sensor.findall('state_interface')}
+        assert {'orientation.x', 'orientation.y', 'orientation.z', 'orientation.w'} <= names

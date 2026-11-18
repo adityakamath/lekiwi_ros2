@@ -33,3 +33,12 @@ lidar:
   update_rate: 5.0  # Hz, matches the LD06 scan rate
   async: false      # true (background thread) stamps each scan ~0.2 s old; slam_toolbox then stamps map->odom
                     # behind 'now' and Nav2 aborts goals with 'extrapolation into the future'
+tof:
+  # VL53L5CX as a second native lidar instance on tof_frame (ROS only; --lidar plugin): 8x8 zones over a square FOV.
+  resolution: 8  # zones per side
+  fov_degrees: 45.0
+  max_range: 4.0  # m
+  min_range: 0.02  # m
+  update_rate: 15.0  # Hz, the real sensor's ranging_freq
+  # Ray origin above tof_frame, over the chassis collision cylinder's top (the plugin excludes no body); tof_pointcloud adds it back
+  site_height: 0.011  # m

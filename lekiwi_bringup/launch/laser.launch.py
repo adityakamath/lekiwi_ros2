@@ -2,9 +2,7 @@
 """
 Launch LD06 laser scanner for LeKiwi robot.
 
-Starts ldlidar_ros2_node with configuration from laser.yaml. A payload-specific
-laser filter (config/<payload>_laser_filter.yaml) is used automatically when one
-exists; custom_filter overrides it.
+Starts ldlidar_ros2_node with configuration from laser.yaml. The optional custom_filter argument selects an explicit scan filter.
 """
 
 import os
@@ -18,7 +16,6 @@ from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context):
     """Launch ldlidar_ros2_node, plus a scan filter chain when a filter config is resolved."""
-    payload_value = LaunchConfiguration('payload').perform(context).lower()
     custom_filter_name = LaunchConfiguration('custom_filter').perform(context)
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
     config_file = PathJoinSubstitution([pkg_bringup, 'config', 'laser.yaml'])
@@ -31,13 +28,6 @@ def launch_setup(context):
                 f"[laser.launch.py] custom_filter '{custom_filter_name}' not found: "
                 f"expected {filter_config_file}."
             )
-    elif payload_value:
-        payload_filter_file = os.path.join(
-            pkg_bringup, 'config', f'{payload_value}_laser_filter.yaml'
-        )
-        if os.path.exists(payload_filter_file):
-            filter_config_file = payload_filter_file
-
     laser_params = [config_file]
     laser_remappings = []
     if filter_config_file:
@@ -67,13 +57,8 @@ def launch_setup(context):
     return [laser_node, filter_node]
 
 def generate_launch_description():
-    """Declare payload/custom_filter and launch the laser stack via launch_setup."""
+    """Declare custom_filter and launch the laser stack via launch_setup."""
     declared_arguments = [
-        DeclareLaunchArgument(
-            'payload',
-            default_value='',
-            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
-        ),
         DeclareLaunchArgument(
             'custom_filter',
             default_value='',

@@ -23,8 +23,7 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 
 
 def launch_setup(context):
-    """Build joy_teleop (+ joy_node when 'joy' is true) for the selected payload."""
-    payload      = LaunchConfiguration('payload').perform(context)
+    """Build joy_teleop (+ joy_node when 'joy' is true) for the base."""
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     launch_joy   = _launch_arg_as_bool(context, 'joy')
 
@@ -36,7 +35,6 @@ def launch_setup(context):
         name='joy_teleop',
         parameters=[
             f'{pkg_ctrl}/config/base_teleop.yaml',
-            *([] if not payload else [f'{pkg_ctrl}/config/{payload}_teleop.yaml']),
             {'use_sim_time': use_sim_time},
         ],
         output='screen',
@@ -59,11 +57,6 @@ def launch_setup(context):
 def generate_launch_description():
     """Declare teleop launch arguments and launch via launch_setup."""
     declared_arguments = [
-        DeclareLaunchArgument(
-            'payload',
-            default_value='',
-            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
-        ),
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='false',

@@ -8,3 +8,10 @@
 battery_monitor_node:
   ros__parameters:
     state_file_path: "~/.ros/ina260_battery_monitor/state.yaml"
+    publish_rate_hz: 5.0          # 20 Hz upstream; 5 Hz saves CPU
+    eta_current_ema_alpha: 0.04   # keeps the ~5 s time constant (0.01 at 20 Hz)
+
+battery_events_node:
+  ros__parameters:
+    charger_rest_window_samples: 3     # ~0.6 s at 5 Hz (10 samples at 20 Hz)
+    charger_flip_confirm_samples: 10   # ~2 s at 5 Hz (40 samples at 20 Hz)

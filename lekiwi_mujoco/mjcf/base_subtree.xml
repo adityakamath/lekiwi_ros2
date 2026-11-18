@@ -1,26 +1,18 @@
 <!-- base_link's direct children as an includable fragment (freejoint, chassis collision,
      3 wheels with passive rollers, laser_link, imu_link), meant to be spliced inside a <body name="base_link">
      opened by the includer. Not a standalone model - never loaded directly. Body
-     pos/euler/quat values are ported from urdf/base/base.module.xacro + base.common.xacro. -->
+     pos/euler/quat values are ported from urdf/base.module.xacro + base.common.xacro. -->
 <mujoco>
   <!-- 6-DOF floating base - rests on the 3 wheels under gravity, not fixed to anything. -->
   <freejoint/>
-  <!-- Collision cylinder approximates the chassis footprint - the real mesh (739500
-       triangles) exceeds MuJoCo's 200000-face STL loader limit, so collision keeps using
-       this primitive; the decimated copy below is visual-only. group="3" + the transparent
-       material keep it from visually competing with that mesh - same convention as the
-       wheels (wheel_geom class) and pt_mujoco/mjcf/pantilt_shared.xml's "collision"
-       class. -->
+  <!-- Coarse chassis collision envelope. Split CAD meshes are visual only;
+       removing sensors does not change this contact approximation. -->
   <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" group="3" material="base_transparent"/>
   <!-- quat = Rz(base_offset_rz), base_offset_rz = 3*pi/2 (base.common.xacro) - given as an
        explicit quat, not euler, per the mesh-geom euler-composition bug (see ld06_lidar's
        fix). Z-span checked against the collision cylinder above: matches within ~1mm. -->
   <geom class="base_visual" mesh="lekiwi_base_visual" material="base_light_grey" quat="-0.70710678 0 0 0.70710678"/>
-  <!-- plate_link (base.module.xacro's plate_joint): visual only, same quat as the base mesh. The
-       generator swaps its mesh to payload_plate_visual when a payload is attached. -->
-  <body name="plate_link">
-    <geom name="plate_visual" class="base_visual" mesh="container_plate_visual" material="base_charcoal" quat="-0.70710678 0 0 0.70710678"/>
-  </body>
+
 
   <!-- Wheel orientation is an explicit quat, not euler="0 pi/2 <yaw>" - MuJoCo's eulerseq
        doesn't compose the same way URDF's rpy does, which previously put every wheel's
@@ -639,5 +631,13 @@
        housing and needs to be visible, but nothing here models microphone behavior. -->
   <body name="mic_link" pos="-0.045042 0 0.109010">
     <geom class="marker" mesh="respeaker_flex_mic" material="base_charcoal"/>
+  </body>
+
+  <!-- tof_link (base.module.xacro's tof_joint, tof_* from base.common.xacro) - visual only. -->
+  <body name="tof_link" pos="-0.0273 0.0827 0.0955" quat="0 0 0 1">
+    <geom class="marker" mesh="sparkfun_vl53l5cx" material="base_charcoal"/>
+    <body name="tof_frame" pos="0.0127 0.0127 0.0031">
+      <site name="tof_site" pos="0 0 0" group="4"/>
+    </body>
   </body>
 </mujoco>

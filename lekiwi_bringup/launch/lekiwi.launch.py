@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""Launch the LeKiwi robot system.
+"""Launch the LeKiwi base and upgrades selected in hardware.yaml."""
 
-The 'payload' argument selects which hardware payload is present:
-  ""        — base (tray) with the static Gemini 2 + navigation + laser [default, recommended]
-  "pantilt" — base with the payload plate + pan-tilt and its Gemini 2 + navigation + laser
-              [legacy, no longer maintained; needs the pantilt_ros2 submodule]
 
-'imu'/'laser'/'audio'/'battery_monitor' (all default true) each gate one optional physical
-sensor's launch include - see their own DeclareLaunchArgument descriptions below."""
+import tempfile
 
-import math
+import yaml
+
+from lekiwi_mujoco.hardware_config import load_hardware_config
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
-_VALID_PAYLOADS = {'', 'pantilt'}
 
 
 def _launch_arg_as_bool(context, name: str) -> bool:
@@ -34,20 +29,18 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 
 
 def launch_setup(context):
-    """Validate arguments and include control/navigation/laser (+ selected camera for pantilt)."""
-    payload             = LaunchConfiguration('payload').perform(context)
+    """Validate arguments and include control, navigation and the configured base sensors."""
+    hardware_config = LaunchConfiguration('hardware_config').perform(context)
+    hardware = load_hardware_config(hardware_config)
     enable_camera       = _launch_arg_as_bool(context, 'enable_camera')
     diagnostics         = _launch_arg_as_bool(context, 'diagnostics')
     use_mock            = LaunchConfiguration('use_mock').perform(context)
     fusion_mode         = LaunchConfiguration('fusion_mode').perform(context)
-    imu                 = _launch_arg_as_bool(context, 'imu')
-    laser               = _launch_arg_as_bool(context, 'laser')
-    audio               = _launch_arg_as_bool(context, 'audio')
-    battery_monitor     = _launch_arg_as_bool(context, 'battery_monitor')
     map_name            = LaunchConfiguration('map_name').perform(context)
     pointcloud          = _launch_arg_as_bool(context, 'pointcloud')
     mission             = LaunchConfiguration('mission').perform(context)
     wp_loops            = LaunchConfiguration('wp_loops').perform(context)
+    use_composition     = LaunchConfiguration('use_composition').perform(context)
     use_sim_time        = LaunchConfiguration('use_sim_time').perform(context)
     sim                 = _launch_arg_as_bool(context, 'sim')
     mujoco_gui          = LaunchConfiguration('mujoco_gui').perform(context)
@@ -56,11 +49,8 @@ def launch_setup(context):
     mujoco_model        = LaunchConfiguration('mujoco_model').perform(context)
     mujoco_scene        = LaunchConfiguration('mujoco_scene').perform(context)
 
-    camera_fps = float(LaunchConfiguration('camera_fps').perform(context))
-    if not math.isfinite(camera_fps) or camera_fps <= 0 or camera_fps > 30:
-        raise RuntimeError('camera_fps must be finite and in (0, 30] Hz')
-    if not sim and camera_fps not in (5, 10, 15, 30):
-        raise RuntimeError('Real camera_fps must be 5, 10, 15, or 30 Hz')
+    tof, audio = (hardware[name] for name in ('sparkfun_sensor', 'respeaker'))
+    enable_camera = enable_camera and hardware['gemini2']
 
     if sim:
         # Running in MuJoCo implies sim time and mock hardware - forced here defensively
@@ -68,16 +58,6 @@ def launch_setup(context):
         use_sim_time = 'true'
         use_mock = use_mock or 'true'
 
-    if payload not in _VALID_PAYLOADS:
-        raise RuntimeError(
-            f"[lekiwi.launch.py] Unknown payload '{payload}'. "
-            f"Valid values: {sorted(_VALID_PAYLOADS)}"
-        )
-    if not imu and fusion_mode in ('base', 'imu'):
-        raise RuntimeError(
-            f"[lekiwi.launch.py] imu:=false requires fusion_mode:=odom "
-            f"(fusion_mode:={fusion_mode!r} needs the BNO055)."
-        )
 
     pkg_control = FindPackageShare('lekiwi_control').perform(context)
     pkg_nav     = FindPackageShare('lekiwi_navigation').perform(context)
@@ -89,19 +69,17 @@ def launch_setup(context):
         )
 
     control_args = {
-        'payload':          payload,
         'enable_camera':    str(enable_camera).lower(),
         'pointcloud':       str(pointcloud).lower(),
-        'camera_fps': LaunchConfiguration('camera_fps').perform(context),
         'diagnostics':      str(diagnostics).lower(),
         'use_mock':         use_mock,
         'use_sim_time':     use_sim_time,
-        'imu':              str(imu).lower(),
         'joy':              joy,
         'sts_serial_port':  sts_serial_port,
         'mujoco_model':     mujoco_model,
         'enable_odom_tf':   'false',  # the navigation EKF publishes odom -> base_footprint
     }
+    control_args['hardware_config'] = hardware_config
     if sim:
         control_args['ros2_control_hardware_type'] = 'mujoco'
         control_args['mujoco_headless'] = 'false' if mujoco_gui.lower() in ('true', '1') else 'true'
@@ -115,24 +93,36 @@ def launch_setup(context):
         'use_sim_time': use_sim_time,
         'diagnostics':  str(diagnostics).lower(),
         'wp_loops':     wp_loops,
+        'use_composition': use_composition,
     })
 
     actions = [control, nav]
 
     if diagnostics:
         pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
-        # name='analyzers' is required, not cosmetic - matches diagnostic_aggregator.yaml's
-        # own top-level key, which ROS 2 uses to associate the params file with this node.
-        actions.append(Node(
-            package='diagnostic_aggregator',
-            executable='aggregator_node',
-            name='analyzers',
-            output='log',
-            parameters=[
-                f'{pkg_bringup}/config/diagnostic_aggregator.yaml',
-                {'use_sim_time': use_sim_time.lower() in ('true', '1')},
-            ],
-        ))
+        analyzer_file = f'{pkg_bringup}/config/diagnostic_aggregator.yaml'
+        enabled_analyzers = {
+            'motors': not sim,
+            'imu': not sim,
+            'battery': not sim,
+            'patrol': True,
+        }
+        if any(enabled_analyzers.values()):
+            if not all(enabled_analyzers.values()):
+                with open(analyzer_file) as stream:
+                    analyzer_config = yaml.safe_load(stream)
+                sections = analyzer_config['analyzers']['ros__parameters']
+                for name, enabled in enabled_analyzers.items():
+                    if not enabled:
+                        sections.pop(name, None)
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_diagnostics_', delete=False) as stream:
+                    yaml.safe_dump(analyzer_config, stream)
+                    analyzer_file = stream.name
+            actions.append(Node(
+                package='diagnostic_aggregator', executable='aggregator_node', name='analyzers',
+                output='log', parameters=[analyzer_file,
+                                        {'use_sim_time': use_sim_time.lower() in ('true', '1')}],
+            ))
 
     if sim:
         # laser/audio/battery_monitor/real camera have no simulated equivalent, or are
@@ -141,45 +131,39 @@ def launch_setup(context):
 
     pkg_bringup = FindPackageShare('lekiwi_bringup').perform(context)
 
-    if laser:
-        actions.append(include(pkg_bringup, 'launch/laser.launch.py', {'payload': payload}))
+    actions.append(include(pkg_bringup, 'launch/laser.launch.py'))
+
+    if tof:
+        # Its start-up stalls the shared I2C bus, so wait until the controllers are active.
+        actions.append(TimerAction(period=20.0, actions=[include(pkg_bringup, 'launch/tof.launch.py')]))
 
     if audio:
         pkg_audio = FindPackageShare('lekiwi_audio').perform(context)
         actions.append(include(pkg_audio, 'launch/audio.launch.py'))
 
-    if battery_monitor:
-        # Starts both battery_monitor_node and battery_events_node (the latter exposes
-        # /battery_low, /battery_critical, /battery_full, /charger_connected as SetBool
-        # services for indicator_node). battery_params_file is left at its own default
-        # (ina260_battery_monitor's own config/battery.yaml) deliberately - only the one
-        # LeKiwi-specific override goes here, layered on top via battery_overrides_file, so
-        # this never re-duplicates (and re-drifts from) the upstream package's own defaults.
-        # Argument names are battery-prefixed, not the generic params_file/overrides_file -
-        # nav2.launch.py (included above, as `nav`) declares its own params_file argument in
-        # this same launch tree's shared LaunchConfiguration namespace, and a generic name
-        # here would silently resolve to nav2's value instead of this package's own default
-        # (found the hard way - see battery_monitor.launch.py's own module docstring).
-        pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
-        actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
-            'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
-        }))
+    # Starts both battery_monitor_node and battery_events_node (the latter exposes
+    # /battery_low, /battery_critical, /battery_full, /charger_connected as SetBool
+    # services for indicator_node). battery_params_file is left at its own default
+    # (ina260_battery_monitor's own config/battery.yaml) deliberately - only the one
+    # LeKiwi-specific override goes here, layered on top via battery_overrides_file, so
+    # this never re-duplicates (and re-drifts from) the upstream package's own defaults.
+    # Argument names are battery-prefixed, not the generic params_file/overrides_file -
+    # nav2.launch.py (included above, as `nav`) declares its own params_file argument in
+    # this same launch tree's shared LaunchConfiguration namespace, and a generic name
+    # here would silently resolve to nav2's value instead of this package's own default
+    # (found the hard way - see battery_monitor.launch.py's own module docstring).
+    pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
+    actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
+        'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
+    }))
 
-    # The Gemini 2 is on every configuration: the pan-tilt's own driver launch with the payload, and
-    # lekiwi_bringup's own without one (pantilt_ros2 is then not needed at all).
-    if payload == 'pantilt':
-        camera = include(FindPackageShare('pt_bringup').perform(context), 'launch/gemini2.launch.py', {
-            'enable_camera': str(enable_camera).lower(),
-            'pointcloud': str(pointcloud).lower(),
-            'camera_fps': str(int(float(LaunchConfiguration('camera_fps').perform(context)))),
-        })
-    else:
+    # Start the fitted Gemini 2 via the local driver launch.
+    if hardware['gemini2']:
         camera = include(pkg_bringup, 'launch/gemini2.launch.py', {
             'enable_camera': str(enable_camera).lower(),
             'pointcloud': str(pointcloud).lower(),
-            'camera_fps': str(int(float(LaunchConfiguration('camera_fps').perform(context)))),
         })
-    actions.append(camera)
+        actions.append(camera)
 
     return actions
 
@@ -187,16 +171,12 @@ def launch_setup(context):
 def generate_launch_description():
     """Declare all top-level LeKiwi launch arguments and launch via launch_setup."""
     declared_arguments = [
-        DeclareLaunchArgument(
-            'payload',
-            default_value='',
-            description='Hardware payload: "" for the base with its static Gemini 2 (default), '
-                        '"pantilt" for the legacy pan-tilt (needs the pantilt_ros2 submodule)',
-        ),
+        DeclareLaunchArgument('hardware_config',
+                              default_value=PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'hardware.yaml']),
+                              description='Optional robot assemblies; LiDAR, IMU and battery monitoring are permanent.'),
+
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start the selected real or simulated camera; false retains geometry.'),
-        DeclareLaunchArgument('camera_fps', default_value='15.0',
-                              description='Camera RGB/depth rate in Hz for either model; simulation is capped at 5 Hz.'),
         DeclareLaunchArgument(
             'diagnostics',
             default_value='false',
@@ -229,7 +209,7 @@ def generate_launch_description():
             'mujoco_model',
             default_value='',
             description='[advanced, sim only] Path to a pre-built MJCF file to load; empty means '
-                        'xacro-process it at launch time instead (picked by payload).',
+                        'xacro-process it at launch time instead (base model).',
         ),
         DeclareLaunchArgument(
             'fusion_mode',
@@ -238,41 +218,13 @@ def generate_launch_description():
                 '[advanced] EKF sensor fusion mode: '
                 'base = wheel odom + BNO055 (default); '
                 'imu = BNO055 only (test platform); '
-                'odom = wheel odom only (debug, required when imu:=false).'
+                'odom = wheel odom only (debug).'
             ),
-        ),
-        DeclareLaunchArgument(
-            'imu',
-            default_value='true',
-            description='Whether a physical BNO055 IMU is present on the base (honored on '
-                        'real hardware and sim:=true/MuJoCo). false requires '
-                        'fusion_mode:=odom; omits the IMU from the URDF, the '
-                        'imu_sensor_broadcaster controller, and bno055_diagnostics.',
-        ),
-        DeclareLaunchArgument(
-            'laser',
-            default_value='true',
-            description='Whether a physical LD06 LiDAR is present on the base. '
-                        'false skips laser.launch.py\'s include entirely.',
-        ),
-        DeclareLaunchArgument(
-            'audio',
-            default_value='true',
-            description='Whether a physical reSpeaker mic array and speaker is present on the base. '
-                        'false skips lekiwi_audio\'s launch include entirely.',
-        ),
-        DeclareLaunchArgument(
-            'battery_monitor',
-            default_value='true',
-            description='Whether a physical INA260 current/voltage sensor is present on the base. '
-                        'false skips ina260_battery_monitor\'s launch include entirely (battery_monitor_node '
-                        'and battery_events_node together); if left true with no INA260 fitted, '
-                        'battery_monitor_node warns and shuts down cleanly instead of crashing.',
         ),
         DeclareLaunchArgument(
             'pointcloud',
             default_value='false',
-            description='[pantilt only] Enable point clouds from the selected camera; real Gemini 2 drivers also publish the Cloudini-compressed cloud.',
+            description='Publish the Gemini 2 colored point cloud; the real camera also publishes the Cloudini-compressed cloud.',
         ),
         DeclareLaunchArgument(
             'mission',
@@ -294,6 +246,12 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
+            'use_composition',
+            default_value='true',
+            description='Load the Nav2 nodes into one container instead of one process each '
+                        '(same names, parameters and remappings).',
+        ),
+        DeclareLaunchArgument(
             'wp_loops',
             default_value='0',
             description=(
@@ -311,9 +269,9 @@ def generate_launch_description():
             'sim',
             default_value='false',
             description='Run against MuJoCo instead of real hardware: forces use_sim_time and '
-                        'use_mock, and skips laser/audio/battery_monitor/real camera (laser is hosted '
+                        'use_mock, and skips laser/tof/audio/battery_monitor/real camera (laser is hosted '
                         'by the mujoco control node itself; the other three have no simulated '
-                        'equivalent at all). Base and pantilt payload both supported.',
+                        'equivalent at all). The base model is generated from the hardware profile.',
         ),
         DeclareLaunchArgument(
             'mujoco_scene',

@@ -75,14 +75,13 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
-from rclpy.time import Time
 
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import FollowWaypoints, NavigateToPose
 from nav_msgs.msg import Path
 from std_srvs.srv import SetBool
 from visualization_msgs.msg import Marker, MarkerArray
-import tf2_ros
+from lekiwi_navigation.tf_on_demand import lookup_transform
 
 # /waypoint_follow reflects ongoing patrol state, not a one-shot action - late-joining
 # subscribers (audio indicator, bool_toggle_node) should learn current state on connect.
@@ -145,8 +144,6 @@ class WaypointRecorderNode(Node):
         self._failed_waypoint = None
         self._consecutive_failures = 0
 
-        self._tf_buffer = tf2_ros.Buffer()
-        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
         self._marker_pub = self.create_publisher(MarkerArray, marker_topic, 10)
         self._diagnostics_pub = self.create_publisher(DiagnosticArray, diagnostics_topic, 10)
@@ -190,8 +187,7 @@ class WaypointRecorderNode(Node):
             return response
 
         try:
-            tf = self._tf_buffer.lookup_transform(
-                self._frame_id, 'base_footprint', Time(), Duration(seconds=0.5))
+            tf = lookup_transform(self._frame_id, 'base_footprint')
         except Exception as e:
             response.success = False
             response.message = f'TF lookup failed: {e}'

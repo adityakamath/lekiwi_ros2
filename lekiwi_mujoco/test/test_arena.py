@@ -15,7 +15,7 @@ from lekiwi_mujoco.simulation import Simulation  # noqa: E402
 @pytest.fixture(scope='module')
 def arena_model(tmp_path_factory):
     path = tmp_path_factory.mktemp('arena') / 'robot.xml'
-    return mujoco.MjModel.from_xml_path(str(build('base', path, absolute=True, scene='arena')))
+    return mujoco.MjModel.from_xml_path(str(build(path, absolute=True, scene='arena')))
 
 
 @pytest.mark.parametrize('prop', ['box', 'ball'])

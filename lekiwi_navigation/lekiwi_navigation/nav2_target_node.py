@@ -59,7 +59,7 @@ class Nav2TargetNode(Node):
         self._last_update = None
         self._status = None
         self._buffer = tf2_ros.Buffer()
-        self._listener = tf2_ros.TransformListener(self._buffer, self)
+        self._listener = None  # created only while the map pose is being seeded
         self._broadcaster = tf2_ros.TransformBroadcaster(self)
         retained = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
                               reliability=ReliabilityPolicy.RELIABLE)
@@ -301,6 +301,9 @@ class Nav2TargetNode(Node):
         now = self.get_clock().now()
         self._advance_command(now.nanoseconds)
         if self._mode is True and self._pose is None:
+            if self._listener is None:
+                self._buffer.clear()  # drop transforms left from an earlier listener
+                self._listener = tf2_ros.TransformListener(self._buffer, self)
             try:
                 # The attached target is identity in base_frame: this is the one-time
                 # attachment-to-map conversion, not continuous robot tracking.
@@ -309,6 +312,8 @@ class Nav2TargetNode(Node):
             except tf2_ros.TransformException:
                 self._publish_status('waiting_for_map_transform')
                 return
+            self._listener.unregister()
+            self._listener = None
             q = tf.transform.rotation
             yaw = math.atan2(2 * (q.w * q.z + q.x * q.y),
                              1 - 2 * (q.y * q.y + q.z * q.z))

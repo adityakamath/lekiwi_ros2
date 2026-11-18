@@ -20,6 +20,7 @@ setup(
     entry_points={'console_scripts': [
         'gemini2_cloud = lekiwi_mujoco.gemini2_cloud:main',
         'gemini2_depth = lekiwi_mujoco.gemini2_depth:main',
+        'tof_pointcloud = lekiwi_mujoco.tof_pointcloud:main',
         'build_mujoco_models = lekiwi_mujoco.build_mujoco_models:main',
         'mujoco_preview = lekiwi_mujoco.mujoco_preview:main',
         'benchmark_mujoco = lekiwi_mujoco.benchmark_mujoco:main',

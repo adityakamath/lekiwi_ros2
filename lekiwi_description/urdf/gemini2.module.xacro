@@ -1,9 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- Static Gemini 2 for the no-payload base. Same frames as pantilt_ros2's camera macro
-       (gemini2_link, gemini2_imu_frame, gemini2_link_model_origin), so the driver and /gemini2/* topics
-       are identical with or without a payload; kept here so the base does not depend on pantilt_ros2. -->
+  <!-- Static Gemini 2 camera, optical mesh and IMU frames. -->
   <xacro:macro name="gemini2_camera" params="parent *origin">
 
     <material name="gemini2_charcoal">

@@ -1,0 +1,11 @@
+# Robot hardware. Edit this file, then launch normally.
+
+# Independent optional assemblies.
+rpi5: true            # Raspberry Pi 5 case; false removes it for an alternative computer
+respeaker: true       # Microphone, control board, speaker, and their mounts
+sparkfun_sensor: true # Sparkfun sensor (Default: VL53L5CX) only; its mount is permanent
+gemini2: true         # Gemini 2 and its base mount
+shelf: true           # Tray and shelf spacers
+
+# LiDAR, BNO055 IMU and INA260 battery monitoring are permanent hardware.
+# The shared LiDAR/SparkFun mounting plate always remains fitted.

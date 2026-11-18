@@ -27,13 +27,11 @@ from PIL import Image
 
 import rclpy
 from rclpy._rclpy_pybind11.service_introspection import ServiceIntrospectionState
-from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import qos_profile_services_default
-from rclpy.time import Time
 from slam_toolbox.srv import SaveMap, SerializePoseGraph
 from std_srvs.srv import SetBool
-import tf2_ros
+from lekiwi_navigation.tf_on_demand import lookup_transform
 
 
 class MapSaverNode(Node):
@@ -55,8 +53,6 @@ class MapSaverNode(Node):
         self._save_client      = self.create_client(SaveMap, '/slam_toolbox/save_map')
         self._serialize_client = self.create_client(SerializePoseGraph, '/slam_toolbox/serialize_map')
 
-        self._tf_buffer   = tf2_ros.Buffer()
-        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
         self._saving = False
         self._save_watchdog = None
@@ -223,9 +219,7 @@ class MapSaverNode(Node):
         """Look up map→base_footprint and write starting_pose.yaml next to the map files."""
         save_dir = os.path.dirname(self._map_name)
         try:
-            tf_stamped = self._tf_buffer.lookup_transform(
-                'map', 'base_footprint', Time(), Duration(seconds=0.5)
-            )
+            tf_stamped = lookup_transform('map', 'base_footprint')
             t = tf_stamped.transform.translation
             q = tf_stamped.transform.rotation
             theta = math.atan2(

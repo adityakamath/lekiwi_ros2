@@ -14,6 +14,7 @@ ekf_node:
 
     # Output
     publish_tf: true
+    predict_to_current_time: true  # publish the state at the current time, not at the last sensor update
     publish_acceleration: false
 
     # Sensor 0: Wheel odometry from omni_wheel_drive_controller (/base_controller/odom)

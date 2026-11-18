@@ -6,58 +6,44 @@ import mujoco
 import numpy as np
 import yaml
 
-from lekiwi_mujoco.paths import package_share, payload_package
+from lekiwi_mujoco.paths import package_share
 
 WHEELS = ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint')
 
 
-def _laser_filter_params(has_payload):
+def _laser_filter_params():
     """Read the same filter chain the real robot's laser_filters node applies
-    (lekiwi_mujoco/config/mujoco_laser_filter[_pantilt].yaml), so the standalone sim's
+    (lekiwi_mujoco/config/mujoco_laser_filter.yaml), so the standalone sim's
     lidar_scan() matches what /scan looks like on hardware or in the ROS sim - without
     duplicating the threshold/mask numbers here and letting them drift out of sync."""
-    name = 'mujoco_laser_filter_pantilt.yaml' if has_payload else 'mujoco_laser_filter.yaml'
+    name = 'mujoco_laser_filter.yaml'
     filters = yaml.safe_load((package_share('lekiwi_mujoco') / 'config' / name).read_text())
     filters = filters['laser_scan_filter_chain']['ros__parameters']
-    no_hit_threshold, mask = None, None
+    no_hit_threshold = None
     for value in filters.values():
         if not isinstance(value, dict) or 'type' not in value:
             continue
         if value['type'] == 'laser_filters/LaserScanRangeFilter':
             no_hit_threshold = float(value['params']['lower_threshold'])
-        elif value['type'] == 'laser_filters/LaserScanAngularBoundsFilterInPlace':
-            mask = (float(value['params']['lower_angle']), float(value['params']['upper_angle']))
     if no_hit_threshold is None:
         raise ValueError(f'{name}: no LaserScanRangeFilter (no_hit_to_inf) entry found')
-    return no_hit_threshold, mask
+    return no_hit_threshold
 
 
 def lidar_scan(bindings, sensordata):
     """Filtered LD06 ranges, or None if this model has no lidar.
 
     Mirrors the real robot's laser_filters chain: MuJoCo's -1 'no hit' sentinel becomes
-    +inf per REP-117 (bindings.lidar_filter's no_hit_to_inf threshold). The payload's blind
-    arc needs no masking here - when a payload is mounted, build_mujoco_models's
-    mask_payload_lidar() already removed those rangefinders from the model entirely (see
-    its docstring), so MuJoCo's own native rangefinder visualization is correct un-aided,
-    and bindings.lidar_adr simply doesn't include them.
+    +inf per REP-117 using the same threshold as the ROS scan filter.
     """
     if bindings.lidar_filter is None:
         return None
-    no_hit_threshold, _mask = bindings.lidar_filter
+    no_hit_threshold = bindings.lidar_filter
     ranges = sensordata[bindings.lidar_adr].copy()
     ranges[ranges < no_hit_threshold] = np.inf
     return ranges
 
 
-def payload_names():
-    # pt_mujoco is only needed for models that carry the payload, so the base runs without it
-    try:
-        payload_package()
-        from pt_mujoco.simulation import PAYLOAD
-    except (ImportError, FileNotFoundError):
-        return None
-    return PAYLOAD
 
 
 def finite_vector(value, size, label):
@@ -80,15 +66,9 @@ class RobotBindings:
 
         self.base = required(mujoco.mjtObj.mjOBJ_BODY, 'base_link')
         self.wheels = tuple(required(mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in WHEELS)
-        payload = payload_names()
-        if payload is None and model.nu > len(WHEELS):
-            raise ValueError('This model has a payload but pt_mujoco is not available')
-        payload = payload or ()
-        self.payload = tuple(name for name in payload
-                             if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, name) >= 0)
-        if self.payload and self.payload != payload:
-            raise ValueError('Pan-tilt model must contain both payload actuators')
-        names = WHEELS + self.payload
+        if model.nu != len(WHEELS):
+            raise ValueError('LeKiwi base requires exactly three wheel actuators')
+        names = WHEELS
         self.actuator_ids = MappingProxyType({name: required(mujoco.mjtObj.mjOBJ_ACTUATOR, name) for name in names})
         self.joint_ids = MappingProxyType({name: required(mujoco.mjtObj.mjOBJ_JOINT, name) for name in names})
         for name in names:
@@ -101,7 +81,7 @@ class RobotBindings:
         lidar = sorted(((int(name.rsplit('-', 1)[1]), i) for name, i in self.sensor_ids.items()
                        if name.startswith('lidar-')))
         self.lidar_adr = np.array([model.sensor_adr[i] for _, i in lidar], dtype=int)
-        self.lidar_filter = _laser_filter_params(bool(self.payload)) if lidar else None
+        self.lidar_filter = _laser_filter_params() if lidar else None
 
     def _named_ids(self, kind, count):
         return MappingProxyType({name: i for i in range(count)
@@ -127,12 +107,6 @@ class RobotControl:
             raise ValueError('Radii and velocity limits must be positive')
         angles = offset + np.arange(3) * 2 * np.pi / 3
         self.kinematics = np.column_stack((np.sin(angles), -np.cos(angles), np.full(3, -base_radius))) / radius
-        self.payload_limits = {name: float(self.bindings.numeric('velocity_limit_' + name)[0]) for name in self.bindings.payload}
-        if any(not np.isfinite(v) or v <= 0 for v in self.payload_limits.values()):
-            raise ValueError('Payload velocity limits must be positive and finite')
-        self.previous_targets = {name: float(np.clip(0, *model.actuator_ctrlrange[self.bindings.actuator_ids[name]]))
-                                 for name in self.payload_limits}
-
     def wheel_speeds(self, command):
         command = finite_vector(command, 3, 'body velocity')
         rates = self.kinematics @ command
@@ -146,45 +120,20 @@ class RobotControl:
         return rates / scale
 
     def action(self, value):
-        return np.clip(finite_vector(value, 3 + len(self.payload_limits), 'action'), -1, 1)
-
-    def integrate_payload(self, data, rates, dt):
-        """Form requested targets from normalized rates; physics enforces them separately."""
-        if not np.isfinite(dt) or dt < 0:
-            raise ValueError('Target interval must be finite and nonnegative')
-        rates = finite_vector(rates, len(self.payload_limits), 'payload rates')
-        for rate, (name, limit) in zip(np.clip(rates, -1, 1), self.payload_limits.items()):
-            actuator = self.bindings.actuator_ids[name]
-            data.ctrl[actuator] = np.clip(data.ctrl[actuator] + rate * limit * dt,
-                                          *self.model.actuator_ctrlrange[actuator])
+        return np.clip(finite_vector(value, 3, 'action'), -1, 1)
 
     def apply(self, data, requested, dt):
         if not np.isfinite(dt) or dt < 0:
             raise ValueError('Control interval must be finite and nonnegative')
         requested = finite_vector(requested, self.model.nu, 'actuator commands')
         data.ctrl[self.wheels] = self.limit_wheels(requested[self.wheels])
-        for name, limit in self.payload_limits.items():
-            actuator = self.bindings.actuator_ids[name]
-            low, high = self.model.actuator_ctrlrange[actuator]
-            previous = self.previous_targets[name]
-            target = np.clip(requested[actuator], max(low, previous-limit*dt), min(high, previous+limit*dt))
-            data.ctrl[actuator] = target
-            self.previous_targets[name] = float(target)
-
-    def reset_targets(self, data):
-        self.previous_targets = {name: float(np.clip(data.ctrl[self.bindings.actuator_ids[name]],
-                                                    *self.model.actuator_ctrlrange[self.bindings.actuator_ids[name]]))
-                                 for name in self.payload_limits}
-        for name, value in self.previous_targets.items():
-            data.ctrl[self.bindings.actuator_ids[name]] = value
 
 
 class Simulation:
     """One model/data owner. No wall-clock pacing, rendering, keyboard or ROS imports.
 
     step(count, action) holds a normalized rate action for count physics ticks.
-    step(count) accepts actuator edits in data.ctrl (e.g. viewer sliders); position
-    requests persist until reached or replaced, with slew limits at each tick.
+    step(count) also accepts wheel velocity edits in data.ctrl (e.g. viewer sliders).
     """
     def __init__(self, model):
         self.model = model
@@ -192,8 +141,6 @@ class Simulation:
         self.robot = RobotBindings(model)
         self.control = RobotControl(model, self.robot)
         self.ready = False
-        self._requested = self.data.ctrl.copy()
-        self._applied = self.data.ctrl.copy()
 
     def steps_for(self, seconds):
         if not np.isfinite(seconds) or seconds <= 0:
@@ -207,9 +154,6 @@ class Simulation:
         if not np.isfinite(settle_seconds) or settle_seconds < 0:
             raise ValueError('Settling duration must be finite and nonnegative')
         mujoco.mj_resetData(self.model, self.data)
-        self.control.reset_targets(self.data)
-        self._requested = self.data.ctrl.copy()
-        self._applied = self.data.ctrl.copy()
         self.ready = True
         # Settling uses the same bounded controls and stepping as normal execution.
         self.step(round(settle_seconds / self.model.opt.timestep))
@@ -219,14 +163,10 @@ class Simulation:
 
     def command(self, body_velocity):
         self.data.ctrl[self.control.wheels] = self.control.wheel_speeds(body_velocity)
-        self._requested[self.control.wheels] = self.data.ctrl[self.control.wheels]
 
     def stop(self):
-        """Zero wheel command and hold current payload targets; do not teleport state."""
+        """Zero wheel commands without teleporting the robot."""
         self.data.ctrl[self.control.wheels] = 0.
-        self._requested = self.data.ctrl.copy()
-        self._applied = self.data.ctrl.copy()
-        self.control.reset_targets(self.data)
 
     def step(self, count=1, action=None):
         if not self.ready:
@@ -236,16 +176,11 @@ class Simulation:
         action = self.control.action(action) if action is not None else None
         if not np.isfinite(self.data.ctrl).all():
             raise ValueError('Actuator commands must be finite')
-        changed = self.data.ctrl != self._applied
-        self._requested[changed] = self.data.ctrl[changed]
         for _ in range(count):
             if action is not None:
-                self.data.ctrl[self.control.wheels] = self.control.wheel_speeds(action[:3] * self.control.base_limits)
-                self.control.integrate_payload(self.data, action[3:], self.model.opt.timestep)
-                self._requested = self.data.ctrl.copy()
-            self.control.apply(self.data, self._requested, self.model.opt.timestep)
+                self.data.ctrl[self.control.wheels] = self.control.wheel_speeds(action * self.control.base_limits)
+            self.control.apply(self.data, self.data.ctrl, self.model.opt.timestep)
             mujoco.mj_step(self.model, self.data)
-        self._applied = self.data.ctrl.copy()
         mujoco.mj_forward(self.model, self.data)
         if not np.isfinite(self.data.qpos).all() or not np.isfinite(self.data.qvel).all() or not np.isfinite(self.data.sensordata).all():
             raise FloatingPointError('Non-finite MuJoCo state')

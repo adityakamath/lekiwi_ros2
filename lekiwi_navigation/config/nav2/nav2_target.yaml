@@ -5,7 +5,7 @@ nav2_target_node:
     target_frame: nav2_target
     teleop_topic: cmd_vel_teleop
     mode_service: twist_switch
-    publish_rate: 30.0
+    publish_rate: 15.0
     command_timeout: 0.2
     max_dt: 0.1
     translation_scale: 2.0

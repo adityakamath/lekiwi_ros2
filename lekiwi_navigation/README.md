@@ -17,11 +17,13 @@ Navigation for LeKiwi: sensor fusion, mapping, localization, path planning and p
 
 ## Requirements
 
-ROS 2 Kilted with `navigation2`, `nav2_bringup`, `slam_toolbox` and `robot_localization`, and Pillow (`python3-pil`) for the map saver. It expects the robot to publish `/scan`, `/base_controller/odom` and the IMU, and to take velocity commands through `lekiwi_control`'s twist switch and collision monitor path.
+ROS 2 Kilted with `navigation2`, `nav2_bringup`, `slam_toolbox` and `robot_localization`, and Pillow (`python3-pil`) for the map saver. Full navigation expects `/scan`, `/base_controller/odom` and the permanent BNO055 IMU, and sends velocity commands through `lekiwi_control`'s twist switch and collision monitor path.
 
 ## Running
 
-`lekiwi_bringup` starts this with the rest of the robot. To run it on its own:
+`lekiwi_bringup` always starts full navigation with the permanent LiDAR and BNO055 IMU. The default EKF fuses wheel odometry and IMU; `fusion_mode` remains a runtime debugging override. [`hardware.yaml`](../lekiwi_bringup/config/hardware.yaml) controls optional assemblies only.
+
+To run full navigation on its own:
 
 ```bash
 ros2 launch lekiwi_navigation navigation.launch.py mission:=map                        # map the room with SLAM
@@ -37,6 +39,7 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 | `mission` | `""` | `map`: map from scratch; `slam`: localize with slam_toolbox on a saved map; `amcl`: localize with AMCL on a saved map. Empty maps from scratch, or uses AMCL if `map_name` is set |
 | `map_name` | `""` | Folder under `maps/`; also loads that map's zone masks |
 | `wp_loops` | `0` | Waypoint patrol passes per start: `0` loops forever, `N>0` runs `N` passes |
+| `use_composition` | `true` | Load the Nav2 nodes into one container (`nav2_container`) instead of one process each (`false` runs them separately); same node names, parameters and remappings |
 | `diagnostics` | `false` | Publish the patrol status on `/diagnostics` |
 | `use_sim_time` | `false` | Use `/clock` instead of system time |
 
@@ -55,6 +58,10 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 
 **Speed limits.** The joystick axis scales in `lekiwi_control/config/base_teleop.yaml` set the speed limits. `nav2.launch.py` reads their absolute values from the installed `lekiwi_control` package and overrides the MPPI, behavior-server rotation and velocity smoother limits after loading `params_file`; this also applies to custom parameter files. Keep acceleration and controller tuning in `nav2.yaml`. After changing the teleop scales, rebuild `lekiwi_control` (if you use a copied install) and restart the stack. Negative scales invert axes; zero or non-finite scales and nonzero offsets are rejected. Launch through `nav2.launch.py` to apply the derived limits.
 
+**Update rates.** The EKF runs at 50 Hz with `predict_to_current_time: true`. The Nav2 controller (MPPI), behavior server and waypoint follower run at 20 Hz, the local costmap at 10 Hz, and `nav2_target_node` publishes at 15 Hz.
+
+**Composition.** With `use_composition:=true` the container loads `params_file`, so the nodes have the same parameters as when run separately; `waypoint_recorder_node` and `nav2_target_node` always run as their own processes.
+
 **Inflation.** The local and global inflation radii are 0.20 m and 0.25 m, and the robot radius is 0.17 m. `inflation_radius` is measured from the obstacle to the robot centre. At start-up Nav2 Kilted's SmacPlanner2D may log an optimization warning about non-circular footprints; this is expected.
 
 ### Maps and zones
@@ -63,7 +70,7 @@ Saving a map (the `/save_map` service, bound to the Screenshot button) writes a 
 
 ## How it works
 
-The EKF fuses wheel odometry and the IMU into `/odometry/filtered`. With no map, slam_toolbox builds one and publishes `map -> odom`; with a saved map, slam_toolbox (which can keep extending it) or AMCL localizes on it. Nav2 then plans and drives. Its velocity commands go through the safety path described in the [`lekiwi_control` README](../lekiwi_control/README.md#how-it-works): the twist switch, then the collision monitor.
+With the default hardware profile, the EKF fuses wheel odometry and the IMU into `/odometry/filtered`. With no map, slam_toolbox builds one and publishes `map -> odom`; with a saved map, slam_toolbox (which can keep extending it) or AMCL localizes on it. Nav2 then plans and drives. Its velocity commands go through the safety path described in the [`lekiwi_control` README](../lekiwi_control/README.md#how-it-works): the twist switch, then the collision monitor.
 
 The waypoint patrol is driven by three `SetBool` services, bound to joystick buttons in `lekiwi_control`:
 
@@ -119,10 +126,6 @@ ros2 topic pub --once /nav2_target_goal_input geometry_msgs/msg/PoseStamped \
 - Only one goal from this node can be pending or active at a time. A rejection or a terminal result frees the slot. The request is rejected if mode confirmation or the map pose is missing, the coordinates are not finite, or the action server is unavailable.
 - If a transport error leaves the outcome unknown, the slot stays reserved. Inspect or cancel the goal in Nav2, then call `/nav2_send_goal` with `data: false` to clear it. Clearing does not cancel the earlier goal. `data: false` is otherwise a no-op.
 - A pose input is a one-shot goal; edit continuously with the target controls and commit with the button.
-
-### Validation and tests
-
-The robot validation checklist and the automated target tests are in [`docs/nav2_target.md`](docs/nav2_target.md).
 
 ## Tests
 

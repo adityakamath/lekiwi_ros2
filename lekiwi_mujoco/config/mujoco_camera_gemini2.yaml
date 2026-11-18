@@ -1,4 +1,4 @@
-# Gemini 2 render camera for the no-payload base (same as pt_mujoco's); depth goes to a private topic for the host to register to color.
+# Gemini 2 render camera; depth is registered to color by the host.
 /**:
   ros__parameters:
     mujoco_plugins:

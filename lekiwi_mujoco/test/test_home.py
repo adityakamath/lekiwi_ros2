@@ -15,7 +15,7 @@ from lekiwi_mujoco.simulation import Simulation  # noqa: E402
 @pytest.fixture(scope='module')
 def apartment_model(tmp_path_factory):
     path = tmp_path_factory.mktemp('apartment') / 'robot.xml'
-    return mujoco.MjModel.from_xml_path(str(build('base', path, absolute=True, scene='home')))
+    return mujoco.MjModel.from_xml_path(str(build(path, absolute=True, scene='home')))
 
 
 @pytest.mark.parametrize('prop', ['cardboard_box', 'foam_block', 'toy_ball'])

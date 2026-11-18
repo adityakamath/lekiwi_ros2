@@ -65,6 +65,7 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'diagnostics':  LaunchConfiguration('diagnostics'),
             'wp_loops':     LaunchConfiguration('wp_loops'),
+            'use_composition': LaunchConfiguration('use_composition'),
         }.items(),
     )
 
@@ -117,6 +118,11 @@ def generate_launch_description():
                 "Forwarded to nav2.launch.py: overrides waypoint_recorder.yaml's "
                 'number_of_loops. 0 = loop forever (default), N>0 = exactly N passes.'
             ),
+        ),
+        DeclareLaunchArgument(
+            'use_composition',
+            default_value='true',
+            description='Forwarded to nav2.launch.py: load the Nav2 nodes into one container.',
         ),
         ekf,
         slam,

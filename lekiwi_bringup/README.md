@@ -1,25 +1,27 @@
 # LeKiwi Bringup
 
-The top-level launch files for LeKiwi. One command starts the whole system (control, navigation, sensors, audio, and the Gemini 2 camera) on the real robot or in the MuJoCo simulation. This package also holds the LiDAR configuration and the udev rules.
+The top-level launch files for LeKiwi. One command starts the whole system (control, navigation, sensors, audio, and the Gemini 2 camera) on the real robot or in the MuJoCo simulation. This package owns `hardware.yaml`, sensor settings, point-cloud compression and the udev rules.
 
 ## Contents
 
 | Path | Purpose |
 |------|---------|
 | `launch/lekiwi.launch.py` | The whole system; includes the other packages' launch files |
-| `launch/laser.launch.py` | The LD06 LiDAR driver, with the payload's scan filter if there is one |
-| `launch/gemini2.launch.py` | The Orbbec Gemini 2 driver and depth-to-scan for the base (no payload) |
-| `config/gemini2_depth_to_scan.yaml` | Settings for the depth-to-scan conversion |
+| `launch/laser.launch.py` | The LD06 LiDAR driver, with an optional custom scan filter |
+| `launch/tof.launch.py` | The VL53L5CX ToF imager (`tof_imager_ros`), configured and activated on start (`lekiwi.launch.py` starts it 20 s after launch) |
+| `launch/gemini2.launch.py` | The Orbbec Gemini 2 driver for the base |
 | `patches/orbbec-kilted-*.patch` | Two patches for building the Orbbec driver on Kilted: QoS API and `-Werror` ([build steps](#gemini-2-driver-real-robot-only)) |
+| `config/hardware.yaml` | Fitted assemblies and sensor switches |
 | `config/laser.yaml` | LiDAR serial port and settings |
-| `config/<payload>_laser_filter.yaml` | Masks the part of the scan a payload blocks (currently `pantilt`) |
-| `config/battery_overrides.yaml` | LeKiwi's overrides on top of the battery monitor's defaults |
+| `config/gemini2.yaml`, `src/pcl_compressor_node.cpp` | Real camera stream settings (resolution, frame rates, depth registration, filters, laser power, optional IMU) and Cloudini compression for the camera cloud |
+| `config/tof.yaml` | ToF imager resolution, ranging rate, frame and publish period |
+| `config/battery_overrides.yaml` | LeKiwi's overrides on top of the battery monitor's defaults (state file, 5 Hz rate) |
 | `config/diagnostic_aggregator.yaml` | The single top-level health view on `/diagnostics_agg` |
 | `udev/99-lekiwi.rules` | Stable device names for the LiDAR and servo bus |
 
 ## Requirements
 
-The other LeKiwi packages, built together with `colcon build --packages-up-to lekiwi_bringup`, which also brings in the submodules' packages (`ldlidar_ros2`, `ina260_battery_monitor` and the hardware interfaces), `laser_filters` and `diagnostic_aggregator`. The base with its Gemini 2 needs the [Orbbec driver](#gemini-2-driver-real-robot-only) for the real camera (not for `sim:=true` or `enable_camera:=false`) and nothing from `pantilt_ros2`. With the legacy pan-tilt payload, build `pt_bringup` and its other packages from [pantilt_ros2](../payloads/pantilt_ros2/README.md) too. Install the [udev rules](#stable-device-names-udev) once per robot.
+Build the packages and drivers described in the [repository installation instructions](../README.md#installation). The C++ point-cloud compressor requires `cloudini_lib`, `cloudini_ros`, `point_cloud_interfaces`, `rclcpp` and `rclcpp_components`; make these packages available in the workspace or underlay before building bringup. The real Gemini 2 driver is built separately below.
 
 ## Stable device names (udev)
 
@@ -37,11 +39,11 @@ Install `udev/99-lekiwi.rules` once per robot (command in the [repository README
 
 ```bash
 ros2 launch lekiwi_bringup lekiwi.launch.py                                       # base with tray and Gemini 2
-ros2 launch lekiwi_bringup lekiwi.launch.py payload:=pantilt                      # legacy pan-tilt payload
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=map                          # SLAM mapping
 ros2 launch lekiwi_bringup lekiwi.launch.py mission:=amcl map_name:=livingroom1   # localize on a saved map
 ros2 launch lekiwi_bringup lekiwi.launch.py sim:=true mujoco_scene:=home         # MuJoCo simulation
 ros2 launch lekiwi_bringup laser.launch.py                                        # LiDAR alone
+ros2 launch lekiwi_bringup tof.launch.py                                          # ToF imager alone
 ```
 
 ### Launch arguments
@@ -50,22 +52,22 @@ The main arguments are in the [repository README](../README.md#launch-arguments)
 
 | Argument | Default | Meaning |
 |----------|---------|---------|
+| `hardware_config` | `config/hardware.yaml` in this package | Hardware composition profile, forwarded to control and model generation |
 | `enable_camera` | `true` | Real or simulated camera publishing on/off; camera geometry remains selected |
 | `pointcloud` | `false` | One colored cloud in hardware or simulation; the real driver also starts Cloudini compression. Off by default |
 | `sts_serial_port`, `use_mock` | `""` | Servo serial port and mock mode; empty uses `lekiwi_control`'s `urdf_config.yaml` |
-| `camera_fps` | `15` | Shared RGB/depth rate for either real camera (5, 10, 15, 30 Hz); simulation caps rendering at 5 Hz |
 | `mujoco_model` | `""` | `sim` only: a pre-built MJCF; empty generates one at launch |
 | `use_sim_time` | `false` | Use `/clock`; forced on with `sim:=true` |
-
-`laser.launch.py` takes `payload` and `custom_filter`, the name of a filter file in `config/` that overrides the payload's.
 
 ## Configuration
 
 | File | What it sets |
 |------|--------------|
+| `config/hardware.yaml` | Independent hardware switches; defaults enable every group |
+| `config/gemini2.yaml` | The real camera stream: color (15 FPS) and depth (5 FPS) profiles, depth registration, filters, laser power and the optional IMU, plus the Cloudini topics, XYZ resolution (1 cm) and point filtering |
 | `config/laser.yaml` | LD06 serial port (`/dev/ttyLIDAR`), baud rate, range and the angle crop. `product_name` is `LDLiDAR_LD19` (the LD06 and LD19 are the same device) |
-| `config/pantilt_laser_filter.yaml` | The arc of the scan the pan-tilt blocks, and the filtered scan's QoS |
-| `config/battery_overrides.yaml` | Only what differs from the battery monitor's own defaults, such as the state file location |
+| `config/tof.yaml` | `tof_imager_ros` parameters: 8x8 or 4x4 resolution, continuous or autonomous mode, ranging rate (10 Hz; max 15 Hz at 8x8), publish period and `frame_id: tof_frame` |
+| `config/battery_overrides.yaml` | Only what differs from the battery monitor's own defaults: the state file location, a 5 Hz `battery_state` rate with the charger-detection windows and ETA smoothing scaled to it |
 | `config/diagnostic_aggregator.yaml` | How motor, IMU, patrol and battery diagnostics roll up (with `diagnostics:=true`) |
 
 The rest of the system is configured in the packages that own it; see their READMEs.
@@ -77,14 +79,16 @@ The rest of the system is configured in the packages that own it; see their READ
 | Started | By | Condition |
 |---------|----|-----------|
 | Control and teleop | `lekiwi_control` | always (MuJoCo model with `sim:=true`) |
-| Navigation: EKF, SLAM or AMCL, Nav2, waypoint patrol | `lekiwi_navigation` | always |
+| EKF | `lekiwi_navigation` | always; wheel odometry + IMU by default |
+| SLAM or AMCL, Nav2, waypoint patrol and target tracker | `lekiwi_navigation` | always |
+| Gemini 2 driver and streaming helpers | `gemini2.launch.py` | real hardware, `gemini2: true`; streaming follows `enable_camera` |
 | Diagnostic aggregator | this package | `diagnostics:=true` |
-| LiDAR | `laser.launch.py` | real hardware and `laser:=true` |
-| Audio | `lekiwi_audio` | real hardware and `audio:=true` |
-| Battery monitor | `ina260_battery_monitor` | real hardware and `battery_monitor:=true` |
-| Gemini 2 camera | `gemini2.launch.py` (this package), or `pt_bringup` with `payload:=pantilt` | real hardware and `enable_camera:=true` |
+| LiDAR | `laser.launch.py` | real hardware |
+| ToF imager (`tof/pointcloud` in `tof_frame`) | `tof.launch.py`, 20 s after launch | real hardware and `sparkfun_sensor: true` in `hardware.yaml` |
+| Audio | `lekiwi_audio` | real hardware and `respeaker: true` in `hardware.yaml` |
+| Battery monitor and events (one process, `battery_nodes`) | `ina260_battery_monitor` | real hardware |
 
-In simulation only the first three run: the simulated LiDAR and camera come from the MuJoCo plugins, and audio and the battery monitor are not simulated. `sim:=true` also forces simulation time and mock hardware. The launch file turns off the controller's own `odom -> base_footprint`; the EKF publishes it.
+In simulation, control, the selected navigation path and optional diagnostics run. Enabled simulated sensors come from MuJoCo plugins; real sensor drivers, audio and the battery monitor are skipped. `sim:=true` also forces simulation time and mock hardware. The launch file turns off the controller's own `odom -> base_footprint`; the EKF publishes it.
 
 ## Gemini 2 driver (real robot only)
 
@@ -95,7 +99,7 @@ sudo apt-get update
 sudo apt-get install libgflags-dev nlohmann-json3-dev libgoogle-glog-dev libdw-dev libssl-dev \
   ros-kilted-backward-ros ros-kilted-image-transport ros-kilted-image-transport-plugins \
   ros-kilted-image-publisher ros-kilted-camera-info-manager ros-kilted-diagnostic-updater \
-  ros-kilted-statistics-msgs ros-kilted-xacro ros-kilted-depthimage-to-laserscan
+  ros-kilted-statistics-msgs ros-kilted-xacro
 
 cd ~/ros2_ws/src/lekiwi_ros2
 git submodule update --init modules/OrbbecSDK_ROS2
@@ -120,9 +124,53 @@ sudo udevadm trigger --subsystem-match=usb
 
 The real camera is started by `gemini2.launch.py`; `sim:=true` and `enable_camera:=false` do not need the driver.
 
+## ToF imager
+
+The SparkFun VL53L5CX (8×8 zones, 45° field of view) faces up from the rear plate. `tof.launch.py` runs [`tof_imager_ros`](https://github.com/adityakamath/tof_imager_ros) as a lifecycle node with `config/tof.yaml`, configures it and activates it once configured. The 8×8 point cloud is `tof/pointcloud` (`sensor_msgs/PointCloud2`, ranging at the 10 Hz set in `config/tof.yaml`) in `tof_frame`: +z along the sensor's boresight (up), +x to the robot's right and +y forward. The frame's yaw is set in the URDF (see the [description README](../lekiwi_description/README.md#tof-imager)). In simulation the same topic comes from the MuJoCo model (see [`lekiwi_mujoco`](../lekiwi_mujoco/README.md#tof-imager)); the same `sparkfun_sensor` hardware setting selects it there.
+
+Real robot only, once per robot: enable I2C on the Raspberry Pi and install the sensor library into the system Python that ROS uses (`pip3 install --break-system-packages ./modules/tof_imager_ros/vl53l5cx_python`; the [`tof_imager_ros` README](https://github.com/adityakamath/tof_imager_ros#how-to-use) has the I2C steps). If the node exits at start, `ros2 launch` shows why: `No module named 'vl53l5cx'` means the library is missing from that Python, and `Sensor not alive` means wiring or the I2C address. Check it with:
+
+```bash
+ros2 lifecycle get /tof_imager         # active
+ros2 topic hz /tof/pointcloud          # published only while something subscribes
+```
+
+Set `sparkfun_sensor: false` in `hardware.yaml` if no sensor is fitted.
+
+The ToF imager starts 20 s after launch, once the controllers are active. It reads the sensor only while `tof/pointcloud` has a subscriber.
+
+## Raspberry Pi 5 system settings
+
+Per-robot operating-system settings (not part of the repository) used on the reference robot, a Raspberry Pi 5 with Ubuntu 24.04 and Kilted:
+
+| Setting | Where | Purpose |
+|---------|-------|---------|
+| `dtparam=i2c_arm_baudrate=400000` | `/boot/firmware/config.txt` | 400 kHz I2C bus shared by the BNO055, the battery monitor and the ToF imager |
+| `usb_max_current_enable=1` | `/boot/firmware/config.txt` | Full USB current for the Gemini 2; use a 5 V / 5 A supply |
+| `dtparam=audio=off`, `camera_auto_detect=0` | `/boot/firmware/config.txt` | Disable unused interfaces |
+| `rtprio 99` and `memlock unlimited` for the `realtime` group | `/etc/security/limits.d/` | Real-time scheduling for the control loop; for sessions started through Tailscale SSH also set `LimitRTPRIO` and `LimitMEMLOCK` in a systemd drop-in for `tailscaled` |
+
+`config.txt` changes take effect after a reboot. Optionally `export ROS_LOG_DIR=/dev/shm/ros_log` keeps ROS logs in RAM (they are lost on reboot).
+
 ## Camera
 
-Gemini 2 uses `/gemini2/*` in hardware and simulation. Both real and simulated Gemini 2 generate `/gemini2/scan` directly from depth images, including when `pointcloud:=true`; `pointcloud:=true` adds `/gemini2/depth_registered/points`; on real hardware it also publishes `/gemini2/depth_registered/points/compressed` through Cloudini. Compressed RGB is always available in simulation. The real Gemini wrapper requests 640×360 color and 640×400 depth at 15 Hz. See [camera variants](../lekiwi_mujoco/README.md#camera-model) and [driver installation](#gemini-2-driver-real-robot-only). With no payload `pointcloud:=true` publishes the colored cloud without Cloudini compression; Cloudini compression is part of the pan-tilt payload.
+`gemini2: false` in `hardware.yaml` removes the camera, mount and processing.
+`enable_camera:=false` keeps the fitted camera geometry but skips streaming.
+The real wrapper requests 640×360 color and 640×400 depth, with color at 15 FPS and depth at 5 FPS, all from `config/gemini2.yaml`;
+simulation uses the plugin YAML rate (5 Hz).
+`config/gemini2.yaml` also sets `depth_registration` (on: depth is aligned to color; off: depth keeps its own size), `enable_noise_removal_filter`, `enable_frame_sync`, `enable_ldp`, `enable_imu` and `laser_energy_level` (IR projector power, -1 = device default); all are required. `pointcloud:=true` needs `depth_registration: true` and the launch stops with an error otherwise.
+
+The Gemini 2 also has an accelerometer and gyroscope, off by default. Set `enable_imu: true` in `config/gemini2.yaml` and relaunch to get raw samples (`sensor_msgs/Imu`, no orientation) on `/gemini2/gyro_accel/sample`, in `gemini2_accel_gyro_optical_frame`.
+
+`pointcloud:=true` enables `/gemini2/depth_registered/points`. On real hardware
+it also starts `PCLCompressorNode`, which drops invalid/duplicate voxel points,
+compresses XYZ at 1 cm resolution while preserving RGB, and publishes Cloudini
+messages on `/gemini2/depth_registered/points/compressed`. Its settings are in
+`config/gemini2.yaml`. Simulation publishes the raw colored cloud without
+this compressor. Direct `gemini2.launch.py` calls additionally accept
+`pointcloud_decimation` (default 2), `serial_number` and `usb_port`.
+
+If the depth stream never appears, check the Orbbec SDK log in `~/.ros/Log/gemini2/`: a healthy start logs `Stream state changed from STARTING to STREAMING@Depth`, and a stalled one stays at `STARTING` while color slows to about half rate. `dmesg` then usually shows the camera resetting or disconnecting. Stop the launch with a single Ctrl-C and let it exit; a hard kill can leave the camera streaming, so reconnect it before the next start. A 320×200 depth request stalled or reset the camera in several runs on our unit; the driver lists 1280×800, 640×400, 424×266 and 320×200 as the supported depth sizes, and the published depth is the color size either way.
 
 To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 
@@ -130,11 +178,9 @@ To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 ros2 launch lekiwi_bringup lekiwi.launch.py enable_camera:=false
 ```
 
-LeKiwi passes `enable_camera` to the camera launch (`gemini2.launch.py` here, or `pt_bringup`'s with the pan-tilt), which skips the driver and streaming helpers before resolving camera dependencies when false. Camera geometry remains in the URDF. In simulation, the same flag skips the camera plugin and camera processing while keeping the selected URDF and MJCF geometry.
-
 ## Checking CPU use
 
-A bare `lekiwi.launch.py` command starts `payload:=""`, `enable_camera:=true`, `laser:=true`, `audio:=true` and `battery_monitor:=true`, plus `lekiwi_navigation` (an empty `mission` and `map_name` start SLAM mapping and Nav2). The standalone `lekiwi_control/control.launch.py` and `lekiwi_bringup/laser.launch.py` also default to `payload:=""`.
+A bare `lekiwi.launch.py` command reads `hardware.yaml` and starts the configured hardware plus navigation. The default file selects base-only mode with every optional group enabled and LiDAR, IMU and battery monitoring always present. `fusion_mode` defaults to `base` (wheel odometry and IMU); the IMU and LiDAR are always present.
 
 On the robot, wait for startup to settle, then list the busiest processes and the running nodes:
 
@@ -143,11 +189,7 @@ ps -eo pid,pcpu,comm,args --sort=-pcpu | head -30
 ros2 node list
 ```
 
-Look for `orbbec_camera`, `slam_toolbox`, the Nav2 costmap nodes and `laser_scan_filter_chain`. To compare configurations, launch the same payload, navigation stack, camera driver, laser filter, audio and battery components at the same camera rate.
-
-## Using it with another payload
-
-Add the payload's name to `_VALID_PAYLOADS` in `lekiwi.launch.py`. If it blocks part of the LiDAR's view, add `config/<name>_laser_filter.yaml` and `laser.launch.py` applies it automatically. The [repository README](../lekiwi_description/README.md#using-it-on-another-robot) lists the rest of the wiring; a few launch branches still test for `pantilt` explicitly.
+Look for `orbbec_camera`, `slam_toolbox`, `nav2_container` (all the Nav2 nodes with the default `use_composition:=true`, or the separate Nav2 processes with `false`), `battery_nodes` and `laser_scan_filter_chain`. To compare configurations, launch the same navigation stack, camera driver, laser filter, audio and battery components at the same camera rate.
 
 ## Tests
 
@@ -155,4 +197,19 @@ Add the payload's name to `_VALID_PAYLOADS` in `lekiwi.launch.py`. If it blocks 
 pytest test -q
 ```
 
-The tests check that the launch arguments are declared and validated, and that the LiDAR filter configuration resolves for each payload.
+The tests check launch arguments, hardware-profile forwarding, permanent LiDAR/IMU/navigation and real battery startup, camera processing and explicit LiDAR filter paths without starting hardware drivers.
+
+Configure robot composition only in
+[`config/hardware.yaml`](config/hardware.yaml).
+It selects optional assemblies. LiDAR, IMU and battery monitoring are permanent. Launch
+normally after editing it; no hardware flags are needed. See
+[Configure the robot](../lekiwi_description/README.md#configure-the-robot).
+
+LiDAR, BNO055 IMU and real-robot battery monitoring always run. The velocity
+path always passes through the collision monitor.
+
+The SparkFun sensor and Gemini 2 currently have one supported model each. To add
+another sensor on the permanent plate, replace its sensor mesh/frame and driver
+integration together. A replacement camera needs its own mesh, mount, frames and
+driver configuration; disabling `gemini2` removes both camera and mount. No
+replacement model choices are exposed until their assets and drivers are added.

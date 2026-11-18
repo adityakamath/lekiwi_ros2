@@ -1,0 +1,25 @@
+# Real Gemini 2 stream settings, read by gemini2.launch.py (every key is required).
+/gemini2/gemini2:
+  ros__parameters:
+    color_fps: 15
+    depth_fps: 5
+    # Must be sizes the camera offers: the driver exits on an unsupported profile (424x240 color does not exist).
+    color_width: 640
+    color_height: 360
+    depth_width: 640
+    depth_height: 400
+    enable_imu: false  # camera accel/gyro on /gemini2/gyro_accel/sample; nothing uses it, and streaming it costs USB bandwidth and CPU
+    depth_registration: true  # align depth to color; pointcloud:=true needs true (the colored cloud)
+    enable_noise_removal_filter: false  # host-side depth filter
+    enable_frame_sync: true  # sync color and depth frames
+    enable_ldp: true  # laser distance protection - always keep on (safety)
+    laser_energy_level: 2  # IR projector power; -1 = device default. Lower draws less (start-up USB disconnects); the driver logs the valid range at launch
+
+# Cloudini compression of the registered, colored Gemini 2 point cloud at 1 cm resolution (enough for visualization).
+/gemini2_cloudini_compressor:
+  ros__parameters:
+    compressing: true
+    topic_input: "/gemini2/depth_registered/points"
+    topic_output: "/gemini2/depth_registered/points/compressed"
+    resolution: 0.01
+    filter_points: true  # drop invalid points and duplicates within a voxel

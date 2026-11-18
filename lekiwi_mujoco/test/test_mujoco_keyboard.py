@@ -1,4 +1,4 @@
-"""Held-key motion, release, focus and payload-limit checks without a GUI."""
+"""Held-key motion, release, focus and wheel-limit checks without a GUI."""
 from pathlib import Path
 import sys
 
@@ -13,8 +13,8 @@ from lekiwi_mujoco.mujoco_preview import HeldKeys, KeyboardControl  # noqa: E402
 
 
 @pytest.fixture(scope='module')
-def model(pantilt):
-    return mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_pt101.xml'))
+def model():
+    return mujoco.MjModel.from_xml_path(str(PACKAGE / 'mjcf/lekiwi_base.xml'))
 
 
 @pytest.mark.parametrize('key,shift,command', [
@@ -62,25 +62,6 @@ def test_focus_loss_stops_and_other_events_forward(model):
     assert keys.events.get() == 'focus_lost'
 
 
-@pytest.mark.parametrize('key,name,sign', [(glfw.KEY_LEFT, 'shoulder_pan_joint', 1),
-    (glfw.KEY_RIGHT, 'shoulder_pan_joint', -1), (glfw.KEY_DOWN, 'tilt_joint', -1),
-    (glfw.KEY_UP, 'tilt_joint', 1)])
-def test_payload_continuous_motion_release_and_limits(model, key, name, sign):
-    for alt in [glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT]:
-        data = mujoco.MjData(model)
-        control = KeyboardControl(model)
-        actuator = model.actuator(name).id
-        for _ in range(6):
-            control.update(data, {key, alt}, 1 / 60)
-        assert data.ctrl[actuator] == pytest.approx(sign * control.payload_limits[name] * .1)
-        control.update(data, set(), 1.)
-        assert data.ctrl[actuator] == pytest.approx(sign * control.payload_limits[name] * .1)
-        for _ in range(600):
-            control.update(data, {key, alt}, 1 / 60)
-        low, high = model.actuator_ctrlrange[actuator]
-        assert data.ctrl[actuator] == pytest.approx(high if sign > 0 else low)
-
-
 def test_reset_pause_are_edges_not_repeat():
     keys = HeldKeys()
     for key in [ord('X'), ord('P')]:
@@ -126,20 +107,15 @@ def test_all_key_combinations_respect_body_and_wheel_limits(model):
             assert np.all(np.abs(body) <= control.base_limits + 1e-10)
 
 
-def test_slider_commands_are_limited_and_payload_targets_slew(model):
+def test_slider_commands_respect_wheel_and_body_limits(model):
     control = KeyboardControl(model)
     data = mujoco.MjData(model)
     data.ctrl[control.wheels] = [100, -100, 50]
-    data.ctrl[model.actuator('tilt_joint').id] = 1.5
-    previous = 0.
     for _ in range(20):
         control.enforce_limits(data, .002)
         assert np.max(np.abs(data.ctrl[control.wheels]) / control.wheel_limits) <= 1. + 1e-10
         body = np.linalg.solve(control.kinematics, data.ctrl[control.wheels])
         assert np.all(np.abs(body) <= control.base_limits + 1e-10)
-        assert abs(data.ctrl[model.actuator('tilt_joint').id] - previous) <= control.payload_limits['tilt_joint'] * .002 + 1e-10
-        previous = data.ctrl[model.actuator('tilt_joint').id]
-        data.ctrl[model.actuator('tilt_joint').id] = 1.5
 
 
 def test_motor_limit_is_baked_into_xml(model):
@@ -148,26 +124,9 @@ def test_motor_limit_is_baked_into_xml(model):
         actuator = model.actuator(name).id
         assert model.actuator_ctrllimited[actuator]
         assert np.allclose(model.actuator_ctrlrange[actuator], [-expected, expected])
-    assert model.numeric('velocity_limit_tilt_joint').data[0] == pytest.approx(expected, abs=1e-5)
 
 
-def test_alt_priority_and_modifier_switch_while_arrow_held(model):
-    data = mujoco.MjData(model)
-    control = KeyboardControl(model)
-    arrow = {glfw.KEY_LEFT}
-    control.update(data, arrow, .01)
-    assert np.any(data.ctrl[control.wheels])
-    control.update(data, arrow | {glfw.KEY_LEFT_SHIFT, glfw.KEY_LEFT_ALT}, .01)
-    assert np.all(data.ctrl[control.wheels] == 0)
-    pan = model.actuator('shoulder_pan_joint').id
-    angle = data.ctrl[pan]
-    assert angle == pytest.approx(control.payload_limits['shoulder_pan_joint'] * .01)
-    control.update(data, arrow | {glfw.KEY_LEFT_SHIFT}, .01)
-    assert np.allclose(data.ctrl[control.wheels], control.control.wheel_speeds([0, 0, .68]))
-    assert data.ctrl[pan] == angle
-
-
-def test_old_payload_letters_are_only_viewer_shortcuts(model):
+def test_unbound_letters_are_forwarded_to_viewer(model):
     data = mujoco.MjData(model)
     control, keys = KeyboardControl(model), HeldKeys()
     forwarded = []

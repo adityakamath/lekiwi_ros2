@@ -15,9 +15,10 @@ def test_explicit_paths_do_not_require_package_discovery(monkeypatch, tmp_path):
     def unavailable(name):
         raise AssertionError(f'Unexpected package lookup: {name}')
     monkeypatch.setattr(builder, 'package_share', unavailable)
-    result = builder.build('base', tmp_path / 'model.xml', absolute=True,
+    result = builder.build(tmp_path / 'model.xml', absolute=True,
                            control_dir=ROOT.parent / 'lekiwi_control',
-                           description_dir=ROOT.parent / 'lekiwi_description')
+                           description_dir=ROOT.parent / 'lekiwi_description',
+                           hardware_config=ROOT.parent / 'lekiwi_bringup/config/hardware.yaml')
     assert result.is_file()
 
 

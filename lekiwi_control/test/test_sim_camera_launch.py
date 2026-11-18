@@ -8,11 +8,10 @@ import pytest
 import yaml
 
 
-@pytest.mark.pantilt
 @pytest.mark.parametrize('enabled,cloud', [
     ('true', 'false'), ('true', 'true'), ('false', 'true'),
 ])
-def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
+def test_sim_camera_pipeline(enabled, cloud, monkeypatch, tmp_path):
     path = Path(__file__).resolve().parents[1] / 'launch/control.launch.py'
     spec = importlib.util.spec_from_file_location('sim_camera_launch', path)
     module = importlib.util.module_from_spec(spec)
@@ -21,10 +20,12 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
     for action in module.generate_launch_description().entities:
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
-    context.launch_configurations.update(payload='pantilt',
-                                         enable_camera=enabled, pointcloud=cloud,
+    context.launch_configurations.update(enable_camera=enabled, pointcloud=cloud,
                                          ros2_control_hardware_type='mujoco',
                                          mujoco_model='/unused/model.xml')
+    config = tmp_path / 'hardware.yaml'
+    config.write_text('shelf: true\n')
+    context.launch_configurations['hardware_config'] = str(config)
     nodes = []
     original = module.Node
 
@@ -32,10 +33,6 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
         nodes.append(kwargs)
         return original(**kwargs)
 
-    monkeypatch.setattr(module.FindPackageShare, 'find',
-                        lambda self, package: str(Path(__file__).resolve().parents[2] /
-                                                  ('payloads/pantilt_ros2' if package.startswith('pt_') else '') /
-                                                  package))
     monkeypatch.setattr(module, 'Node', record)
     module.launch_setup(context)
     names = {n.get('name') for n in nodes}
@@ -50,17 +47,15 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
     control = next(n for n in nodes if n['package'] == 'mujoco_ros2_control')
     parameters = [str(p) for p in control['parameters']]
     assert any(p.endswith(f'{imu_name}_imu_broadcaster.yaml') for p in parameters) == (enabled == 'true')
-    assert any('pt_mujoco/config/mujoco_ros2_control_plugins.yaml' in p for p in parameters) == (enabled == 'true')
-    assert any(p.endswith('mujoco_camera_pantilt.yaml') for p in parameters) == (enabled == 'true')
-    assert any(isinstance(p, dict) and 'mujoco_plugins' in p for p in control['parameters']) == (enabled == 'true')
+    assert any(p.endswith('mujoco_camera_plugin.yaml') for p in parameters) == (enabled == 'true')
+    assert not any(isinstance(p, dict) and 'mujoco_plugins' in p for p in control['parameters'])  # Rates come from plugin YAML.
     if enabled == 'false':
         assert not any('camera_gemini2.yaml' in p for p in parameters)
         assert not any(name and 'gemini2' in name for name in names)
         return
     assert 'gemini2_rgb_compressor' in names
     assert 'gemini2_mount_tf' not in names
-    assert {'gemini2_depth', 'gemini2_depth_to_scan'} <= names
-    assert '/gemini2/scan' in remaps
+    assert {'gemini2_depth'} <= names
     assert '/_gemini2/depth_raw' not in remaps  # It is configured on the camera plugin.
     assert any(p.endswith('mujoco_camera_gemini2.yaml') for p in parameters)
     assert ('gemini2_colored_pointcloud' in names) == (cloud == 'true')
@@ -70,15 +65,12 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch):
     assert 'gemini2_pointcloud_to_scan' not in names
 
 
-@pytest.mark.parametrize('payload,hw_type,diagnostics,expected_joints', [
-    ('', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']),
-    pytest.param('pantilt', 'real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint',
-                                             'shoulder_pan_joint', 'tilt_joint'], marks=pytest.mark.pantilt),
-    pytest.param('pantilt', 'real', 'false', None, marks=pytest.mark.pantilt),
-    pytest.param('pantilt', 'mujoco', 'true', None, marks=pytest.mark.pantilt),  # MuJoCo joints export no voltage/temperature/current
+@pytest.mark.parametrize('hw_type,diagnostics,expected_joints', [
+    ('real', 'true', ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']),
+    ('real', 'false', None), ('mujoco', 'true', None),
 ])
 def test_state_interfaces_broadcaster_for_motor_diagnostics(
-        payload, hw_type, diagnostics, expected_joints, monkeypatch):
+        hw_type, diagnostics, expected_joints, monkeypatch, tmp_path):
     path = Path(__file__).resolve().parents[1] / 'launch/control.launch.py'
     spec = importlib.util.spec_from_file_location('state_ifaces_launch', path)
     module = importlib.util.module_from_spec(spec)
@@ -87,10 +79,13 @@ def test_state_interfaces_broadcaster_for_motor_diagnostics(
     for action in module.generate_launch_description().entities:
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
-    context.launch_configurations.update(payload=payload, diagnostics=diagnostics,
+    context.launch_configurations.update(diagnostics=diagnostics,
                                          enable_camera='false',
                                          ros2_control_hardware_type=hw_type,
                                          mujoco_model='/unused/model.xml')
+    config = tmp_path / 'hardware.yaml'
+    config.write_text('shelf: true\n')
+    context.launch_configurations['hardware_config'] = str(config)
     nodes = []
     original = module.Node
 
@@ -98,10 +93,6 @@ def test_state_interfaces_broadcaster_for_motor_diagnostics(
         nodes.append(kwargs)
         return original(**kwargs)
 
-    monkeypatch.setattr(module.FindPackageShare, 'find',
-                        lambda self, package: str(Path(__file__).resolve().parents[2] /
-                                                  ('payloads/pantilt_ros2' if package.startswith('pt_') else '') /
-                                                  package))
     monkeypatch.setattr(module, 'Node', record)
     module.launch_setup(context)
     spawners = [n for n in nodes if n.get('package') == 'controller_manager'

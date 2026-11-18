@@ -1,6 +1,3 @@
-[submodule "payloads/pantilt_ros2"]
-	path = payloads/pantilt_ros2
-	url = https://github.com/adityakamath/pantilt_ros2
 [submodule "modules/sts_hardware_interface"]
 	path = modules/sts_hardware_interface
 	url = https://github.com/adityakamath/sts_hardware_interface.git
@@ -20,3 +17,6 @@
 	path = modules/OrbbecSDK_ROS2
 	url = https://github.com/orbbec/OrbbecSDK_ROS2.git
 	ignore = dirty
+[submodule "modules/tof_imager_ros"]
+	path = modules/tof_imager_ros
+	url = https://github.com/adityakamath/tof_imager_ros

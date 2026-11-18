@@ -1,4 +1,3 @@
-# Plugins for mujoco_ros2_control (hardware type mujoco); the camera is in mujoco_camera_pantilt.yaml.
 /**:
   ros__parameters:
     mujoco_plugins:
@@ -8,6 +7,10 @@
         lidar:
           frame_name: laser_frame
           topic: /scan_raw
+        # Raw ToF cloud in the lidar site's axes (x forward); tof_pointcloud rotates it into tof_frame as /tof/pointcloud
+        tof:
+          frame_name: tof_frame
+          topic: /tof/pointcloud_raw
       # Ground-truth base pose/velocity (no controller drift).
       free_joint_state_publisher:
         type: "mujoco_ros2_control_plugins/FreeJointStatePublisherPlugin"

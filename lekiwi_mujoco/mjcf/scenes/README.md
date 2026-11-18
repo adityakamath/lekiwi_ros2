@@ -1,6 +1,6 @@
 # LeKiwi MuJoCo scenes
 
-Select a scene with `--scene <name>` in the standalone tools or `mujoco_scene:=<name>` with ROS. `flat` is the standard floor.
+Select a scene with `--scene <name>` in the standalone tools or `mujoco_scene:=<name>` with ROS. `flat` is the standard floor. Scenes change the environment only; robot assemblies come from [`hardware.yaml`](../../../lekiwi_bringup/config/hardware.yaml). Run the examples from `lekiwi_mujoco`; on Linux use `python3` in place of `mjpython`.
 
 ## Arena
 
@@ -20,7 +20,7 @@ course; the standard blue checkerboard continues outside. Floor markings are
 visual only. Select `arena_top` or `arena_overview` for a view of the entire course.
 
 ```sh
-mjpython -m lekiwi_mujoco.mujoco_preview --variant base --scene arena
+mjpython -m lekiwi_mujoco.mujoco_preview --scene arena
 ```
 
 ## Home
@@ -42,7 +42,7 @@ not calibrated to physical household objects.
 
 ```sh
 # macOS standalone apartment
-mjpython -m lekiwi_mujoco.mujoco_preview --variant base --scene home
+mjpython -m lekiwi_mujoco.mujoco_preview --scene home
 ```
 
 ## Maze
@@ -58,5 +58,5 @@ All cells are reachable, with a continuous route through the maze. No route is
 painted on the floor. `maze_top` and `maze_overview` provide fixed camera views.
 
 ```sh
-mjpython -m lekiwi_mujoco.mujoco_preview --variant base --scene maze
+mjpython -m lekiwi_mujoco.mujoco_preview --scene maze
 ```

@@ -15,12 +15,12 @@ amcl:
     alpha5: 0.1  # strafe noise (omni only)
 
     # Particle filter
-    max_particles: 2000
+    max_particles: 1000
     particle_filter_publish_period_s: 0.1  # s; 0 = disabled
     pf_err: 0.05                           # error bound [0-1]
     pf_z: 0.99                             # confidence bound [0-1]
-    update_min_d: 0.10                     # m
-    update_min_a: 0.2                      # rad
+    update_min_d: 0.15                     # m
+    update_min_a: 0.3                      # rad
     resample_interval: 1                   # updates
 
     # Laser model

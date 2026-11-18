@@ -1,0 +1,7 @@
+tof_imager:
+  ros__parameters:
+    frame_id: tof_frame
+    resolution: 8  # 4 (4x4) or 8 (8x8)
+    mode: 1  # 1 continuous, 3 autonomous
+    ranging_freq: 10  # Hz, max 15 at 8x8 and 60 at 4x4
+    timer_period: 0.1  # s

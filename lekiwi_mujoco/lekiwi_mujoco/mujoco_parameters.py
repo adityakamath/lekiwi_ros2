@@ -47,14 +47,15 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
     offset = float(geometry['wheel_offset'])
     if not np.isfinite(offset):
         raise ValueError('wheel_offset must be finite')
-    # All represented base joints follow the expanded URDF. Payload chain is handled
-    # separately because its mount uses an extra fixed intermediate MJCF body.
+    # All represented base joints follow the expanded URDF.
     base_joints = ['lekiwi_mount_joint', 'laser_joint', 'laser_frame_joint',
-                   'imu_joint', 'imu_frame_joint', 'mic_joint', 'plate_joint'] + [p + '_wheel_joint' for p in WHEELS]
+                   'imu_joint', 'imu_frame_joint', 'mic_joint', 'tray_joint', 'tof_joint', 'tof_frame_joint'] + [p + '_wheel_joint' for p in WHEELS]
     for name in base_joints:
         joint = urdf.find(f"joint[@name='{name}']")
         if joint is None:
-            raise ValueError(f'Missing URDF joint {name}')
+            if name == 'lekiwi_mount_joint' or name.endswith('_wheel_joint'):
+                raise ValueError(f'Missing URDF joint {name}')
+            continue
         body = spec.body(joint.find('child').get('link'))
         if body is None:
             raise ValueError(f'Missing MuJoCo body for {name}')
@@ -77,8 +78,10 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
     # Sync visual mesh origins and scales, with explicit decimated mesh mapping.
     # Actual asset name for the wheel is read by geoms rather than assumed.
     mesh_scales = {}
-    for body_name in ('base_link', 'left_wheel_link', 'back_wheel_link', 'right_wheel_link', 'imu_link', 'mic_link', 'plate_link'):
+    for body_name in ('base_link', 'left_wheel_link', 'back_wheel_link', 'right_wheel_link', 'imu_link', 'mic_link', 'tray_link', 'tof_link'):
         visual = urdf.find(f"link[@name='{body_name}']/visual")
+        if visual is None or spec.body(body_name) is None:
+            continue
         for geom in spec.body(body_name).geoms:
             if geom.meshname:
                 geom.mass, geom.density = 0, 0
@@ -91,18 +94,19 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
                 spec.mesh(geom.meshname).scale = scale
     # Lidar mesh is intentionally on laser_frame to avoid rangefinder self-hits.
     visual = urdf.find("link[@name='laser_link']/visual")
-    p, r = pose(visual.find('origin'), set_origin)
-    frame = urdf.find("joint[@name='laser_frame_joint']/origin")
-    fp, fr = pose(frame, set_origin)
-    for geom in spec.body('laser_frame').geoms:
-        if geom.meshname:
-            geom.mass, geom.density = 0, 0
-            geom.pos = fr.T @ (p - fp)
-            quaternion = np.empty(4)
-            mujoco.mju_mat2Quat(quaternion, (fr.T @ r).ravel())
-            geom.alt.type = mujoco.mjtOrientation.mjORIENTATION_QUAT
-            geom.quat = quaternion
-            spec.mesh(geom.meshname).scale = np.fromstring(visual.find('geometry/mesh').get('scale', '1 1 1'), sep=' ')
+    if visual is not None:
+        p, r = pose(visual.find('origin'), set_origin)
+        frame = urdf.find("joint[@name='laser_frame_joint']/origin")
+        fp, fr = pose(frame, set_origin)
+        for geom in spec.body('laser_frame').geoms:
+            if geom.meshname:
+                geom.mass, geom.density = 0, 0
+                geom.pos = fr.T @ (p - fp)
+                quaternion = np.empty(4)
+                mujoco.mju_mat2Quat(quaternion, (fr.T @ r).ravel())
+                geom.alt.type = mujoco.mjtOrientation.mjORIENTATION_QUAT
+                geom.quat = quaternion
+                spec.mesh(geom.meshname).scale = np.fromstring(visual.find('geometry/mesh').get('scale', '1 1 1'), sep=' ')
     contact = simulation['contact']
     small = positive(contact['roller_radius_fraction'], 'roller_radius_fraction') * radius
     width = positive(contact['roller_half_width_fraction'], 'roller_half_width_fraction') * radius
@@ -173,7 +177,6 @@ def sync_robot_parameters(spec, urdf, geometry, simulation, set_origin):
     chassis.pos = contact['chassis_center']
     for actuator in spec.actuators:
         name = actuator.target
-        # Payload servos are configured by the payload's own package (pt_mujoco) when attached.
         if not name.endswith('wheel_joint'):
             continue
         joint = spec.joint(name)

@@ -137,6 +137,8 @@ class TestTwistSwitchCb:
         assert result.success is True
 
 
+
+
 # ── BoolToggle state machine ──────────────────────────────────────────────────
 
 class TestBoolToggleState:

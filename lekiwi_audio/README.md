@@ -26,7 +26,7 @@ Spoken status announcements for LeKiwi. A node watches the robot's services and 
 ros2 launch lekiwi_audio audio.launch.py
 ```
 
-`lekiwi_bringup` starts this for you unless you pass `audio:=false`. With the robot or the simulation running, calling a service the node watches triggers its phrase, for example:
+`lekiwi_bringup` starts this on real hardware when `respeaker: true` in [`hardware.yaml`](../lekiwi_bringup/config/hardware.yaml). Set it to `false` to skip audio and remove the associated meshes. Simulation does not start audio automatically; you can launch this package separately. With the robot or simulation running, calling a service the node watches triggers its phrase, for example:
 
 ```bash
 ros2 service call /emergency_stop std_srvs/srv/SetBool "{data: true}"

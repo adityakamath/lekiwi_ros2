@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""Generate portable base/PT101 MJCFs from shared xacro + the pan-tilt payload from pt_mujoco.
+"""Generate the configured LeKiwi base MJCF from URDF and simulation settings.
 
-Also used by ROS launch: --absolute keeps mesh paths valid in temporary files.
-Native MjSpec parsing resolves XML includes; the payload is built by pt_mujoco from this robot's
-URDF and attached at the URDF's mount, without modifying the pinned pantilt_ros2 dependency.
-
-Standalone, no install needed: `python3 -m lekiwi_mujoco.build_mujoco_models --variant pt101
---output /tmp/robot.xml`, run from this package's root dir (-m puts the cwd on sys.path).
-After `pip install -e .` (or a colcon build), the same tool is also `build_mujoco_models`
-on PATH / `ros2 run lekiwi_mujoco build_mujoco_models`.
+Run python3 -m lekiwi_mujoco.build_mujoco_models to regenerate the base model.
+--absolute keeps mesh paths valid when ROS launch generates a temporary model.
 """
 import argparse
 from contextlib import contextmanager
@@ -18,13 +12,13 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import mujoco
+from lekiwi_mujoco.hardware_config import load_hardware_config
 from lekiwi_mujoco.mujoco_parameters import positive, sync_robot_parameters
-from lekiwi_mujoco.simulation import _laser_filter_params
 import yaml
 import xacro
 import xacro.substitution_args
 
-from lekiwi_mujoco.paths import package_share, payload_package
+from lekiwi_mujoco.paths import package_share
 
 PACKAGE = None  # Optional description override; resolve lazily so explicit paths work.
 SIM_PACKAGE = package_share('lekiwi_mujoco')
@@ -56,53 +50,25 @@ def set_origin(element, origin):
     element.quat = quat
 
 
-def expand_urdf(variant, packages, control):
-    """The robot URDF in mock mode, plus the controller geometry and payload joint limits it is built from."""
+def expand_urdf(packages, control, hardware_config=None):
+    """The robot URDF in mock mode, plus its controller geometry."""
     config = yaml.safe_load((control / 'config/control.yaml').read_text())['base_controller']['ros__parameters']
     motor = yaml.safe_load((control / 'config/urdf_config.yaml').read_text())
-    payload_limits = {}
-    if variant != 'base':
-        # Optional limit overrides come from the payload's own control package, like the real robot's.
-        payload_package()
-        from pt_mujoco.build_mujoco_models import joint_limits
-        payload_limits = joint_limits(package_share('pt_control'))
-    source = 'base/base.urdf.xacro' if variant == 'base' else 'base_pantilt/base_pantilt.urdf.xacro'
+    hardware_config = hardware_config or package_share('lekiwi_bringup') / 'config/hardware.yaml'
+    source = 'base.urdf.xacro'
+    load_hardware_config(hardware_config)  # Validate Python API callers as well as CLI profiles.
     with package_paths(packages):
         doc = xacro.process_file(str(packages['lekiwi_description'] / 'urdf' / source), mappings={
             'use_mock': 'true',
             'base_controller_config': str(control / 'config/control.yaml'),
             **{key: str(value).lower() if isinstance(value, bool) else str(value) for key, value in motor.items()},
-            'simulation_controllers': '', 'payload_simulation_controllers': ''})
-    return ET.fromstring(doc.toxml()), config, payload_limits
-
-
-def attach_payload(spec, variant, urdf, payload_limits, packages):
-    """Mount the pan-tilt payload at the URDF's mount joint.
-
-    pt_mujoco builds the payload (frames, inertias, limits, servo parameters, camera) from this
-    robot's own URDF; the base spec only owns where it is mounted.
-    """
-    joint = urdf.find("joint[@name='pantilt_mount_joint']")
-    if joint is None:
-        raise ValueError('Missing payload mount: pantilt_mount_joint')
-    parent = spec.body(joint.find('parent').get('link'))
-    if parent is None:
-        raise ValueError(f"Missing payload mount body: {joint.find('parent').get('link')}")
-    payload_package()
-    from pt_mujoco.build_mujoco_models import build_payload_spec
-    payload = build_payload_spec(variant, urdf, payload_limits, packages['pt_description'])
-    frame = parent.add_frame(name='pantilt_mount')
-    set_origin(frame, joint.find('origin'))
-    # A named root default stays valid when serialized below the robot's default.
-    payload.default.name = 'pt_payload'
-    spec.attach(payload, prefix='', frame=frame)
+            'simulation_controllers': '',
+            'hardware_config': str(hardware_config)})
+    return ET.fromstring(doc.toxml()), config
 
 
 def add_static_camera(spec, urdf, packages):
-    """No-payload Gemini 2 on the base bracket: frames from the URDF, camera/IMU like pt_mujoco's gemini2 subtree.
-
-    With the pan-tilt payload the camera comes from pt_mujoco instead, so this is base-only.
-    """
+    """Attach the static camera using URDF geometry and frames."""
     mount = spec.body('base_link').add_body(name='gemini2_link')
     set_origin(mount, urdf.find("joint[@name='gemini2_link_center_joint']/origin"))
     model = mount.add_body(name='gemini2_link_model_origin')
@@ -111,7 +77,7 @@ def add_static_camera(spec, urdf, packages):
     geom = model.add_geom(type=mujoco.mjtGeom.mjGEOM_MESH, meshname='gemini2', contype=0, conaffinity=0,
                           group=2, mass=0, rgba=[0.15, 0.15, 0.15, 1.0])
     set_origin(geom, urdf.find("link[@name='gemini2_link_model_origin']/visual/origin"))
-    # Gemini 2 16:9 RGB profile, nominal V55/H86; right is the frame's -Y and up its +Z (as in pt_mujoco).
+    # Gemini 2 16:9 RGB profile, nominal V55/H86; right is the frame's -Y and up its +Z.
     camera = mount.add_camera(name='gemini2_rgb', fovy=55, resolution=[640, 360])
     camera.alt.type = mujoco.mjtOrientation.mjORIENTATION_XYAXES
     camera.alt.xyaxes = [0, -1, 0, 0, 0, 1]
@@ -138,7 +104,6 @@ def sync_velocity_limits(spec, urdf, config):
     numeric('wheel_kinematics', [config['wheel_radius'], config['robot_radius'], config['wheel_offset']], positive=False)
     for actuator in spec.actuators:
         name = actuator.target
-        # The payload's limits are synced by pt_mujoco when it is attached.
         if name in ('left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint'):
             limit = float(urdf.find(f"joint[@name='{name}']/limit").get('velocity'))
             actuator.ctrllimited = True
@@ -146,28 +111,65 @@ def sync_velocity_limits(spec, urdf, config):
             numeric('velocity_limit_' + name, [limit])
 
 
-def build_robot_spec(variant, pt_package=None, *, control_dir=None, description_dir=None):
+def configure_base_components(spec, urdf, packages):
+    """Draw split fixed parts from the same expanded URDF used for TF and hardware.
+
+    Keep the simulation's wheel contacts and sensor sites; remove absent sensor
+    bodies before compilation so no disabled device survives as hidden geometry.
+    """
+    links = {link.get('name'): link for link in urdf.findall('link')}
+    for body_name, prefix in [('laser_link', 'lidar-'), ('imu_link', 'bno055_'),
+                              ('mic_link', None), ('tof_link', None), ('rpi5_case_link', None)]:
+        if body_name in links:
+            continue
+        if prefix:
+            for sensor in list(spec.sensors):
+                if sensor.name.startswith(prefix):
+                    spec.delete(sensor)
+        body = spec.body(body_name)
+        if body is not None:
+            spec.delete(body)
+    # The plain chassis fits MuJoCo's STL limit; never draw the old combined mesh.
+    filename = links['base_link'].find('visual/geometry/mesh').get('filename').split('/')[-1]
+    spec.mesh('lekiwi_base_visual').file = str(packages['lekiwi_description'] / 'meshes' / filename)
+    for joint in urdf.findall('joint'):
+        if joint.get('type') != 'fixed' or joint.find('parent').get('link') != 'base_link':
+            continue
+        name = joint.find('child').get('link')
+        if spec.body(name) is not None or name == 'gemini2_link':
+            continue
+        link = links[name]
+        visual = link.find('visual')
+        if visual is None:
+            continue
+        body = spec.body('base_link').add_body(name=name)
+        set_origin(body, joint.find('origin'))
+        filename = visual.find('geometry/mesh').get('filename').split('/')[-1]
+        mesh_name = Path(filename).stem + '_visual'
+        if spec.mesh(mesh_name) is None:
+            spec.add_mesh(name=mesh_name, file=str(packages['lekiwi_description'] / 'meshes' / filename))
+        geom = body.add_geom(name=name + '_visual', type=mujoco.mjtGeom.mjGEOM_MESH,
+                             meshname=mesh_name, contype=0, conaffinity=0, group=2, mass=0)
+        set_origin(geom, visual.find('origin'))
+        geom.rgba = list(map(float, visual.find('material/color').get('rgba').split()))
+        spec.mesh(mesh_name).scale = list(map(float, visual.find('geometry/mesh').get('scale', '1 1 1').split()))
+    used_meshes = {geom.meshname for geom in spec.geoms if geom.meshname}
+    for mesh in list(spec.meshes):
+        if mesh.name not in used_meshes:
+            spec.delete(mesh)
+
+
+def build_robot_spec(*, control_dir=None, description_dir=None, hardware_config=None):
     """Return an editable native spec with absolute assets for future scene composition."""
-    if variant not in ('base', 'pt101'):
-        raise ValueError(f'Unknown variant: {variant}')
     control = Path(control_dir).resolve() if control_dir else control_package()
     packages = {'lekiwi_description': Path(description_dir).resolve() if description_dir else (PACKAGE or package_share('lekiwi_description'))}
-    if variant != 'base':
-        packages['pt_description'] = Path(pt_package).resolve() if pt_package else package_share('pt_description')
     with package_paths(packages):
         doc = xacro.process_file(str(SIM_PACKAGE / 'mjcf/base.mjcf.xacro'))
     # MuJoCo parses includes and maintains model references; no custom XML assembly.
     spec = mujoco.MjSpec.from_string(doc.toxml())
-    urdf, config, payload_limits = expand_urdf(variant, packages, control)
-    if variant != 'base':
-        spec.geom('plate_visual').meshname = 'payload_plate_visual'
-        attach_payload(spec, variant, urdf, payload_limits, packages)
-        # Kilted's released MujocoSystemInterface expects the default IMU suffixes.
-        spec.sensor('gemini2_gyroscope').name = 'gemini2_gyro'
-        spec.sensor('gemini2_accelerometer').name = 'gemini2_accel'
-        spec.add_sensor(name='gemini2_quat', type=mujoco.mjtSensor.mjSENS_FRAMEQUAT,
-                        objtype=mujoco.mjtObj.mjOBJ_SITE, objname='gemini2_imu')
-    if variant == 'base':
+    urdf, config = expand_urdf(packages, control, hardware_config)
+    configure_base_components(spec, urdf, packages)
+    if urdf.find("link[@name='gemini2_link']") is not None:
         add_static_camera(spec, urdf, packages)
     sync_velocity_limits(spec, urdf, config)
     configure_physics(spec)
@@ -228,8 +230,8 @@ def compose_scene(robot, scene='flat'):
     return world
 
 
-def build_spec(variant, pt_package=None, scene='flat', *, control_dir=None, description_dir=None):
-    return compose_scene(build_robot_spec(variant, pt_package, control_dir=control_dir, description_dir=description_dir), scene)
+def build_spec(scene='flat', *, control_dir=None, description_dir=None, hardware_config=None):
+    return compose_scene(build_robot_spec(control_dir=control_dir, description_dir=description_dir, hardware_config=hardware_config), scene)
 
 
 def use_native_lidar(xml):
@@ -248,7 +250,9 @@ def use_native_lidar(xml):
     parents = {child: parent for parent in root.iter() for child in parent}
     for site in [e for e in root.iter('site') if e.get('name', '').startswith('lidar-')]:
         parents[site].remove(site)
-    frame = next(e for e in root.iter('body') if e.get('name') == 'laser_frame')
+    frame = next((e for e in root.iter('body') if e.get('name') == 'laser_frame'), None)
+    if frame is None:
+        return xml
     # The plugin excludes no body from its rays (the rangefinders excluded their own), so the
     # visual LD06 mesh around the site would be hit at zero range and blank the whole scan.
     for geom in [e for e in frame if e.tag == 'geom']:
@@ -270,38 +274,43 @@ def use_native_lidar(xml):
     return ET.tostring(root, encoding='unicode')
 
 
-def mask_payload_lidar(xml, mask):
-    """Remove the rangefinders (and their sites) in the payload's blind arc.
+def use_native_tof(xml):
+    """Add a VL53L5CX mujoco.plugin.lidar instance on tof_frame, independently of the LD06.
 
-    Matches what the real robot's laser_filters payload_mask discards (see
-    config/mujoco_laser_filter_pantilt.yaml) - by removing them from the model instead of
-    filtering sensordata at runtime, MuJoCo's own native rangefinder visualization already
-    only shows the unblocked arc, with no extra Python-side drawing needed downstream. Each
-    site's quat sweeps local +Z CCW about laser_frame's Z starting at +X (base_subtree.xml),
-    so rangefinder lidar-i sits at angle i * 2*pi / (ray count).
+    The site's x axis points along tof_frame's +z, the sensor's boresight. It sits site_height above the chip, over
+    the chassis collision cylinder, which the plugin's rays would otherwise hit from inside. Rays span the sensor's
+    square field of view, one per zone centre.
     """
-    lower, upper = mask
+    tof = yaml.safe_load((SIM_PACKAGE / 'config/mujoco.yaml').read_text())['tof']
     root = ET.fromstring(xml)
+    frame = next((e for e in root.iter('body') if e.get('name') == 'tof_frame'), None)
+    if frame is None:
+        return xml
+    # R_y(-90 deg): site x -> tof_frame z, site y -> y, site z -> -x.
+    ET.SubElement(frame, 'site', name='tof', pos=f"0 0 {tof['site_height']}", quat='0.70710678 0 -0.70710678 0', group='4')
+    zones = tof['resolution']
+    half = math.radians(tof['fov_degrees']) / 2 * (1 - 1 / zones)  # first/last zone centres
+    plugin = root.find('extension/plugin[@plugin="mujoco.plugin.lidar"]')
+    if plugin is None:
+        extension = root.find('extension')
+        if extension is None:
+            extension = ET.SubElement(root, 'extension')
+        plugin = ET.SubElement(extension, 'plugin', plugin='mujoco.plugin.lidar')
+    instance = ET.SubElement(plugin, 'instance', name='tof')
+    for key, value in {
+            'resolution': f'{zones} {zones}', 'azimuth_range': f'{-half:.7f} {half:.7f}',
+            'elevation_range': f'{-half:.7f} {half:.7f}', 'max_range': tof['max_range'],
+            'min_range': tof['min_range'], 'update_rate': tof['update_rate'],
+            'async': 0}.items():
+        ET.SubElement(instance, 'config', key=key, value=str(value))
     sensor = next(root.iter('sensor'))
-    rays = [e for e in sensor if e.tag == 'rangefinder' and e.get('name', '').startswith('lidar-')]
-    step = 2 * math.pi / len(rays)
-    masked_names = set()
-    for ray in rays:
-        angle = int(ray.get('name').rsplit('-', 1)[1]) * step
-        if angle > math.pi:
-            angle -= 2 * math.pi
-        if lower <= angle <= upper:
-            masked_names.add(ray.get('name'))
-            sensor.remove(ray)
-    parents = {child: parent for parent in root.iter() for child in parent}
-    for site in [e for e in root.iter('site') if e.get('name') in masked_names]:
-        parents[site].remove(site)
+    ET.SubElement(sensor, 'plugin', name='tof', instance='tof', objtype='site', objname='tof')
     return ET.tostring(root, encoding='unicode')
 
 
-def build(variant, output, absolute=False, pt_package=None, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder'):
+def build(output, absolute=False, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder', hardware_config=None):
     output = Path(output).resolve()
-    spec = build_spec(variant, pt_package=pt_package, scene=scene, control_dir=control_dir, description_dir=description_dir)
+    spec = build_spec(scene=scene, control_dir=control_dir, description_dir=description_dir, hardware_config=hardware_config)
     for mesh in [*spec.meshes, *spec.textures]:
         if mesh.file:
             path = Path(mesh.file).resolve()
@@ -323,39 +332,30 @@ def build(variant, output, absolute=False, pt_package=None, scene=True, *, contr
     content = '<!-- Generated by lekiwi_mujoco.build_mujoco_models using MjSpec; edit sources, not this file. -->\n'
     xml = spec.to_xml()
     if lidar == 'plugin':
-        xml = use_native_lidar(xml)
+        xml = use_native_tof(use_native_lidar(xml))
     elif lidar != 'rangefinder':
         raise ValueError("lidar must be 'rangefinder' or 'plugin'")
-    elif variant != 'base':
-        _, mask = _laser_filter_params(has_payload=True)
-        if mask is not None:
-            xml = mask_payload_lidar(xml, mask)
     output.write_text(content + xml)
     return output
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--variant', choices=['base', 'pt101'])
     parser.add_argument('--output', type=Path)
     parser.add_argument('--absolute', action='store_true')
-    parser.add_argument('--pt-package', type=Path)
     parser.add_argument('--control-package', type=Path, help='Directory containing control config/ (data only)')
     parser.add_argument('--description-package', type=Path, help='Robot description source/share directory')
     parser.add_argument('--scene', default='flat', help='flat, arena, home, maze, none, or a scene MJCF path')
     parser.add_argument('--lidar', choices=['rangefinder', 'plugin'], default='rangefinder',
                         help='plugin: one native mujoco.plugin.lidar sensor (ROS/mujoco_vendor only)')
+    parser.add_argument('--hardware-config', type=Path, help='YAML file selecting optional hardware groups')
     args = parser.parse_args()
-    if bool(args.variant) != bool(args.output):
-        parser.error('--variant and --output must be used together')
-    if args.variant:
-        build(args.variant, args.output, args.absolute, args.pt_package, scene=args.scene, control_dir=args.control_package, description_dir=args.description_package, lidar=args.lidar)
-    else:
-        for variant in ('base', 'pt101'):
-            filename = 'lekiwi_base.xml' if variant == 'base' else f'lekiwi_{variant}.xml'
-            print(build(variant, SIM_PACKAGE / 'mjcf' / filename, args.absolute, args.pt_package,
-                        scene=args.scene, control_dir=args.control_package,
-                        description_dir=args.description_package, lidar=args.lidar))
+    hardware_config = args.hardware_config
+    load_hardware_config(hardware_config)
+    output = args.output or SIM_PACKAGE / 'mjcf/lekiwi_base.xml'
+    print(build(output, args.absolute, scene=args.scene,
+                control_dir=args.control_package, description_dir=args.description_package,
+                lidar=args.lidar, hardware_config=hardware_config))
 
 
 if __name__ == '__main__':

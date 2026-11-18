@@ -15,7 +15,6 @@ import yaml
 # Resolve source package root (works with both symlink-install and regular install).
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 _CFG_BASE = os.path.join(_PKG_SRC, 'config')
-_CFG_PANTILT = _CFG_BASE
 
 
 def _load(path):
@@ -40,7 +39,7 @@ class TestUrdfConfig:
     def test_required_keys_present(self):
         for key in ('serial_port', 'baud_rate', 'use_mock', 'use_sync_write',
                     'left_motor_id', 'back_motor_id', 'right_motor_id',
-                    'sts3215_max_vel_steps', 'proportional_acc_max', 'proportional_vel_max',
+                    'sts3215_max_vel_steps', 'proportional_acc_max',
                     'internal_max_vel', 'internal_max_acc', 'internal_acc_coeff',
                     'internal_control_period'):
             assert key in self.cfg, f"Missing key '{key}' in urdf_config.yaml"
@@ -176,32 +175,6 @@ class TestCollisionToggleYaml:
         assert node == '/collision_monitor'
 
 
-# ── pantilt/pantilt_teleop.yaml ──────────────────────────────────────────────────────
-
-class TestTeleopYamlPantilt:
-    def setup_method(self):
-        self.cfg = _load(os.path.join(_CFG_PANTILT, 'pantilt_teleop.yaml'))
-
-    def test_pantilt_control_action_present(self):
-        assert 'pantilt_control' in self.cfg['joy_teleop']['ros__parameters']
-
-    def test_pantilt_control_publishes_to_correct_topic(self):
-        action = self.cfg['joy_teleop']['ros__parameters']['pantilt_control']
-        assert action['topic_name'] == '/pantilt_controller/commands'
-
-    def test_pantilt_uses_float64_multiarray(self):
-        action = self.cfg['joy_teleop']['ros__parameters']['pantilt_control']
-        assert action['interface_type'] == 'std_msgs/msg/Float64MultiArray'
-
-    def test_pantilt_shares_l1_deadman(self):
-        """Pan-tilt deadman must match the base drive deadman (L1 = button 9)."""
-        base_teleop = _load(os.path.join(_CFG_BASE, 'base_teleop.yaml'))
-        base_deadman = base_teleop['joy_teleop']['ros__parameters']['teleop']['deadman_buttons']
-        pantilt_deadman = self.cfg['joy_teleop']['ros__parameters']['pantilt_control']['deadman_buttons']
-        assert pantilt_deadman == base_deadman, \
-            "Pan-tilt deadman must match base drive deadman button(s)"
-
-
 # ── bno055_diagnostics.yaml ──────────────────────────────────────────────────
 
 class TestBno055DiagnosticsYaml:
@@ -226,7 +199,7 @@ class TestBno055DiagnosticsYaml:
 
 class TestControlLaunchArgs:
     EXPECTED_ARGS = [
-        'payload', 'camera_fps', 'sts_serial_port', 'use_mock',
+        'hardware_config', 'sts_serial_port', 'use_mock',
         'diagnostics', 'use_sim_time', 'joy',
     ]
 
@@ -239,7 +212,7 @@ class TestControlLaunchArgs:
 # ── teleop.launch.py argument surface ────────────────────────────────────────
 
 class TestTeleopLaunchArgs:
-    EXPECTED_ARGS = ['payload', 'use_sim_time', 'joy']
+    EXPECTED_ARGS = ['use_sim_time', 'joy']
 
     def test_expected_args_declared(self):
         output = _show_arguments('lekiwi_control', 'teleop.launch.py')

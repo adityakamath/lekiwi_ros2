@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 50  # Hz
+    update_rate: 20  # Hz
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
 
     # Command and error handling

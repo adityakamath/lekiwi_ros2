@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
-"""
-Launch the LeKiwi robot control stack.
+"""Launch the LeKiwi base controller, configured sensors and teleoperation."""
 
-The 'payload' argument selects which hardware is present alongside the base:
-  ""        — base drive (+ IMU unless imu:=false)  [default: no payload]
-  "pantilt" — base drive + pan-tilt servos (+ IMU unless imu:=false)
-
-payload:="pantilt" merges pan-tilt onto this shared bus instead of including
-pt_control/launch/pantilt.launch.py - see pantilt_ros2 README's "Launch-time bring-up".
-"""
-
-import math
 import subprocess
+import shlex
 import sys
 import tempfile
 
 import yaml
+
+from lekiwi_mujoco.hardware_config import load_hardware_config
 
 from launch import LaunchDescription
 from launch.actions import (
@@ -25,7 +18,7 @@ from launch.actions import (
     RegisterEventHandler,
     TimerAction,
 )
-from launch.event_handlers import OnProcessStart
+from launch.event_handlers import OnProcessExit, OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -45,18 +38,14 @@ def _launch_arg_as_bool(context, name: str) -> bool:
     )
 
 def launch_setup(context):
-    """Build the control-stack nodes for the selected payload."""
-    payload        = LaunchConfiguration('payload').perform(context)
-    enable_camera = _launch_arg_as_bool(context, 'enable_camera')
+    """Build the control-stack nodes for the base."""
+    hardware_config = LaunchConfiguration('hardware_config').perform(context)
+    hardware = load_hardware_config(hardware_config)
+    enable_camera = _launch_arg_as_bool(context, 'enable_camera') and hardware['gemini2']
     pointcloud = _launch_arg_as_bool(context, 'pointcloud')
-    camera_fps = float(LaunchConfiguration('camera_fps').perform(context))
-    if not math.isfinite(camera_fps) or not 0 < camera_fps <= 30:
-        raise RuntimeError('camera_fps must be finite and in (0, 30] Hz')
-    render_fps = min(camera_fps, 5.0)
     serial_port  = LaunchConfiguration('sts_serial_port').perform(context)
     use_mock     = LaunchConfiguration('use_mock').perform(context)
     diagnostics  = _launch_arg_as_bool(context, 'diagnostics')
-    imu          = _launch_arg_as_bool(context, 'imu')
     launch_joy   = _launch_arg_as_bool(context, 'joy')
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     enable_odom_tf = _launch_arg_as_bool(context, 'enable_odom_tf')
@@ -65,8 +54,6 @@ def launch_setup(context):
         yaml.safe_dump({'base_controller': {'ros__parameters': {'enable_odom_tf': enable_odom_tf}}}, f)
         odom_tf_params = f.name
     hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
-    if hw_type != 'mujoco' and camera_fps not in (5, 10, 15, 30):
-        raise RuntimeError('Real camera_fps must be 5, 10, 15, or 30 Hz')
     mujoco_model    = LaunchConfiguration('mujoco_model').perform(context)
     mujoco_scene = LaunchConfiguration('mujoco_scene').perform(context)
     mujoco_headless = LaunchConfiguration('mujoco_headless').perform(context)
@@ -74,68 +61,54 @@ def launch_setup(context):
     pkg_desc = FindPackageShare('lekiwi_description').perform(context)
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
     pkg_mujoco = FindPackageShare('lekiwi_mujoco').perform(context)
-    pkg_pt_mujoco = FindPackageShare('pt_mujoco').perform(context) if payload == 'pantilt' else ''
-    pkg_pt_control = FindPackageShare('pt_control').perform(context) if payload == 'pantilt' else ''
     xacro    = FindExecutable(name='xacro').perform(context)
 
-    urdf = f'{pkg_desc}/urdf/base_pantilt/base_pantilt.urdf.xacro' if payload == 'pantilt' else f'{pkg_desc}/urdf/base/base.urdf.xacro'
+    urdf = f'{pkg_desc}/urdf/base.urdf.xacro'
 
-    # The control plugin loads MJCF from disk. Generate one model per payload.
+    # The control plugin loads MJCF from disk. Generate the configured base model.
     if mujoco_model:
         final_mujoco_model = mujoco_model
     elif hw_type == 'mujoco':
         # One compiler for committed assets, headless tests and ROS; it also
-        # resolves the pinned payload's optical frame into MuJoCo's convention.
+        # uses the configured base frames and sensor assemblies.
         with tempfile.NamedTemporaryFile(
                 suffix='.xml', prefix='lekiwi_mujoco_', delete=False) as mjcf_file:
             final_mujoco_model = mjcf_file.name
         subprocess.run([
             sys.executable, '-m', 'lekiwi_mujoco.build_mujoco_models',
             '--control-package', pkg_ctrl, '--description-package', pkg_desc,
-            '--variant', 'pt101' if payload == 'pantilt' else 'base',
             '--output', final_mujoco_model, '--absolute', '--scene', mujoco_scene,
             '--lidar', 'plugin',
+            '--hardware-config', hardware_config,
         ], capture_output=True, text=True, check=True)
     else:
         final_mujoco_model = ''
 
-    _cfg = yaml.safe_load(open(f'{pkg_ctrl}/config/urdf_config.yaml'))
+    with open(f'{pkg_ctrl}/config/urdf_config.yaml') as stream:
+        _cfg = yaml.safe_load(stream)
     final_serial_port = serial_port if serial_port else _cfg['serial_port']
     final_use_mock    = use_mock if use_mock else str(_cfg['use_mock']).lower()
 
-    xacro_cmd = (
-        f'{xacro} {urdf}'
-        f' base_controller_config:={pkg_ctrl}/config/control.yaml'
-        f' serial_port:={final_serial_port}'
-        f' use_mock:={final_use_mock}'
-        f' baud_rate:={_cfg["baud_rate"]}'
-        f' use_sync_write:={str(_cfg["use_sync_write"]).lower()}'
-        f' left_motor_id:={_cfg["left_motor_id"]}'
-        f' back_motor_id:={_cfg["back_motor_id"]}'
-        f' right_motor_id:={_cfg["right_motor_id"]}'
-        f' sts3215_max_vel_steps:={_cfg["sts3215_max_vel_steps"]}'
-        f' proportional_acc_max:={_cfg["proportional_acc_max"]}'
-        f' internal_max_vel:={_cfg["internal_max_vel"]}'
-        f' internal_max_acc:={_cfg["internal_max_acc"]}'
-        f' internal_acc_coeff:={_cfg["internal_acc_coeff"]}'
-        f' internal_control_period:={_cfg["internal_control_period"]}'
-        f' imu:={str(imu).lower()}'
-    )
-    xacro_cmd += f' enable_camera:={str(enable_camera).lower()}'
-    if payload == 'pantilt':
-        pt_cfg = yaml.safe_load(open(f'{pkg_pt_control}/config/urdf_config.yaml'))
-        xacro_cmd += (
-            f' proportional_vel_max:={_cfg["proportional_vel_max"]}'
-            f' pantilt_internal_max_vel:={pt_cfg["internal_max_vel"]}'
-            f' pantilt_internal_max_acc:={pt_cfg["internal_max_acc"]}'
-            f' pantilt_internal_acc_coeff:={pt_cfg["internal_acc_coeff"]}'
-        )
+    # Build argv before quoting, so profile/package paths containing spaces are valid.
+    xacro_args = [
+        xacro, urdf,
+        f'base_controller_config:={pkg_ctrl}/config/control.yaml',
+        f'serial_port:={final_serial_port}',
+        f'use_mock:={final_use_mock}',
+        *[f'{name}:={str(_cfg[name]).lower()}' for name in (
+            'baud_rate', 'use_sync_write', 'left_motor_id', 'back_motor_id', 'right_motor_id',
+            'sts3215_max_vel_steps', 'proportional_acc_max', 'internal_max_vel',
+            'internal_max_acc', 'internal_acc_coeff', 'internal_control_period')],
+        f'hardware_config:={hardware_config}',
+        f'enable_camera:={str(enable_camera).lower()}',
+    ]
     if hw_type == 'mujoco':
-        xacro_cmd += (
-            f' ros2_control_hardware_type:={hw_type}'
-            f' mujoco_model:={final_mujoco_model}'
-            f' mujoco_headless:={mujoco_headless}'
-        )
+        xacro_args += [
+            f'ros2_control_hardware_type:={hw_type}',
+            f'mujoco_model:={final_mujoco_model}',
+            f'mujoco_headless:={mujoco_headless}',
+        ]
+    xacro_cmd = shlex.join(xacro_args)
 
     robot_description = {
         'robot_description': ParameterValue(Command([xacro_cmd]), value_type=str)
@@ -165,6 +138,18 @@ def launch_setup(context):
         arguments=['--ros-args', '--log-level', 'rclcpp:=ERROR'],
     )
 
+    # Remove plugin entries for absent devices as well as their processing nodes.
+    sensor_plugins = f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml'
+    if hw_type == 'mujoco' and not hardware['sparkfun_sensor']:
+        with open(sensor_plugins) as stream:
+            plugin_config = yaml.safe_load(stream)
+        plugins = plugin_config['/**']['ros__parameters']['mujoco_plugins']
+        lidar_plugin = plugins['mujoco_3d_lidar_plugin']
+        lidar_plugin.pop('tof', None)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_sensors_', delete=False) as stream:
+            yaml.safe_dump(plugin_config, stream)
+            sensor_plugins = stream.name
+
     # mujoco_ros2_control hosts its own simulation + /scan publishing (base.control.xacro) -
     # use_sim_time:true is required regardless of the launch arg.
     mujoco_control_node = Node(
@@ -175,19 +160,11 @@ def launch_setup(context):
             f'{pkg_ctrl}/config/control.yaml',
             *([f'{pkg_ctrl}/config/gemini2_imu_broadcaster.yaml']
               if enable_camera else []),
-            f'{pkg_mujoco}/config/mujoco_ros2_control_plugins.yaml',
-            # Camera plugin: from pt_mujoco with the pan-tilt, lekiwi_mujoco's own copy without a payload.
-            *(([f'{pkg_pt_mujoco}/config/mujoco_ros2_control_plugins.yaml',
-                f'{pkg_pt_mujoco}/config/mujoco_camera_gemini2.yaml',
-                f'{pkg_mujoco}/config/mujoco_camera_pantilt.yaml']
-               if payload == 'pantilt' else
-               [f'{pkg_mujoco}/config/mujoco_camera_plugin.yaml',
-                f'{pkg_mujoco}/config/mujoco_camera_gemini2.yaml'])
+            sensor_plugins,
+            *([f'{pkg_mujoco}/config/mujoco_camera_plugin.yaml',
+               f'{pkg_mujoco}/config/mujoco_camera_gemini2.yaml']
               if enable_camera else []),
             {'use_sim_time': True},
-            *([{'mujoco_plugins': {'mujoco_camera_plugin':
-                   {'camera_publish_rate': render_fps}}}]
-              if enable_camera else []),
             odom_tf_params,
         ],
         output='both',
@@ -200,7 +177,7 @@ def launch_setup(context):
     # raw-to-/scan split the real LD06 uses, and the camera images need an optical frame.
     sim_nodes = []
     if hw_type == 'mujoco':
-        filter_file = 'mujoco_laser_filter_pantilt.yaml' if payload == 'pantilt' else 'mujoco_laser_filter.yaml'
+        filter_file = 'mujoco_laser_filter.yaml'
         sim_nodes.append(Node(
             package='laser_filters',
             executable='scan_to_scan_filter_chain',
@@ -209,21 +186,16 @@ def launch_setup(context):
             parameters=[f'{pkg_mujoco}/config/{filter_file}', {'use_sim_time': True}],
             remappings=[('scan', 'scan_raw'), ('scan_filtered', 'scan')],
         ))
+        if hardware['sparkfun_sensor']:
+            sim_nodes.append(Node(
+                package='lekiwi_mujoco', executable='tof_pointcloud',
+                name='tof_pointcloud', output='log', parameters=[{'use_sim_time': True}],
+            ))
         if enable_camera:
             sim_nodes.extend([
                 Node(
                     package='lekiwi_mujoco', executable='gemini2_depth',
                     name='gemini2_depth', output='log', parameters=[{'use_sim_time': True}],
-                ),
-                Node(
-                    package='depthimage_to_laserscan',
-                    executable='depthimage_to_laserscan_node',
-                    name='gemini2_depth_to_scan', output='log',
-                    parameters=[f'{pkg_mujoco}/config/mujoco_gemini2_depth_to_scan.yaml',
-                                {'use_sim_time': True}],
-                    remappings=[('depth', '/gemini2/depth/image_raw'),
-                                ('depth_camera_info', '/gemini2/depth/camera_info'),
-                                ('scan', '/gemini2/scan')],
                 ),
                 Node(
                     package='tf2_ros', executable='static_transform_publisher',
@@ -270,7 +242,6 @@ def launch_setup(context):
     teleop_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([f'{pkg_ctrl}/launch/teleop.launch.py']),
         launch_arguments={
-            'payload': payload,
             'use_sim_time': str(use_sim_time).lower(),
             'joy': str(launch_joy).lower(),
         }.items(),
@@ -299,13 +270,12 @@ def launch_setup(context):
              arguments=['base_controller', '-c', '/controller_manager',
                         '--controller-manager-timeout', '30'], output='both'),
     ]
-    if imu:
-        # Only spawn when the URDF declares the lekiwi_imu interface (imu:=true branch).
-        extra_spawner_nodes.append(
-            Node(package='controller_manager', executable='spawner',
-                 arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
-                            '--controller-manager-timeout', '30'], output='both'),
-        )
+    # Spawn only when the hardware file includes the BNO055.
+    extra_spawner_nodes.append(
+        Node(package='controller_manager', executable='spawner',
+             arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
+                        '--controller-manager-timeout', '30'], output='both'),
+    )
     if hw_type == 'mujoco' and enable_camera:
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
@@ -315,21 +285,10 @@ def launch_setup(context):
                             '--controller-ros-args', '--ros-args -r ~/imu:=/gemini2/gyro_accel/sample'],
                  output='both'),
         )
-    if payload == 'pantilt':
-        extra_spawner_nodes.append(
-            Node(package='controller_manager', executable='spawner',
-                 arguments=['pantilt_controller', '-c', '/controller_manager',
-                            '--controller-manager-timeout', '30',
-                            '--param-file', f'{pkg_pt_control}/config/pantilt_controller.yaml'],
-                 output='both'),
-        )
-
     # Real-hardware motor health for motor_diagnostics_node (/dynamic_joint_states is gone on Lyrical);
     # the MuJoCo joints export no voltage/temperature/current/is_moving interfaces.
     if diagnostics and hw_type != 'mujoco':
         sts_joints = ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']
-        if payload == 'pantilt':
-            sts_joints += ['shoulder_pan_joint', 'tilt_joint']
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_state_ifaces_', delete=False) as f:
             yaml.safe_dump({'state_interfaces_broadcaster': {'ros__parameters': {'interfaces': [
                 f'{j}/{i}' for j in sts_joints
@@ -348,18 +307,12 @@ def launch_setup(context):
         output='both',
     )
 
-    # Start spawners as soon as control_node (whichever variant) starts. joint_state_broadcaster
-    # first; others follow after a brief stagger so they don't all race to activate at once.
+    # Spawners run one after another: concurrent load_controller calls race in the controller manager.
+    spawners = [joint_state_broadcaster_spawner, *extra_spawner_nodes]
     controller_spawner_actions = [
-        RegisterEventHandler(
-            OnProcessStart(
-                target_action=control_node,
-                on_start=[
-                    joint_state_broadcaster_spawner,
-                    TimerAction(period=1.0, actions=extra_spawner_nodes),
-                ],
-            )
-        )
+        RegisterEventHandler(OnProcessStart(target_action=control_node, on_start=[spawners[0]])),
+        *[RegisterEventHandler(OnProcessExit(target_action=done, on_exit=[nxt]))
+          for done, nxt in zip(spawners, spawners[1:])],
     ]
 
     motor_diagnostics = IncludeLaunchDescription(
@@ -377,22 +330,21 @@ def launch_setup(context):
         *sim_nodes,
     ]
 
-    if diagnostics:
+    if diagnostics and hw_type != 'mujoco':
         actions.append(TimerAction(period=3.0, actions=[motor_diagnostics]))
-        if imu:
-            actions.append(TimerAction(
-                period=3.0,
-                actions=[Node(
-                    package='bno055_hardware_interface',
-                    executable='bno055_diagnostics',
-                    name='bno055_diagnostics',
-                    output='log',
-                    parameters=[
-                        f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
-                        {'enable_mock_mode': final_use_mock},
-                    ],
-                )],
-            ))
+        actions.append(TimerAction(
+            period=3.0,
+            actions=[Node(
+                package='bno055_hardware_interface',
+                executable='bno055_diagnostics',
+                name='bno055_diagnostics',
+                output='log',
+                parameters=[
+                    f'{pkg_ctrl}/config/bno055_diagnostics.yaml',
+                    {'enable_mock_mode': final_use_mock},
+                ],
+            )],
+        ))
 
     return actions
 
@@ -400,17 +352,14 @@ def launch_setup(context):
 def generate_launch_description():
     """Declare control-stack launch arguments and launch via launch_setup."""
     declared_arguments = [
-        DeclareLaunchArgument(
-            'payload',
-            default_value='',
-            description='Hardware payload: "" for base only, "pantilt" for base + pan-tilt',
-        ),
+        DeclareLaunchArgument('hardware_config',
+                              default_value=PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'hardware.yaml']),
+                              description='Optional robot assemblies; LiDAR, IMU and battery monitoring are permanent.'),
+
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start simulated camera publishing; geometry remains selected.'),
         DeclareLaunchArgument('pointcloud', default_value='false',
-                              description='[simulation] Publish one colored cloud (real hardware uses pt_bringup Cloudini compression when enabled).'),
-        DeclareLaunchArgument('camera_fps', default_value='15.0',
-                              description='Camera frame rate in Hz; simulation is capped at 5 Hz.'),
+                              description='[simulation] Publish one colored cloud (real hardware uses lekiwi_bringup Cloudini compression when enabled).'),
         DeclareLaunchArgument(
             'sts_serial_port',
             default_value='',
@@ -427,15 +376,6 @@ def generate_launch_description():
             description='Launch motor and IMU diagnostics nodes. Defaults to false everywhere '
                         'in the stack (lekiwi.launch.py included) so this default takes effect '
                         'identically whether control.launch.py is run standalone or included.',
-        ),
-        DeclareLaunchArgument(
-            'imu',
-            default_value='true',
-            description='Whether a physical BNO055 IMU is present (honored on real and '
-                        'mujoco hardware; gazebo is xacro-level only, not wired into this '
-                        'launch file). false omits the IMU sensor block, skips spawning '
-                        'imu_sensor_broadcaster, and skips bno055_diagnostics even when '
-                        'diagnostics:=true.',
         ),
         DeclareLaunchArgument(
             'use_sim_time',
@@ -459,9 +399,9 @@ def generate_launch_description():
             'ros2_control_hardware_type',
             default_value='real',
             description='"real" for STS/BNO055 hardware plugins, "mujoco" for '
-                        'mujoco_ros2_control/MujocoSystemInterface (base and pantilt payload both '
+                        'mujoco_ros2_control/MujocoSystemInterface (base '
                         'supported). "gazebo" is also supported at the URDF/xacro level - '
-                        'base.control.xacro/base_pantilt.control.xacro - but not wired into this '
+                        'base.control.xacro - but not wired into this '
                         'launch file.',
         ),
         DeclareLaunchArgument('mujoco_scene', default_value='flat',
@@ -470,8 +410,8 @@ def generate_launch_description():
             'mujoco_model',
             default_value='',
             description='Path to a pre-built MJCF file to load; empty means generate with MjSpec from '
-                        'the base MJCF and the selected payload URDF '
-                        '(picked by payload) at launch time instead. Only '
+                        'the base MJCF and URDF '
+                        'at launch time instead. Only '
                         'used when ros2_control_hardware_type:="mujoco".',
         ),
         DeclareLaunchArgument(
