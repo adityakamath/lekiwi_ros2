@@ -45,6 +45,8 @@ jobs:
           apt-get update && apt-get install -y --no-install-recommends \
             python3-pip python3-pil python3-yaml git \
             ros-${{ matrix.ros_distro }}-ament-index-python \
+            ros-${{ matrix.ros_distro }}-cloudini-lib \
+            ros-${{ matrix.ros_distro }}-cloudini-ros \
             ros-${{ matrix.ros_distro }}-controller-manager \
             ros-${{ matrix.ros_distro }}-diagnostic-aggregator \
             ros-${{ matrix.ros_distro }}-forward-command-controller \
@@ -54,6 +56,7 @@ jobs:
             ros-${{ matrix.ros_distro }}-joy-teleop \
             ros-${{ matrix.ros_distro }}-nav2-bringup \
             ros-${{ matrix.ros_distro }}-navigation2 \
+            ros-${{ matrix.ros_distro }}-point-cloud-interfaces \
             ros-${{ matrix.ros_distro }}-omni-wheel-drive-controller \
             ros-${{ matrix.ros_distro }}-robot-localization \
             ros-${{ matrix.ros_distro }}-robot-state-publisher \
