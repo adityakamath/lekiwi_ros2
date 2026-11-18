@@ -58,6 +58,10 @@
   <xacro:property name="mic_base_offset_x" value="-0.045042"/>
   <xacro:property name="mic_base_offset_z" value="0.10901"/>
 
+  <!-- Dock connector contact face in base_link (mesh y=+106.8 mm rotated onto +x; contact tip z=10.2 mm) -->
+  <xacro:property name="dock_connector_frame_offset_x" value="0.1068"/>
+  <xacro:property name="dock_connector_frame_offset_z" value="0.0102"/>
+
   <!-- SparkFun VL53L5CX ToF on the base's mid-plate holder pad (pad top z=95.5 mm, centre x=-40 mm, y=+70 mm).
        The mesh origin is its corner, so the origin is the centre shifted by (12.7, 12.7) mm; yaw pi puts the
        7-pad header toward +y and the Qwiic connectors on +/-x. -->

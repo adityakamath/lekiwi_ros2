@@ -82,6 +82,17 @@
     <!-- Shared LiDAR/SparkFun mount; stays fitted when either sensor is removed. -->
     <xacro:lekiwi_base_component name="lidar_plate" mesh="lidar_plate_assembly"
                                  material="base_light_grey" rgba="${light_grey_rgba}"/>
+    <!-- Docking connector; stays fitted like the LiDAR plate. -->
+    <xacro:lekiwi_base_component name="dock_connector" mesh="dock_connector_base"
+                                 material="base_charcoal" rgba="${charcoal_rgba}"/>
+    <!-- Dock alignment frame at the contact face centre: +x points out of the connector toward the dock. -->
+    <link name="dock_connector_frame"/>
+    <joint name="dock_connector_frame_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="dock_connector_frame"/>
+      <origin xyz="${dock_connector_frame_offset_x} 0 ${dock_connector_frame_offset_z}" rpy="0 0 0"/>
+    </joint>
+
     <xacro:if value="${has_lidar}">
     <!-- LD06 and mounting plate -->
     <!-- LD06 laser link -->

@@ -16,6 +16,7 @@ import yaml
 
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 _URDF_BASE = os.path.join(_PKG_SRC, 'urdf', 'base.urdf.xacro')
+_URDF_DOCK = os.path.join(_PKG_SRC, 'urdf', 'dock.urdf.xacro')
 
 # Mock hardware args matching urdf_config.yaml defaults so the xacro parses cleanly.
 _BASE_ARGS = [
@@ -161,13 +162,24 @@ class TestPrebuiltUrdfConsistency:
         assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
             'base.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
 
+    def test_dock_urdf_not_stale(self):
+        prebuilt = os.path.join(_PKG_SRC, 'urdf', 'dock.urdf')
+        assert os.path.isfile(prebuilt), 'The checked-in dock.urdf is missing'
+        generated, _, rc = _xacro(_URDF_DOCK, _BASE_ARGS)
+        assert rc == 0
+        with open(prebuilt) as f:
+            existing = f.read()
+        assert self._strip_comments(_portable(generated)) == self._strip_comments(existing), \
+            'dock.urdf is stale: regenerate with python3 test/test_urdf_xacro.py --write'
+
 
 if __name__ == '__main__' and '--write' in sys.argv:
-    result = subprocess.run(['xacro', 'base.urdf.xacro'] + _BASE_ARGS,
-                            cwd=os.path.join(_PKG_SRC, 'urdf'),
-                            capture_output=True, text=True, check=True)
-    with open(os.path.join(_PKG_SRC, 'urdf', 'base.urdf'), 'w') as out:
-        out.write(_portable(result.stdout))
+    for name in ('base', 'dock'):
+        result = subprocess.run(['xacro', f'{name}.urdf.xacro'] + _BASE_ARGS,
+                                cwd=os.path.join(_PKG_SRC, 'urdf'),
+                                capture_output=True, text=True, check=True)
+        with open(os.path.join(_PKG_SRC, 'urdf', f'{name}.urdf'), 'w') as out:
+            out.write(_portable(result.stdout))
 
 
 # Hardware presence must remove whole assemblies, without dangling TF references.

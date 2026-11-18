@@ -219,6 +219,35 @@
     <child link="lidar_plate_link"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
   </joint>
+  <link name="dock_connector_link">
+    <visual>
+      <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dock_connector_base.stl"/>
+      </geometry>
+      <material name="base_charcoal">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dock_connector_base.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="dock_connector_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="dock_connector_link"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <!-- Dock alignment frame at the contact face centre: +x points out of the connector toward the dock. -->
+  <link name="dock_connector_frame"/>
+  <joint name="dock_connector_frame_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="dock_connector_frame"/>
+    <origin rpy="0 0 0" xyz="0.1068 0 0.0102"/>
+  </joint>
   <!-- LD06 and mounting plate -->
   <!-- LD06 laser link -->
   <link name="laser_link">

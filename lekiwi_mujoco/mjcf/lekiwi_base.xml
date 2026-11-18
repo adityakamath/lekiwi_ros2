@@ -51,6 +51,7 @@
     <mesh name="rpi5_case_assembly_visual" file="../../lekiwi_description/meshes/rpi5_case_assembly.stl"/>
     <mesh name="gemini2_mount_visual" file="../../lekiwi_description/meshes/gemini2_mount.stl"/>
     <mesh name="lidar_plate_assembly_visual" file="../../lekiwi_description/meshes/lidar_plate_assembly.stl"/>
+    <mesh name="dock_connector_base_visual" file="../../lekiwi_description/meshes/dock_connector_base.stl"/>
     <mesh name="respeaker_board_assembly_visual" file="../../lekiwi_description/meshes/respeaker_board_assembly.stl"/>
     <mesh name="speaker_assembly_visual" file="../../lekiwi_description/meshes/speaker_assembly.stl"/>
     <mesh name="tray_assembly_visual" file="../../lekiwi_description/meshes/tray_assembly.stl"/>
@@ -671,6 +672,10 @@
         <body name="lidar_plate_link">
           <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
           <geom name="lidar_plate_link_visual" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" group="2" rgba="0.8 0.8 0.8 1" mass="0" mesh="lidar_plate_assembly_visual"/>
+        </body>
+        <body name="dock_connector_link">
+          <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
+          <geom name="dock_connector_link_visual" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" group="2" rgba="0.15 0.15 0.15 1" mass="0" mesh="dock_connector_base_visual"/>
         </body>
         <body name="respeaker_board_link">
           <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>

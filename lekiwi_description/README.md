@@ -12,6 +12,8 @@ Base URDF and split component meshes, including the tray and optional sensors.
 | `urdf/gemini2.module.xacro` | Fixed Gemini 2 mesh and camera frames |
 | `urdf/base.control.xacro` | The `<ros2_control>` block for the wheels and IMU, and the xacro arguments below |
 | `urdf/base.urdf` | Pre-generated base (tray and Gemini 2) URDF |
+| `urdf/dock.urdf.xacro` | The dock-side connector as its own world-fixed model; `dock_link` coincides with `base_link` when docked |
+| `urdf/dock.urdf` | Pre-generated dock URDF |
 
 ## Requirements
 
