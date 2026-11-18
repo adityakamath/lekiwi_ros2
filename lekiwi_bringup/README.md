@@ -79,14 +79,14 @@ The rest of the system is configured in the packages that own it; see their READ
 | Started | By | Condition |
 |---------|----|-----------|
 | Control and teleop | `lekiwi_control` | always (MuJoCo model with `sim:=true`) |
-| EKF | `lekiwi_navigation` | always; wheel odometry + IMU by default |
-| SLAM or AMCL, Nav2, waypoint patrol and target tracker | `lekiwi_navigation` | always |
+| EKF | `lekiwi_navigation` | always; wheel odometry + IMU by default (`fusion_mode:=odom` with `imu: false`) |
+| SLAM or AMCL, Nav2, waypoint patrol and target tracker | `lekiwi_navigation` | `lidar: true` |
 | Gemini 2 driver and streaming helpers | `gemini2.launch.py` | real hardware, `gemini2: true`; streaming follows `enable_camera` |
 | Diagnostic aggregator | this package | `diagnostics:=true` |
-| LiDAR | `laser.launch.py` | real hardware |
+| LiDAR | `laser.launch.py` | real hardware and `lidar: true` in `hardware.yaml` |
 | ToF imager (`tof/pointcloud` in `tof_frame`) | `tof.launch.py`, 20 s after launch | real hardware and `sparkfun_sensor: true` in `hardware.yaml` |
 | Audio | `lekiwi_audio` | real hardware and `respeaker: true` in `hardware.yaml` |
-| Battery monitor and events (one process, `battery_nodes`) | `ina260_battery_monitor` | real hardware |
+| Battery monitor and events (one process, `battery_nodes`) | `ina260_battery_monitor` | real hardware and `battery_monitor: true` in `hardware.yaml` |
 
 In simulation, control, the selected navigation path and optional diagnostics run. Enabled simulated sensors come from MuJoCo plugins; real sensor drivers, audio and the battery monitor are skipped. `sim:=true` also forces simulation time and mock hardware. The launch file turns off the controller's own `odom -> base_footprint`; the EKF publishes it.
 

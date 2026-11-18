@@ -53,7 +53,7 @@ ros2 launch lekiwi_control teleop.launch.py                                    #
 Robot composition comes from [`hardware.yaml`](../lekiwi_bringup/config/hardware.yaml).
 Control loads that file, expands `lekiwi_description/urdf/base.urdf.xacro` and
 starts the wheel controller and joint-state broadcaster. The BNO055 broadcaster
-always runs; the simulated Gemini IMU broadcaster requires the camera
+runs when `imu: true`; the simulated Gemini IMU broadcaster requires the camera
 and streaming to be enabled. Motor/IMU hardware diagnostics run only on real hardware.
 
 **`urdf_config.yaml`** sets the serial port, wheel IDs (7/8/9), mock mode and
