@@ -2,7 +2,7 @@
 ekf_node:
   ros__parameters:
     # Filter settings
-    frequency: 50.0      # Hz
+    frequency: 30.0      # Hz
     sensor_timeout: 0.1  # s
     two_d_mode: true
 

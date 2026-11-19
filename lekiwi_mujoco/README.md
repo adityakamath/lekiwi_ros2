@@ -179,7 +179,7 @@ Notes for control-only runs: `control.launch.py` publishes `odom -> base_footpri
 
 ## Configuration
 
-Geometry is expanded from `lekiwi_description/urdf/base.urdf.xacro`; the base and each sensor assembly come from their own `*.module.xacro` files (`ld06`, `bno055`, `vl53l5cx`, `respeaker`, `gemini2`), so the model follows the `hardware.yaml` switches. Rebuild `mjcf/lekiwi_base.xml` after changing URDF, physics or robot MJCF sources. Scene-only changes are loaded when a viewer or launch rebuilds its selected scene.
+Geometry is expanded from `lekiwi_description/urdf/base.urdf.xacro`; the base and each sensor assembly come from their own `*.module.xacro` files. Rebuild `mjcf/lekiwi_base.xml` after changing URDF, physics or robot MJCF sources. Scene-only changes are loaded when a viewer or launch rebuilds its selected scene.
 
 | File | What it sets |
 |------|--------------|

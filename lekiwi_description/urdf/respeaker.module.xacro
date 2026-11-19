@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- ReSpeaker microphone array, control board and speaker, with their mounts. Fitted when has_respeaker is set; uses base_link and the shared constants. -->
+  <!-- ReSpeaker microphone, board and speaker. -->
   <xacro:macro name="lekiwi_respeaker_module">
     <!-- Respeaker flex mic link -->
     <link name="mic_link">

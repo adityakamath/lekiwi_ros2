@@ -5,6 +5,6 @@ imu: true             # BNO055 IMU; false requires fusion_mode:=odom
 battery_monitor: true # INA260 battery monitor (real hardware only)
 rpi5: true            # Raspberry Pi 5 case; false removes it for an alternative computer
 respeaker: true       # Microphone, control board, speaker, and their mounts
-sparkfun_sensor: true # Sparkfun sensor (Default: VL53L5CX) only; the shared plate goes only when lidar is also false
+sparkfun_sensor: true # Sparkfun sensor (Default: VL53L5CX) only; the shared plate stays while lidar is on
 gemini2: true         # Gemini 2 and its base mount
 shelf: true           # Tray and shelf spacers

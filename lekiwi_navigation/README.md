@@ -58,7 +58,7 @@ ros2 launch lekiwi_navigation navigation.launch.py mission:=slam map_name:=livin
 
 **Speed limits.** The joystick axis scales in `lekiwi_control/config/base_teleop.yaml` set the speed limits. `nav2.launch.py` reads their absolute values from the installed `lekiwi_control` package and overrides the MPPI, behavior-server rotation and velocity smoother limits after loading `params_file`; this also applies to custom parameter files. Keep acceleration and controller tuning in `nav2.yaml`. After changing the teleop scales, rebuild `lekiwi_control` (if you use a copied install) and restart the stack. Negative scales invert axes; zero or non-finite scales and nonzero offsets are rejected. Launch through `nav2.launch.py` to apply the derived limits.
 
-**Update rates.** The EKF runs at 50 Hz with `predict_to_current_time: true`. The Nav2 controller (MPPI), behavior server and waypoint follower run at 20 Hz, the local costmap at 10 Hz, and `nav2_target_node` publishes at 15 Hz.
+**Update rates.** The EKF runs at 30 Hz with `predict_to_current_time: true`. The Nav2 controller (MPPI), behavior server and waypoint follower run at 20 Hz, the local costmap at 10 Hz, and `nav2_target_node` publishes at 15 Hz.
 
 **Composition.** With `use_composition:=true` the container loads `params_file`, so the nodes have the same parameters as when run separately; `waypoint_recorder_node` and `nav2_target_node` always run as their own processes.
 

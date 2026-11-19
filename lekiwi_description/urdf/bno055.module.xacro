@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- BNO055 IMU, its frame and the Gazebo IMU sensor. Fitted when has_imu is set; uses base_link and the shared constants. -->
+  <!-- BNO055 IMU. -->
   <xacro:macro name="lekiwi_bno055_module">
   <!-- BNO055 IMU link -->
   <link name="imu_link">

@@ -170,7 +170,7 @@ messages on `/gemini2/depth_registered/points/compressed`. Its settings are in
 this compressor. Direct `gemini2.launch.py` calls additionally accept
 `pointcloud_decimation` (default 2), `serial_number` and `usb_port`.
 
-If the depth stream never appears, check the Orbbec SDK log in `~/.ros/Log/gemini2/`: a healthy start logs `Stream state changed from STARTING to STREAMING@Depth`, and a stalled one stays at `STARTING` while color slows to about half rate. `dmesg` then usually shows the camera resetting or disconnecting. Stop the launch with a single Ctrl-C and let it exit; a hard kill can leave the camera streaming, so reconnect it before the next start. A 320×200 depth request stalled or reset the camera in several runs on our unit; the driver lists 1280×800, 640×400, 424×266 and 320×200 as the supported depth sizes, and the published depth is the color size either way.
+If the depth stream never appears, check the Orbbec SDK log in `~/.ros/Log/gemini2/`: a healthy start logs `Stream state changed from STARTING to STREAMING@Depth`, and a stalled one stays at `STARTING` while color slows to about half rate. `dmesg` then usually shows the camera resetting or disconnecting. Stop the launch with a single Ctrl-C and let it exit; a hard kill can leave the camera streaming, so reconnect it before the next start. The driver lists 1280×800, 640×400, 424×266 and 320×200 as depth sizes, and the published depth is the color size either way.
 
 To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 

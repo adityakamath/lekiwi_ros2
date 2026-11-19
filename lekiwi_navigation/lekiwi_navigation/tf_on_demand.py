@@ -8,7 +8,7 @@ import tf2_ros
 def lookup_transform(target, source, timeout=2.0):
     """Block until target <- source is available, using a listener on its own node and thread.
 
-    A permanent listener decodes every /tf message (the EKF alone publishes 50 Hz); this one
+    A permanent listener decodes every /tf message (the EKF alone publishes 30 Hz); this one
     exists only for the lookup, so idle nodes pay nothing.
     """
     buffer = tf2_ros.Buffer()

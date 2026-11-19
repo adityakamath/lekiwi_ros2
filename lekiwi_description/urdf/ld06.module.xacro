@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- LD06 LiDAR, its frames and the Gazebo scan sensor. Fitted when has_lidar is set; uses base_link and the shared constants. -->
+  <!-- LD06 LiDAR. -->
   <xacro:macro name="lekiwi_ld06_module">
   <!-- LD06 and mounting plate -->
   <!-- LD06 laser link -->

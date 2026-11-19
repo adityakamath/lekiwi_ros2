@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- SparkFun VL53L5CX ToF imager and its frames. Fitted when has_sparkfun_sensor is set; uses base_link and the shared constants. -->
+  <!-- SparkFun VL53L5CX ToF imager. -->
   <xacro:macro name="lekiwi_vl53l5cx_module">
     <!-- SparkFun VL53L5CX ToF link -->
     <link name="tof_link">

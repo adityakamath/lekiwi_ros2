@@ -7,8 +7,8 @@ Base URDF and split component meshes, including the tray and optional sensors.
 | Path | Purpose |
 |------|---------|
 | `urdf/base.urdf.xacro` | The standalone base: a `base_footprint` root, the base module and the static Gemini 2 |
-| `urdf/base.module.xacro` | The base's links and joints as a `lekiwi_base_module` macro, including the Pi case, tray and shared sensor plate |
-| `urdf/ld06.module.xacro`, `bno055.module.xacro`, `vl53l5cx.module.xacro`, `respeaker.module.xacro` | One macro per sensor assembly, called from the base module when its `hardware.yaml` switch is on |
+| `urdf/base.module.xacro` | The base's links and joints as a `lekiwi_base_module` macro |
+| `urdf/ld06.module.xacro`, `bno055.module.xacro`, `vl53l5cx.module.xacro`, `respeaker.module.xacro` | One macro per sensor assembly |
 | `urdf/base.common.xacro` | Geometry constants: colours, wheel geometry and the mounting offsets of the LiDAR, IMU, microphones, ToF imager and Gemini 2 |
 | `urdf/gemini2.module.xacro` | Fixed Gemini 2 mesh and camera frames |
 | `urdf/base.control.xacro` | The `<ros2_control>` block for the wheels and IMU, and the xacro arguments below |
