@@ -6,7 +6,9 @@
 
 ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot. It provides holonomic drive with odometry, joystick teleoperation, SLAM and Nav2 navigation, motor diagnostics, battery monitoring, spoken status announcements and a MuJoCo simulation.
 
-## ⚠️ Safety
+<img width="721" height="479" alt="Screenshot 2026-11-21 at 23 42 35" src="https://github.com/user-attachments/assets/ea2a83f2-9d5f-41e8-9401-71d65194e51e" />
+
+## ⚠️ Safety and Warnings
 
 **This is a real, motorized robot with no hardwired physical emergency stop.** `/emergency_stop` is a software service call (toggled via joystick button or Foxglove) that tells the hardware interface to stop issuing motor commands. It is not a hardware kill switch, and it will not help if the software stack itself has hung, crashed, or lost connection to the joystick.
 
