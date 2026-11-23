@@ -53,11 +53,11 @@ class TeleopSwitchNode(Node):
         """Declare parameters, wire up the publisher/subscribers, and create /twist_switch."""
         super().__init__('twist_switch_node')
 
-        self.declare_parameter('input_topic_default',          '/cmd_vel_teleop')
+        self.declare_parameter('input_topic_default',          'cmd_vel_teleop')
         self.declare_parameter('input_topic_default.stamped',  True)
-        self.declare_parameter('input_topic_switched',         '/cmd_vel_smoothed')
+        self.declare_parameter('input_topic_switched',         'cmd_vel_smoothed')
         self.declare_parameter('input_topic_switched.stamped', True)
-        self.declare_parameter('output_topic',                 '/base_controller/cmd_vel')
+        self.declare_parameter('output_topic',                 'base_controller/cmd_vel')
         self.declare_parameter('output_topic.stamped',         True)
         self.declare_parameter('frame_id',                     'base_link')
 
@@ -98,7 +98,7 @@ class TeleopSwitchNode(Node):
                 lambda msg: self._handle(msg, switched=True, in_stamped=False),
                 10)
 
-        self._srv = self.create_service(SetBool, '/twist_switch', self._switch_cb)
+        self._srv = self.create_service(SetBool, 'twist_switch', self._switch_cb)
         # Lets a listener (e.g. the audio indicator node) observe every call's
         # request+response on /twist_switch/_service_event, regardless of caller.
         self._srv.configure_introspection(

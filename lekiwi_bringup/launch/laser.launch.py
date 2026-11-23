@@ -28,7 +28,9 @@ def launch_setup(context):
                 f"[laser.launch.py] custom_filter '{custom_filter_name}' not found: "
                 f"expected {filter_config_file}."
             )
-    laser_params = [config_file]
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    laser_params = [config_file, {'frame_id': f'{prefix}laser_frame'}]
     laser_remappings = []
     if filter_config_file:
         laser_remappings = [('scan', 'scan_raw')]

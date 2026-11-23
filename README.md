@@ -181,10 +181,21 @@ The most common arguments for `lekiwi.launch.py` (`--show-arguments` lists them 
 | `mujoco_gui` | `false` | `sim` only: show the MuJoCo viewer (headless otherwise, no display or GPU needed) |
 | `diagnostics` | `false` | Launch the motor and IMU diagnostics nodes |
 | `joy` | `false` | Launch `joy_node` on this device (set `true` if the joystick is plugged in locally) |
+| `namespace` | `""` | Robot namespace, e.g. `robot1`; see [Running with a namespace](#running-with-a-namespace) |
 
 Which sensors are fitted comes from `hardware.yaml`. With the default profile, bringup launches full navigation and the collision-monitor velocity path; real sensor drivers and battery monitoring are skipped in simulation. Without a LiDAR (`lidar: false`) only the EKF runs and commands go straight to the base. Without an IMU (`imu: false`) use `fusion_mode:=odom`.
 
 Camera arguments: `enable_camera:=false` skips the real or simulated camera, `pointcloud:=true` adds a colored point cloud (off by default). Real camera rates are configured in `lekiwi_bringup/config/gemini2.yaml` (color 15 FPS, depth 5 FPS; the camera's own IMU is off by default); simulation renders at 5 Hz. See [`lekiwi_bringup`](lekiwi_bringup/README.md#camera).
+
+### Running with a namespace
+
+```bash
+ros2 launch lekiwi_bringup lekiwi.launch.py namespace:=robot1
+```
+
+Every node, topic, service and action moves under `/robot1/` (`/robot1/cmd_vel_teleop`, `/robot1/emergency_stop`, `/robot1/scan`, ...) and every TF frame gets a `robot1/` prefix (`robot1/odom`, `robot1/base_footprint`, `robot1/map`, ...). All robots share the one global `/tf`, so units on the same network no longer collide. Leave `namespace` empty (the default) and nothing changes: same names, same frames.
+
+`controller_manager`'s own status stays on the global `/diagnostics`, because ros2_control warns about remapping that node. Point tools at the namespaced names, for example `ros2 service call /robot1/emergency_stop std_srvs/srv/SetBool "{data: true}"`. The Foxglove bridge and any remote joystick publisher must use `/robot1/joy` and the other prefixed names too. In simulation the sensor frames are prefixed as well. The Gemini 2 driver publishes its own TF for the RGB, depth, point cloud and IMU frames; the `tf_prefix` it takes from `namespace` puts them all under `robot1/gemini2_link`.
 
 ### Joystick
 

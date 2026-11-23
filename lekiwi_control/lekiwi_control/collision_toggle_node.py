@@ -29,7 +29,7 @@ class CollisionToggleNode(Node):
         super().__init__('collision_toggle_node')
 
         self.declare_parameter('button', 10)
-        self.declare_parameter('target_node', '/collision_monitor')
+        self.declare_parameter('target_node', 'collision_monitor')
         self.declare_parameter('parameter_name', 'FootprintApproach.enabled')
 
         self._button = self.get_parameter('button').value
@@ -40,7 +40,7 @@ class CollisionToggleNode(Node):
         self._warned_unavailable = False  # edge-trigger the "no target" log, see _set_enabled
         self._client = self.create_client(SetParameters, f'{target_node}/set_parameters')
 
-        self.create_subscription(Joy, '/joy', self._joy_callback, 10)
+        self.create_subscription(Joy, 'joy', self._joy_callback, 10)
         self.get_logger().info(
             f'collision_toggle_node ready: holding button {self._button} disables '
             f'{target_node} {self._parameter_name}, releasing re-enables it'

@@ -2,6 +2,7 @@
 """Launch the LeKiwi base and the assemblies selected in hardware.yaml."""
 
 
+import re
 import tempfile
 
 import yaml
@@ -9,10 +10,10 @@ import yaml
 from lekiwi_mujoco.hardware_config import load_hardware_config
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -29,7 +30,19 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 
 
 def launch_setup(context):
+    """Build the robot's actions, placed under the robot namespace when one is set."""
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    if not re.fullmatch(r'([A-Za-z][A-Za-z0-9_]*(/[A-Za-z][A-Za-z0-9_]*)*)?', namespace):
+        raise RuntimeError(
+            f"[lekiwi.launch.py] Launch argument 'namespace' must be a valid ROS name "
+            f"such as robot1, got {namespace!r}."
+        )
+    return [GroupAction([PushRosNamespace(namespace), *_launch_actions(context, namespace)])]
+
+
+def _launch_actions(context, namespace):
     """Validate arguments and include control, navigation and the configured base sensors."""
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
     hardware_config = LaunchConfiguration('hardware_config').perform(context)
     hardware = load_hardware_config(hardware_config)
     enable_camera       = _launch_arg_as_bool(context, 'enable_camera')
@@ -124,17 +137,20 @@ def launch_setup(context):
             if not all(enabled_analyzers.values()):
                 with open(analyzer_file) as stream:
                     analyzer_config = yaml.safe_load(stream)
-                sections = analyzer_config['analyzers']['ros__parameters']
+                sections = analyzer_config['/**/analyzers']['ros__parameters']
                 for name, enabled in enabled_analyzers.items():
                     if not enabled:
                         sections.pop(name, None)
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_diagnostics_', delete=False) as stream:
                     yaml.safe_dump(analyzer_config, stream)
                     analyzer_file = stream.name
+            # The aggregator hardcodes absolute /diagnostics* names; relative is the same topic at the root.
+            remappings = [(f'/{name}', name) for name in ('diagnostics', 'diagnostics_agg', 'diagnostics_toplevel_state')]
             actions.append(Node(
                 package='diagnostic_aggregator', executable='aggregator_node', name='analyzers',
                 output='log', parameters=[analyzer_file,
                                         {'use_sim_time': use_sim_time.lower() in ('true', '1')}],
+                remappings=remappings,
             ))
 
     if sim:
@@ -170,6 +186,7 @@ def launch_setup(context):
         pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
             'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
+            'battery_frame_id': f'{prefix}base_link',
         }))
 
     # Start the fitted Gemini 2 via the local driver launch.
@@ -186,6 +203,10 @@ def launch_setup(context):
 def generate_launch_description():
     """Declare all top-level LeKiwi launch arguments and launch via launch_setup."""
     declared_arguments = [
+        DeclareLaunchArgument('namespace', default_value='',
+                              description='Robot namespace (e.g. robot1): every node, topic, service and action '
+                                          'moves under /<namespace>/ and TF frames get a <namespace>/ prefix. '
+                                          'Empty (default) keeps today\'s unnamespaced names.'),
         DeclareLaunchArgument('hardware_config',
                               default_value=PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'hardware.yaml']),
                               description='Optional robot assemblies.'),

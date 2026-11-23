@@ -28,6 +28,8 @@ def launch_setup(context):
     launch_joy   = _launch_arg_as_bool(context, 'joy')
 
     pkg_ctrl = FindPackageShare('lekiwi_control').perform(context)
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
 
     teleop_node = Node(
         package='joy_teleop',
@@ -36,6 +38,7 @@ def launch_setup(context):
         parameters=[
             f'{pkg_ctrl}/config/base_teleop.yaml',
             {'use_sim_time': use_sim_time},
+            {'teleop.axis_mappings.header-frame_id.value': f'{prefix}base_link'},
         ],
         output='screen',
     )

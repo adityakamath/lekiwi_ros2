@@ -58,6 +58,7 @@ The main arguments are in the [repository README](../README.md#launch-arguments)
 | `sts_serial_port`, `use_mock` | `""` | Servo serial port and mock mode; empty uses `lekiwi_control`'s `urdf_config.yaml` |
 | `mujoco_model` | `""` | `sim` only: a pre-built MJCF; empty generates one at launch |
 | `use_sim_time` | `false` | Use `/clock`; forced on with `sim:=true` |
+| `namespace` | `""` | Put the whole robot under `/<namespace>/` with `<namespace>/`-prefixed TF frames; only `lekiwi.launch.py` takes it (see the [repository README](../README.md#running-with-a-namespace)) |
 
 ## Configuration
 

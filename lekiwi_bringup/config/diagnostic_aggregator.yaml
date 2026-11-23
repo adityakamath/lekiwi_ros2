@@ -11,7 +11,7 @@
 # Loaded by aggregator_node, run under the node name "analyzers" (see lekiwi.launch.py) -
 # the top-level "analyzers" key here must match that node name for ROS 2's YAML-params
 # loading to associate this file with it.
-analyzers:
+/**/analyzers:
   ros__parameters:
     path: LeKiwi
     motors:

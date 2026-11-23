@@ -22,6 +22,14 @@ def _show_arguments(package, launch_file, extra_args=None):
     return result.stdout + result.stderr, result.returncode
 
 
+def _unwrapped(actions):
+    """The robot's actions without the namespace group lekiwi.launch.py wraps them in."""
+    from launch.actions import GroupAction
+    if len(actions) != 1 or not isinstance(actions[0], GroupAction):
+        return actions
+    return [a for a in actions[0].get_sub_entities() if not type(a).__name__.startswith(('Push', 'Pop'))]
+
+
 def _validate_setup(package, filename, overrides):
     """Call validation directly; ros2 launch --noninteractive is not a dry-run."""
     import importlib.util
@@ -38,7 +46,7 @@ def _validate_setup(package, filename, overrides):
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
     context.launch_configurations.update(overrides)
-    return module.launch_setup(context)
+    return _unwrapped(module.launch_setup(context))
 
 
 # ── lekiwi.launch.py argument surface ────────────────────────────────────────
@@ -127,7 +135,7 @@ def test_camera_enable_is_forwarded_and_driver_is_lazy(enabled, sim, monkeypatch
     monkeypatch.setattr(module, 'load_hardware_config', lambda path: dict(
         sparkfun_sensor=False, respeaker=False, gemini2=True, shelf=True,
         lidar=True, imu=True, battery_monitor=True))
-    actions = module.launch_setup(context)
+    actions = _unwrapped(module.launch_setup(context))
     control_args = dict(actions[0].launch_arguments)
     assert control_args['enable_camera'] == enabled
     assert control_args['pointcloud'] == 'false'
@@ -169,7 +177,7 @@ def test_base_uses_its_own_camera_launch(monkeypatch):
     monkeypatch.setattr(module, 'load_hardware_config', lambda path: dict(
         sparkfun_sensor=False, respeaker=False, gemini2=True, shelf=True,
         lidar=True, imu=True, battery_monitor=True))
-    actions = module.launch_setup(context)
+    actions = _unwrapped(module.launch_setup(context))
     source = actions[-1].launch_description_source
     monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
     source.get_launch_description(context)
@@ -195,7 +203,7 @@ def test_gemini2_cloudini_compressor_only_with_pointcloud(monkeypatch):
         context = LaunchContext()
         context.launch_configurations.update(enable_camera='true', pointcloud=pointcloud,
                                              pointcloud_decimation='2', serial_number='', usb_port='')
-        return module.launch_setup(context)
+        return _unwrapped(module.launch_setup(context))
 
     def containers(pointcloud):
         return [a for a in setup(pointcloud) if isinstance(a, ComposableNodeContainer)]
@@ -236,7 +244,7 @@ def test_hardware_config_controls_independent_driver_includes(disabled, absent_i
     config.write_text(yaml.safe_dump({disabled: False}))
     context.launch_configurations['hardware_config'] = str(config)
     monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: '/unused/' + package)
-    actions = module.launch_setup(context)
+    actions = _unwrapped(module.launch_setup(context))
     args = dict(actions[0].launch_arguments)
     assert args['hardware_config'] == str(config)
     assert not {'lidar', 'laser', 'tof', 'audio', 'respeaker', 'speaker', 'gemini2', 'shelf'} & args.keys()
@@ -278,7 +286,7 @@ def test_robot_composition_and_fusion_come_only_from_hardware_file( tmp_path, mo
     config.write_text(yaml.safe_dump({'respeaker': False, 'sparkfun_sensor': False}))
     context.launch_configurations['hardware_config'] = str(config)
     monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: '/unused/' + package)
-    actions = module.launch_setup(context)
+    actions = _unwrapped(module.launch_setup(context))
     assert dict(actions[0].launch_arguments)['hardware_config'] == str(config)
     assert dict(actions[1].launch_arguments)['fusion_mode'] == 'base'
     assert len(actions) == 5  # Control, navigation, default LiDAR/battery, selected camera.
@@ -309,7 +317,7 @@ def test_disabled_lidar_runs_only_the_ekf_and_skips_the_driver(tmp_path, monkeyp
     context.launch_configurations.update(hardware_config=str(config))
     monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: '/unused/' + package)
     includes = {}
-    for action in module.launch_setup(context):
+    for action in _unwrapped(module.launch_setup(context)):
         if isinstance(action, IncludeLaunchDescription):
             source = action.launch_description_source
             monkeypatch.setattr(source, '_get_launch_description', lambda path: LaunchDescription())
@@ -342,11 +350,11 @@ def test_disabled_imu_requires_wheel_odometry_fusion(fusion_mode, allowed, tmp_p
     context.launch_configurations.update(hardware_config=str(config), fusion_mode=fusion_mode)
     monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: '/unused/' + package)
     if allowed:
-        actions = module.launch_setup(context)
+        actions = _unwrapped(module.launch_setup(context))
         assert dict(actions[1].launch_arguments)['fusion_mode'] == 'odom'
     else:
         with pytest.raises(RuntimeError, match='fusion_mode:=odom'):
-            module.launch_setup(context)
+            _unwrapped(module.launch_setup(context))
 
 
 @pytest.mark.parametrize('sim', [True, False])
@@ -378,7 +386,7 @@ def test_navigation_and_default_sensors_launch(sim, tmp_path, monkeypatch):
         return '/unused/' + package
 
     monkeypatch.setattr(FindPackageShare, 'find', find)
-    actions = module.launch_setup(context)
+    actions = _unwrapped(module.launch_setup(context))
     includes = {}
     for action in actions:
         if isinstance(action, IncludeLaunchDescription):
@@ -421,7 +429,7 @@ def test_camera_fps_is_not_a_launch_argument_and_real_rates_come_from_yaml(monke
         declaration.execute(context)
     monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: str(Path(__file__).resolve().parents[1])
                         if package == 'lekiwi_bringup' else '/unused/' + package)
-    driver = next(a for a in module.launch_setup(context) if isinstance(a, IncludeLaunchDescription))
+    driver = next(a for a in _unwrapped(module.launch_setup(context)) if isinstance(a, IncludeLaunchDescription))
     args = dict(driver.launch_arguments)
     assert 'camera_fps' not in args
     assert args['color_fps'] == '15'
@@ -476,11 +484,11 @@ def test_diagnostic_analyzers_follow_enabled_sources(settings, sim, expected, tm
         return original(**kwargs)
 
     monkeypatch.setattr(module, 'Node', record)
-    module.launch_setup(context)
+    _unwrapped(module.launch_setup(context))
     analyzers = [node for node in nodes if node.get('name') == 'analyzers']
     assert bool(analyzers) == bool(expected)
     if analyzers:
-        params = yaml.safe_load(Path(analyzers[0]['parameters'][0]).read_text())['analyzers']['ros__parameters']
+        params = yaml.safe_load(Path(analyzers[0]['parameters'][0]).read_text())['/**/analyzers']['ros__parameters']
         assert set(params) - {'path'} == expected
 
 
@@ -508,7 +516,7 @@ def test_orbbec_component_receives_configured_camera_rates():
     for action in module.generate_launch_description().entities:
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
-    include = next(a for a in module.launch_setup(context) if isinstance(a, IncludeLaunchDescription))
+    include = next(a for a in _unwrapped(module.launch_setup(context)) if isinstance(a, IncludeLaunchDescription))
     for name, value in include.launch_arguments:
         context.launch_configurations[name] = (perform_substitutions(context, value)
                                                     if isinstance(value, list) else str(value))
@@ -529,7 +537,7 @@ def test_orbbec_component_receives_configured_camera_rates():
     for values in evaluate_parameters(context, camera.parameters):
         parameters.update(values)
     configured = yaml.safe_load((package / 'config/gemini2.yaml').read_text())[
-        '/gemini2/gemini2']['ros__parameters']
+        '/**/gemini2/gemini2']['ros__parameters']
     assert parameters['color_fps'] == configured['color_fps'] == 15
     assert parameters['depth_fps'] == configured['depth_fps'] == 5
     assert parameters['enable_colored_point_cloud'] is False

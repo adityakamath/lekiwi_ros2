@@ -41,9 +41,11 @@ class TofPointCloud(Node):
     def __init__(self):
         super().__init__('tof_pointcloud')
         site_height = yaml.safe_load((package_share('lekiwi_mujoco') / 'config/mujoco.yaml').read_text())['tof']['site_height']
-        publisher = self.create_publisher(PointCloud2, '/tof/pointcloud', qos_profile_sensor_data)
-        self.create_subscription(PointCloud2, '/tof/pointcloud_raw',
-                                 lambda msg: publisher.publish(to_tof_frame(msg, site_height)), qos_profile_sensor_data)
+        self.declare_parameter('frame_id', 'tof_frame')
+        frame_id = self.get_parameter('frame_id').value
+        publisher = self.create_publisher(PointCloud2, 'tof/pointcloud', qos_profile_sensor_data)
+        self.create_subscription(PointCloud2, 'tof/pointcloud_raw',
+                                 lambda msg: publisher.publish(to_tof_frame(msg, site_height, frame_id)), qos_profile_sensor_data)
 
 
 def main(args=None):

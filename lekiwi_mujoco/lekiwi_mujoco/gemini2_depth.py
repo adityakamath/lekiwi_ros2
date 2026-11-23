@@ -24,11 +24,11 @@ def depth_millimeters(msg):
 class GeminiDepth(Node):
     def __init__(self):
         super().__init__('gemini2_depth')
-        self.depth_pub = self.create_publisher(Image, '/gemini2/depth/image_raw', 1)
-        self.info_pub = self.create_publisher(CameraInfo, '/gemini2/depth/camera_info', 1)
-        self.create_subscription(Image, '/_gemini2/depth_raw', self.on_depth,
+        self.depth_pub = self.create_publisher(Image, 'gemini2/depth/image_raw', 1)
+        self.info_pub = self.create_publisher(CameraInfo, 'gemini2/depth/camera_info', 1)
+        self.create_subscription(Image, '_gemini2/depth_raw', self.on_depth,
                                  qos_profile_sensor_data)
-        self.create_subscription(CameraInfo, '/gemini2/color/camera_info', self.on_info,
+        self.create_subscription(CameraInfo, 'gemini2/color/camera_info', self.on_info,
                                  qos_profile_sensor_data)
 
     def on_info(self, msg):

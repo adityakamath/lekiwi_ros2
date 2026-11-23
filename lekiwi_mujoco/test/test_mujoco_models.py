@@ -187,7 +187,7 @@ def test_changed_geometry_and_inertia_propagate(parameter_workspace):
     from lekiwi_mujoco.build_mujoco_models import build_robot_spec
     path = parameter_workspace.parent / 'lekiwi_control/config/control.yaml'
     settings = yaml.safe_load(path.read_text())
-    geometry = settings['base_controller']['ros__parameters']
+    geometry = settings['/**/base_controller']['ros__parameters']
     geometry.update(wheel_radius=.0612, robot_radius=.15, wheel_offset=.9)
     path.write_text(yaml.safe_dump(settings))
     module = parameter_workspace / 'urdf/base.module.xacro'
@@ -242,7 +242,7 @@ def test_inconsistent_parameters_fail_generation(parameter_workspace, failure):
     if failure == 'radius':
         path = parameter_workspace.parent / 'lekiwi_control/config/control.yaml'
         settings = yaml.safe_load(path.read_text())
-        settings['base_controller']['ros__parameters']['wheel_radius'] = -1
+        settings['/**/base_controller']['ros__parameters']['wheel_radius'] = -1
         path.write_text(yaml.safe_dump(settings))
     elif failure == 'roller_mass':
         path = parameter_workspace.parent / 'lekiwi_mujoco/config/mujoco.yaml'
@@ -352,3 +352,13 @@ def _urdf_transform(origin):
     rz = np.array([[cy, -sy, 0], [sy, cy, 0], [0, 0, 1]])
     transform[:3, :3] = rz @ ry @ rx
     return transform
+
+
+@pytest.mark.parametrize('prefix', ['', 'robot1/'])
+def test_frame_prefix_names_the_lidar_and_tof_bodies(prefix, tmp_path):
+    import mujoco
+    from lekiwi_mujoco.build_mujoco_models import build
+    model = mujoco.MjModel.from_xml_path(str(build(tmp_path / 'model.xml', absolute=True, frame_prefix=prefix)))
+    bodies = {mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i) for i in range(model.nbody)}
+    assert {f'{prefix}laser_frame', f'{prefix}tof_frame'} <= bodies
+    assert ('laser_frame' in bodies) == (prefix == '')

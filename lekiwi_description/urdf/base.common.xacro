@@ -24,7 +24,7 @@
   <!-- Common wheel geometry: used by ROS controllers, URDF and MuJoCo. -->
   <!-- Required input: base_controller_config:=/path/to/lekiwi_control/config/control.yaml.
        The launch/integration layer supplies it; description does not depend on control. -->
-  <xacro:property name="base_geometry" value="${xacro.load_yaml('$(arg base_controller_config)')['base_controller']['ros__parameters']}"/>
+  <xacro:property name="base_geometry" value="${xacro.load_yaml('$(arg base_controller_config)')['/**/base_controller']['ros__parameters']}"/>
   <xacro:property name="wheel_radius" value="${base_geometry['wheel_radius']}"/>
   <xacro:property name="offset" value="${base_geometry['wheel_offset']}"/>
   <!-- CAD wheel mesh radius in metres; a mesh reference measurement, not an operating parameter. -->

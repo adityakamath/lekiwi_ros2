@@ -103,6 +103,6 @@ def test_state_interfaces_broadcaster_for_motor_diagnostics(
     assert len(spawners) == 1
     args = spawners[0]['arguments']
     params = yaml.safe_load(open(args[args.index('--param-file') + 1]))
-    interfaces = params['state_interfaces_broadcaster']['ros__parameters']['interfaces']
+    interfaces = params['/**/state_interfaces_broadcaster']['ros__parameters']['interfaces']
     assert interfaces == [f'{j}/{i}' for j in expected_joints
                           for i in ('effort', 'voltage', 'temperature', 'current', 'is_moving')]

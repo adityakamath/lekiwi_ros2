@@ -1,5 +1,5 @@
 # IMU-only platform-testing EKF (no wheel odometry).
-ekf_node:
+/**/ekf_node:
   ros__parameters:
     # Filter settings
     frequency: 30.0      # Hz
@@ -20,7 +20,7 @@ ekf_node:
     # Sensor 0: BNO055 IMU via imu_sensor_broadcaster (/imu_sensor_broadcaster/imu)
     # Fuses: full 3D absolute orientation + all angular rates. Excludes linear acceleration.
     # State indices: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
-    imu0: /imu_sensor_broadcaster/imu
+    imu0: imu_sensor_broadcaster/imu
     imu0_config: [false, false, false,
                   true,  true,  true,
                   false, false, false,

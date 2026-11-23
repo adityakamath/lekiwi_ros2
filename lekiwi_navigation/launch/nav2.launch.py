@@ -49,7 +49,7 @@ import os
 import tempfile
 
 import yaml
-from lekiwi_navigation.velocity_limits import velocity_overrides
+from lekiwi_navigation.util_velocity_limits import velocity_overrides
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -124,12 +124,40 @@ def launch_setup(context, *args, **kwargs):
     keepout_lifecycle_nodes = ['keepout_filter_mask_server', 'keepout_costmap_filter_info_server']
     speed_lifecycle_nodes = ['speed_filter_mask_server', 'speed_costmap_filter_info_server']
 
-    # Standard Nav2 TF remappings — required when running without a namespace.
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    ns_path = f'/{namespace}'.rstrip('/')  # '' for the empty namespace
+
+    # No /tf remap: all robots share the one global /tf and tell themselves apart by frame prefix.
+    remappings = [('/diagnostics', 'diagnostics')]
 
     # ParameterFile shares the yaml across every node without duplicating it;
     # allow_substs=True enables $(find ...) substitutions inside it if ever needed.
     configured_params = ParameterFile(params_file, allow_substs=True)
+
+    # Overrides of what nav2.yaml writes unprefixed or absolute: the frames, and the scan and
+    # odometry topics that the costmap child nodes cannot resolve relatively.
+    base_params = [configured_params]
+    frames = {'robot_base_frame': f'{prefix}base_footprint'}
+    scan = {'topic': f'{ns_path}/scan'}  # copied per use: YAML aliases are not valid parameter files
+    odom_topic = f'{ns_path}/odometry/filtered'
+    namespace_overrides = {
+        '/**/bt_navigator': {'ros__parameters': {
+            **frames, 'global_frame': f'{prefix}map', 'odom_topic': odom_topic}},
+        '/**/behavior_server': {'ros__parameters': {
+            **frames, 'global_frame': f'{prefix}map', 'local_frame': f'{prefix}odom'}},
+        '/**/velocity_smoother': {'ros__parameters': {'odom_topic': odom_topic}},
+        '/**/collision_monitor': {'ros__parameters': {
+            'base_frame_id': f'{prefix}base_footprint', 'odom_frame_id': f'{prefix}odom',
+            'scan': dict(scan)}},
+        '/**/local_costmap': {'local_costmap': {'ros__parameters': {
+            **frames, 'global_frame': f'{prefix}odom', 'obstacle_layer': {'scan': dict(scan)}}}},
+        '/**/global_costmap': {'global_costmap': {'ros__parameters': {
+            **frames, 'global_frame': f'{prefix}map', 'obstacle_layer': {'scan': dict(scan)}}}},
+    }
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as overrides:
+        yaml.dump(namespace_overrides, overrides)
+    base_params.append(ParameterFile(overrides.name))
 
     # realpath resolves the --symlink-install symlink to the source tree, so this always
     # points at the real maps/ directory rather than the install/build tree.
@@ -160,11 +188,11 @@ def launch_setup(context, *args, **kwargs):
     filter_enable_params = []
     if keepout_mask_path:
         _filter_dict = {
-            'local_costmap': {'local_costmap': {'ros__parameters': {
+            '/**/local_costmap': {'local_costmap': {'ros__parameters': {
                 'keepout_filter': {'enabled': True},
                 'speed_filter': {'enabled': True},
             }}},
-            'global_costmap': {'global_costmap': {'ros__parameters': {
+            '/**/global_costmap': {'global_costmap': {'ros__parameters': {
                 'keepout_filter': {'enabled': True},
             }}},
         }
@@ -173,7 +201,7 @@ def launch_setup(context, *args, **kwargs):
         _tf.close()
         filter_enable_params = [ParameterFile(_tf.name)]
 
-    _wp_overrides = {'waypoint_recorder_node': {'ros__parameters': {
+    _wp_overrides = {'/**/waypoint_recorder_node': {'ros__parameters': {
         'publish_diagnostics': diagnostics,
         'number_of_loops': wp_loops,
     }}}
@@ -185,34 +213,35 @@ def launch_setup(context, *args, **kwargs):
     # Every Nav2 node is described once and built either as a process (Node) or as a component
     # loaded into one shared container, so both modes get identical names, parameters and remaps.
     smoother_remaps = remappings + [('cmd_vel', 'cmd_vel_raw')]
+    manager_remaps = [('/diagnostics', 'diagnostics')]
     nav2_nodes = [
         dict(package='nav2_controller', executable='controller_server',
              plugin='nav2_controller::ControllerServer', name='controller_server',
-             parameters=[configured_params, speed_limits['controller_server']] + filter_enable_params,
+             parameters=[*base_params, speed_limits['controller_server']] + filter_enable_params,
              remappings=smoother_remaps),
         dict(package='nav2_planner', executable='planner_server',
              plugin='nav2_planner::PlannerServer', name='planner_server',
-             parameters=[configured_params] + filter_enable_params, remappings=remappings),
+             parameters=[*base_params] + filter_enable_params, remappings=remappings),
         # BackUp and Spin also publish cmd_vel; remap to cmd_vel_raw so recovery velocities go
         # through the same smoother/safety path.
         dict(package='nav2_behaviors', executable='behavior_server',
              plugin='behavior_server::BehaviorServer', name='behavior_server',
-             parameters=[configured_params, speed_limits['behavior_server']],
+             parameters=[*base_params, speed_limits['behavior_server']],
              remappings=smoother_remaps),
         dict(package='nav2_bt_navigator', executable='bt_navigator',
              plugin='nav2_bt_navigator::BtNavigator', name='bt_navigator',
-             parameters=[configured_params], remappings=remappings),
+             parameters=[*base_params], remappings=remappings),
         dict(package='nav2_waypoint_follower', executable='waypoint_follower',
              plugin='nav2_waypoint_follower::WaypointFollower', name='waypoint_follower',
-             parameters=[configured_params], remappings=remappings),
+             parameters=[*base_params], remappings=remappings),
         dict(package='nav2_velocity_smoother', executable='velocity_smoother',
              plugin='nav2_velocity_smoother::VelocitySmoother', name='velocity_smoother',
-             parameters=[configured_params, speed_limits['velocity_smoother']],
+             parameters=[*base_params, speed_limits['velocity_smoother']],
              remappings=smoother_remaps),
         # Topic wiring comes from nav2.yaml's cmd_vel_in/out_topic (downstream of twist_switch_node).
         dict(package='nav2_collision_monitor', executable='collision_monitor',
              plugin='nav2_collision_monitor::CollisionMonitor', name='collision_monitor',
-             parameters=[configured_params], remappings=remappings),
+             parameters=[*base_params], remappings=remappings),
         # Costmap filters (no-go + speed zones).
         dict(package='nav2_map_server', executable='map_server',
              plugin='nav2_map_server::MapServer', name='keepout_filter_mask_server',
@@ -221,7 +250,7 @@ def launch_setup(context, *args, **kwargs):
         dict(package='nav2_map_server', executable='costmap_filter_info_server',
              plugin='nav2_map_server::CostmapFilterInfoServer',
              name='keepout_costmap_filter_info_server',
-             parameters=[configured_params], remappings=remappings),
+             parameters=[*base_params], remappings=remappings),
         dict(package='nav2_map_server', executable='map_server',
              plugin='nav2_map_server::MapServer', name='speed_filter_mask_server',
              parameters=[{'yaml_filename': speed_mask_path, 'topic_name': 'speed_filter_mask'}],
@@ -229,22 +258,22 @@ def launch_setup(context, *args, **kwargs):
         dict(package='nav2_map_server', executable='costmap_filter_info_server',
              plugin='nav2_map_server::CostmapFilterInfoServer',
              name='speed_costmap_filter_info_server',
-             parameters=[configured_params], remappings=remappings),
+             parameters=[*base_params], remappings=remappings),
         dict(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              plugin='nav2_lifecycle_manager::LifecycleManager',
              name='lifecycle_manager_navigation',
-             parameters=[configured_params, {'autostart': autostart},
-                         {'node_names': lifecycle_nodes}], remappings=[]),
+             parameters=[*base_params, {'autostart': autostart},
+                         {'node_names': lifecycle_nodes}], remappings=manager_remaps),
         dict(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              plugin='nav2_lifecycle_manager::LifecycleManager',
              name='lifecycle_manager_keepout_zone',
              parameters=[{'autostart': autostart}, {'node_names': keepout_lifecycle_nodes}],
-             remappings=[]),
+             remappings=manager_remaps),
         dict(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              plugin='nav2_lifecycle_manager::LifecycleManager',
              name='lifecycle_manager_speed_zone',
              parameters=[{'autostart': autostart}, {'node_names': speed_lifecycle_nodes}],
-             remappings=[]),
+             remappings=manager_remaps),
     ]
 
     # Plain nodes outside Nav2 lifecycle management; never composed.
@@ -258,6 +287,7 @@ def launch_setup(context, *args, **kwargs):
             parameters=[
                 PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'waypoint_recorder.yaml']),
                 waypoint_recorder_params,
+                {'frame_id': f'{prefix}map', 'base_frame': f'{prefix}base_footprint'},
             ],
             arguments=['--ros-args', '--log-level', log_level],
         ),
@@ -270,6 +300,8 @@ def launch_setup(context, *args, **kwargs):
             parameters=[
                 PathJoinSubstitution([pkg_nav, 'config', 'nav2', 'nav2_target.yaml']),
                 {'use_sim_time': use_sim_time},
+                {'map_frame': f'{prefix}map', 'base_frame': f'{prefix}base_footprint',
+                 'target_frame': f'{prefix}nav2_target'},
             ],
             arguments=['--ros-args', '--log-level', log_level],
         ),
@@ -288,12 +320,12 @@ def launch_setup(context, *args, **kwargs):
                 output='screen',
                 # The costmaps are child nodes the controller/planner create themselves; they read
                 # their settings from the process-wide params file, not from the component's.
-                parameters=[configured_params] + filter_enable_params,
+                parameters=[*base_params] + filter_enable_params,
                 arguments=['--ros-args', '--log-level', log_level],
                 remappings=remappings,
             ),
             LoadComposableNodes(
-                target_container=f'/{container_name}',
+                target_container=f'{ns_path}/{container_name}',
                 composable_node_descriptions=[
                     ComposableNode(
                         package=n['package'], plugin=n['plugin'], name=n['name'],

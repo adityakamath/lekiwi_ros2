@@ -5,7 +5,7 @@ Starts tof_imager_ros's lifecycle node with config/tof.yaml and takes it through
 activate; its point cloud is published on tof/pointcloud in tof_frame."""
 
 from launch import LaunchDescription
-from launch.actions import EmitEvent, RegisterEventHandler
+from launch.actions import EmitEvent, OpaqueFunction, RegisterEventHandler
 from launch.events import matches_action
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import LifecycleNode
@@ -15,15 +15,18 @@ from launch_ros.substitutions import FindPackageShare
 from lifecycle_msgs.msg import Transition
 
 
-def generate_launch_description():
+def launch_setup(context):
     """Launch tof_imager_publisher as a lifecycle node and configure then activate it."""
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
     tof_node = LifecycleNode(
         package='tof_imager_ros',
         executable='tof_imager_publisher',
         name='tof_imager',
         namespace='',
         output='log',
-        parameters=[PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'tof.yaml'])],
+        parameters=[PathJoinSubstitution([FindPackageShare('lekiwi_bringup'), 'config', 'tof.yaml']),
+                    {'frame_id': f'{prefix}tof_frame'}],
         remappings=[('pointcloud', 'tof/pointcloud')],
     )
     configure = EmitEvent(event=ChangeState(
@@ -38,4 +41,9 @@ def generate_launch_description():
             transition_id=Transition.TRANSITION_ACTIVATE,
         ))],
     ))
-    return LaunchDescription([tof_node, configure, activate_when_configured])
+    return [tof_node, configure, activate_when_configured]
+
+
+def generate_launch_description():
+    """Launch the ToF imager, with its frame prefixed when a robot namespace is set."""
+    return LaunchDescription([OpaqueFunction(function=launch_setup)])

@@ -19,8 +19,8 @@ public:
   explicit PCLCompressorNode(const rclcpp::NodeOptions& options)
       : Node("pcl_compressor", options) {
     declare_parameter("compressing", true);
-    declare_parameter("topic_input", "/gemini2/depth_registered/points");
-    declare_parameter("topic_output", "/gemini2/depth_registered/points/compressed");
+    declare_parameter("topic_input", "gemini2/depth_registered/points");
+    declare_parameter("topic_output", "gemini2/depth_registered/points/compressed");
     declare_parameter("resolution", 0.001);  // 1 mm for XYZ
     declare_parameter("filter_points", true);  // drop invalid points and duplicates within a voxel
 

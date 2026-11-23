@@ -11,7 +11,7 @@ import subprocess
 
 import pytest
 import yaml
-from lekiwi_navigation.velocity_limits import velocity_overrides
+from lekiwi_navigation.util_velocity_limits import velocity_overrides
 
 _PKG_SRC = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 _CFG_NAV2 = os.path.join(_PKG_SRC, 'config', 'nav2')
@@ -41,26 +41,26 @@ class TestNav2Yaml:
         for key in ('bt_navigator', 'controller_server', 'planner_server',
                     'behavior_server', 'velocity_smoother', 'collision_monitor',
                     'local_costmap', 'global_costmap', 'waypoint_follower'):
-            assert key in self.cfg, f"Missing top-level key '{key}' in nav2.yaml"
+            assert f'/**/{key}' in self.cfg, f"Missing top-level key '{key}' in nav2.yaml"
 
     def test_controller_frequency_positive(self):
-        freq = self.cfg['controller_server']['ros__parameters']['controller_frequency']
+        freq = self.cfg['/**/controller_server']['ros__parameters']['controller_frequency']
         assert isinstance(freq, (int, float)) and freq > 0
 
     def test_mppi_motion_model_is_omni(self):
-        model = self.cfg['controller_server']['ros__parameters']['FollowPath']['motion_model']
+        model = self.cfg['/**/controller_server']['ros__parameters']['FollowPath']['motion_model']
         assert model == 'Omni', "MPPI motion_model must be 'Omni' for holonomic drive"
 
     def test_velocity_limits_have_single_source(self):
-        mppi = self.cfg['controller_server']['ros__parameters']['FollowPath']
-        smoother = self.cfg['velocity_smoother']['ros__parameters']
+        mppi = self.cfg['/**/controller_server']['ros__parameters']['FollowPath']
+        smoother = self.cfg['/**/velocity_smoother']['ros__parameters']
         assert not {'vx_max', 'vx_min', 'vy_max', 'vy_min', 'wz_max', 'wz_min'} & mppi.keys()
         assert not {'max_velocity', 'min_velocity'} & smoother.keys()
-        assert 'max_rotational_vel' not in self.cfg['behavior_server']['ros__parameters']
+        assert 'max_rotational_vel' not in self.cfg['/**/behavior_server']['ros__parameters']
 
     def test_robot_radius_set(self):
-        local = self.cfg['local_costmap']['local_costmap']['ros__parameters']['robot_radius']
-        global_ = self.cfg['global_costmap']['global_costmap']['ros__parameters']['robot_radius']
+        local = self.cfg['/**/local_costmap']['local_costmap']['ros__parameters']['robot_radius']
+        global_ = self.cfg['/**/global_costmap']['global_costmap']['ros__parameters']['robot_radius']
         assert local > 0 and global_ > 0
 
     def test_inflation_covers_the_circular_robot(self):
@@ -68,12 +68,12 @@ class TestNav2Yaml:
         # inflation radius is smaller than the robot, obstacle cells outside that
         # radius can be traversed even though the robot body would overlap them.
         for name in ('local_costmap', 'global_costmap'):
-            params = self.cfg[name][name]['ros__parameters']
+            params = self.cfg[f'/**/{name}'][name]['ros__parameters']
             assert params['inflation_layer']['inflation_radius'] > params['robot_radius']
 
     def test_costmap_filters_default_disabled(self):
         """Filters must default to disabled; laser.launch.py enables them at runtime."""
-        local_params = self.cfg['local_costmap']['local_costmap']['ros__parameters']
+        local_params = self.cfg['/**/local_costmap']['local_costmap']['ros__parameters']
         assert local_params['keepout_filter']['enabled'] is False
         assert local_params['speed_filter']['enabled'] is False
 
@@ -85,15 +85,15 @@ class TestSlamToolboxYaml:
         self.cfg = _load(os.path.join(_CFG_NAV2, 'slam_toolbox.yaml'))
 
     def test_slam_toolbox_section_present(self):
-        assert 'slam_toolbox' in self.cfg
+        assert '/**/slam_toolbox' in self.cfg
 
     def test_required_frame_params(self):
-        params = self.cfg['slam_toolbox']['ros__parameters']
+        params = self.cfg['/**/slam_toolbox']['ros__parameters']
         for key in ('odom_frame', 'map_frame', 'base_frame', 'scan_topic'):
             assert key in params, f"Missing key '{key}' in slam_toolbox.yaml"
 
     def test_frames_match_nav2_convention(self):
-        params = self.cfg['slam_toolbox']['ros__parameters']
+        params = self.cfg['/**/slam_toolbox']['ros__parameters']
         assert params['odom_frame'] == 'odom'
         assert params['map_frame'] == 'map'
         assert params['base_frame'] == 'base_footprint'
@@ -106,17 +106,17 @@ class TestAmclYaml:
         self.cfg = _load(os.path.join(_CFG_NAV2, 'amcl.yaml'))
 
     def test_amcl_section_present(self):
-        assert 'amcl' in self.cfg
+        assert '/**/amcl' in self.cfg
 
     def test_omni_motion_model(self):
-        model = self.cfg['amcl']['ros__parameters']['robot_model_type']
+        model = self.cfg['/**/amcl']['ros__parameters']['robot_model_type']
         assert 'Omni' in model, "AMCL must use OmniMotionModel for holonomic robot"
 
     def test_max_particles_positive(self):
-        assert self.cfg['amcl']['ros__parameters']['max_particles'] > 0
+        assert self.cfg['/**/amcl']['ros__parameters']['max_particles'] > 0
 
     def test_frames_match_nav2_convention(self):
-        params = self.cfg['amcl']['ros__parameters']
+        params = self.cfg['/**/amcl']['ros__parameters']
         assert params['odom_frame_id'] == 'odom'
         assert params['base_frame_id'] == 'base_footprint'
         assert params['global_frame_id'] == 'map'
@@ -132,23 +132,23 @@ class TestEkfYaml:
         return _load(os.path.join(_CFG_RL, request.param))
 
     def test_ekf_node_section_present(self, cfg):
-        assert 'ekf_node' in cfg
+        assert '/**/ekf_node' in cfg
 
     def test_frequency_positive(self, cfg):
-        freq = cfg['ekf_node']['ros__parameters']['frequency']
+        freq = cfg['/**/ekf_node']['ros__parameters']['frequency']
         assert isinstance(freq, (int, float)) and freq > 0
 
     def test_two_d_mode_is_bool(self, cfg):
-        assert isinstance(cfg['ekf_node']['ros__parameters']['two_d_mode'], bool)
+        assert isinstance(cfg['/**/ekf_node']['ros__parameters']['two_d_mode'], bool)
 
     def test_frames_match_convention(self, cfg):
-        params = cfg['ekf_node']['ros__parameters']
+        params = cfg['/**/ekf_node']['ros__parameters']
         assert params['odom_frame'] == 'odom'
         assert params['base_link_frame'] == 'base_footprint'
         assert params['map_frame'] == 'map'
 
     def test_publish_tf_enabled(self, cfg):
-        assert cfg['ekf_node']['ros__parameters']['publish_tf'] is True
+        assert cfg['/**/ekf_node']['ros__parameters']['publish_tf'] is True
 
 
 class TestEkfBaseYaml:
@@ -158,13 +158,13 @@ class TestEkfBaseYaml:
         self.cfg = _load(os.path.join(_CFG_RL, 'ekf.yaml'))
 
     def test_odom0_and_imu0_both_present(self):
-        params = self.cfg['ekf_node']['ros__parameters']
+        params = self.cfg['/**/ekf_node']['ros__parameters']
         assert 'odom0' in params, "ekf.yaml must fuse wheel odom (odom0)"
         assert 'imu0' in params, "ekf.yaml must fuse IMU (imu0)"
 
     def test_odom0_fuses_velocities_not_position(self):
         """Wheel odom should contribute vx/vy but not absolute position."""
-        config = self.cfg['ekf_node']['ros__parameters']['odom0_config']
+        config = self.cfg['/**/ekf_node']['ros__parameters']['odom0_config']
         # Indices 0-2 are x/y/z position - must be false for odometry-only fusion.
         assert config[0] is False and config[1] is False, \
             "ekf.yaml odom0 should not fuse absolute position"
@@ -182,11 +182,11 @@ class TestEkfImuYaml:
         self.cfg = _load(os.path.join(_CFG_RL, 'ekf_imu.yaml'))
 
     def test_no_odom0_source(self):
-        assert 'odom0' not in self.cfg['ekf_node']['ros__parameters'], \
+        assert 'odom0' not in self.cfg['/**/ekf_node']['ros__parameters'], \
             "ekf_imu.yaml must not fuse wheel odometry (odom0)"
 
     def test_imu0_present(self):
-        assert 'imu0' in self.cfg['ekf_node']['ros__parameters'], \
+        assert 'imu0' in self.cfg['/**/ekf_node']['ros__parameters'], \
             "ekf_imu.yaml must fuse IMU (imu0)"
 
 
@@ -197,11 +197,11 @@ class TestEkfOdomYaml:
         self.cfg = _load(os.path.join(_CFG_RL, 'ekf_odom.yaml'))
 
     def test_no_imu0_source(self):
-        assert 'imu0' not in self.cfg['ekf_node']['ros__parameters'], \
+        assert 'imu0' not in self.cfg['/**/ekf_node']['ros__parameters'], \
             "ekf_odom.yaml must not fuse IMU (imu0)"
 
     def test_odom0_present(self):
-        assert 'odom0' in self.cfg['ekf_node']['ros__parameters'], \
+        assert 'odom0' in self.cfg['/**/ekf_node']['ros__parameters'], \
             "ekf_odom.yaml must fuse wheel odometry (odom0)"
 
 
@@ -221,7 +221,7 @@ class TestCrossFileVelocityConsistency:
         # lekiwi_control lives at src/lekiwi_ros2/lekiwi_control - same monorepo.
         teleop = _load(os.path.normpath(os.path.join(
             _PKG_SRC, '..', 'lekiwi_control', 'config', 'base_teleop.yaml')))
-        axes = teleop['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+        axes = teleop['/**/joy_teleop']['ros__parameters']['teleop']['axis_mappings']
         self.limits = [abs(axes[name]['scale']) for name in
                        ('twist-linear-x', 'twist-linear-y', 'twist-angular-z')]
 
@@ -244,10 +244,10 @@ class TestMapSaverYaml:
         self.cfg = _load(os.path.join(_CFG_NAV2, 'map_saver.yaml'))
 
     def test_section_present(self):
-        assert 'map_saver_node' in self.cfg
+        assert '/**/map_saver_node' in self.cfg
 
     def test_save_timeout_positive(self):
-        t = self.cfg['map_saver_node']['ros__parameters']['save_timeout']
+        t = self.cfg['/**/map_saver_node']['ros__parameters']['save_timeout']
         assert isinstance(t, (int, float)) and t > 0
 
 
@@ -256,24 +256,24 @@ class TestWaypointRecorderYaml:
         self.cfg = _load(os.path.join(_CFG_NAV2, 'waypoint_recorder.yaml'))
 
     def test_section_present(self):
-        assert 'waypoint_recorder_node' in self.cfg
+        assert '/**/waypoint_recorder_node' in self.cfg
 
     def test_required_keys_present(self):
-        params = self.cfg['waypoint_recorder_node']['ros__parameters']
+        params = self.cfg['/**/waypoint_recorder_node']['ros__parameters']
         for key in ('number_of_loops', 'frame_id', 'marker_topic', 'diagnostics_topic', 'max_retries'):
             assert key in params, f"Missing key '{key}' in waypoint_recorder.yaml"
 
     def test_frame_id_is_map(self):
-        assert self.cfg['waypoint_recorder_node']['ros__parameters']['frame_id'] == 'map'
+        assert self.cfg['/**/waypoint_recorder_node']['ros__parameters']['frame_id'] == 'map'
 
     def test_diagnostics_shares_the_common_topic(self):
         # Folded in from a dedicated /patrol_diagnostics topic so patrol status composes
         # with motor_diagnostics/bno055_diagnostics under one diagnostic_aggregator config.
-        topic = self.cfg['waypoint_recorder_node']['ros__parameters']['diagnostics_topic']
-        assert topic == '/diagnostics'
+        topic = self.cfg['/**/waypoint_recorder_node']['ros__parameters']['diagnostics_topic']
+        assert topic == 'diagnostics'
 
     def test_max_retries_positive(self):
-        retries = self.cfg['waypoint_recorder_node']['ros__parameters']['max_retries']
+        retries = self.cfg['/**/waypoint_recorder_node']['ros__parameters']['max_retries']
         assert isinstance(retries, int) and retries > 0
 
 

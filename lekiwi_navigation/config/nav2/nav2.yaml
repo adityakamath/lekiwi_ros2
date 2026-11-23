@@ -1,7 +1,7 @@
 # Speed limits are injected by nav2.launch.py from lekiwi_control/config/base_teleop.yaml.
 # Nav2 navigation stack — loaded by nav2.launch.py.
 
-bt_navigator:
+/**/bt_navigator:
   ros__parameters:
     global_frame: map
     robot_base_frame: base_footprint
@@ -20,7 +20,7 @@ bt_navigator:
       - spin
       - wait
 
-controller_server:
+/**/controller_server:
   ros__parameters:
     controller_frequency: 20.0       # Hz
     costmap_update_timeout: 0.30
@@ -129,7 +129,7 @@ controller_server:
         cost_weight: 5.0           # Nav2 default; allows strafing while preferring forward motion
         threshold_to_consider: 0.5
 
-local_costmap:
+/**/local_costmap:
   local_costmap:
     ros__parameters:
       update_frequency: 10.0       # LD19 scans at ~10 Hz, so faster updates add cost without new data
@@ -172,7 +172,7 @@ local_costmap:
         inflation_radius: 0.20        # obstacle-to-center radius; exceeds the ~0.176 m inscribed radius
       always_send_full_costmap: false
 
-global_costmap:
+/**/global_costmap:
   global_costmap:
     ros__parameters:
       update_frequency: 1.0
@@ -211,7 +211,7 @@ global_costmap:
         inflation_radius: 0.25        # exceeds the inscribed radius; slightly more conservative than local
       always_send_full_costmap: false
 
-keepout_costmap_filter_info_server:
+/**/keepout_costmap_filter_info_server:
   ros__parameters:
     type: 0                        # keepout
     filter_info_topic: "keepout_costmap_filter_info"
@@ -219,7 +219,7 @@ keepout_costmap_filter_info_server:
     base: 0.0
     multiplier: 1.0
 
-speed_costmap_filter_info_server:
+/**/speed_costmap_filter_info_server:
   ros__parameters:
     type: 1                        # speed limit, percentage of max speed
     filter_info_topic: "speed_costmap_filter_info"
@@ -233,7 +233,7 @@ speed_costmap_filter_info_server:
 # circular-robot mode, triggering this non-circular optimization warning even
 # when inflation is configured correctly. The separate InflationLayer warning
 # about inflation_radius < inscribed_radius is real and must not be ignored.
-planner_server:
+/**/planner_server:
   ros__parameters:
     expected_planner_frequency: 1.0  # Hz
     costmap_update_timeout: 1.0
@@ -257,7 +257,7 @@ planner_server:
         do_refinement: true
         refinement_num: 2
 
-waypoint_follower:
+/**/waypoint_follower:
   ros__parameters:
     loop_rate: 20                  # Hz, matches controller_frequency
     stop_on_failure: true
@@ -268,7 +268,7 @@ waypoint_follower:
       enabled: true
       waypoint_pause_duration: 0   # ms
 
-behavior_server:
+/**/behavior_server:
   ros__parameters:
     local_costmap_topic: local_costmap/costmap_raw
     global_costmap_topic: global_costmap/costmap_raw
@@ -294,7 +294,7 @@ behavior_server:
     rotational_acc_lim: 3.4        # must match base_controller az_max (control.yaml)
 
 # Reads cmd_vel_raw (MPPI output) and rate-limits it before it reaches collision_monitor.
-velocity_smoother:
+/**/velocity_smoother:
   ros__parameters:
     smoothing_frequency: 20.0      # Hz
     scale_velocities: false
@@ -307,7 +307,7 @@ velocity_smoother:
     velocity_timeout: 1.0
 
 # Downstream of twist_switch_node — protects both teleop and Nav2 goals.
-collision_monitor:
+/**/collision_monitor:
   ros__parameters:
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"

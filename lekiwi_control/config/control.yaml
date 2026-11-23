@@ -1,4 +1,4 @@
-controller_manager:
+/**/controller_manager:
   ros__parameters:
     update_rate: 20  # Hz
     statistics_publish_rate: 0.0  # Disable /controller_manager/statistics/* topics
@@ -27,7 +27,7 @@ controller_manager:
     base_controller:
       type: omni_wheel_drive_controller/OmniWheelDriveController
 
-base_controller:
+/**/base_controller:
   ros__parameters:
     # 3 wheels at 60°/180°/300° from +X
     wheel_offset: 1.0471975511965976  # rad (π/3)
@@ -48,7 +48,7 @@ base_controller:
 
     cmd_vel_timeout: 0.5  # s
 
-imu_sensor_broadcaster:
+/**/imu_sensor_broadcaster:
   ros__parameters:
     sensor_name: bno055  # must match the URDF ros2_control block's <sensor name="...">
     frame_id: imu_frame

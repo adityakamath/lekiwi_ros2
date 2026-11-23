@@ -1,9 +1,9 @@
-joy_teleop:
+/**/joy_teleop:
   ros__parameters:
     teleop:
       type: topic
       interface_type: geometry_msgs/msg/TwistStamped
-      topic_name: /cmd_vel_teleop
+      topic_name: cmd_vel_teleop
       deadman_buttons: [9] # L1
       # The axis scales below are the base's speed limits [m/s, m/s, rad/s]: the controller
       # (omni_wheel_drive_controller) enforces none. nav2.launch.py derives MPPI,
@@ -28,20 +28,20 @@ joy_teleop:
     estop_toggle:
       type: service
       interface_type: std_srvs/srv/Trigger
-      service_name: /emergency_stop_toggle
+      service_name: emergency_stop_toggle
       buttons: [1]  # B
 
     twist_switch_toggle:
       type: service
       interface_type: std_srvs/srv/Trigger
-      service_name: /twist_switch_toggle
+      service_name: twist_switch_toggle
       buttons: [2]  # X
 
     # waypoint_recorder_node's services.
     record_waypoint:
       type: service
       interface_type: std_srvs/srv/SetBool
-      service_name: /record_waypoint
+      service_name: record_waypoint
       service_request:
         data: true
       buttons: [3]  # Y
@@ -49,13 +49,13 @@ joy_teleop:
     waypoint_follow_toggle:
       type: service
       interface_type: std_srvs/srv/Trigger
-      service_name: /waypoint_follow_toggle
+      service_name: waypoint_follow_toggle
       buttons: [0]  # A
 
     reset_waypoints:
       type: service
       interface_type: std_srvs/srv/SetBool
-      service_name: /reset_waypoints
+      service_name: reset_waypoints
       service_request:
         data: true
       buttons: [11]  # settings
@@ -64,7 +64,7 @@ joy_teleop:
     nav2_send_goal:
       type: service
       interface_type: std_srvs/srv/SetBool
-      service_name: /nav2_send_goal
+      service_name: nav2_send_goal
       service_request:
         data: true
       buttons: [8]  # Right joystick button
@@ -73,7 +73,7 @@ joy_teleop:
     save_map:
       type: service
       interface_type: std_srvs/srv/SetBool
-      service_name: /save_map
+      service_name: save_map
       service_request:
         data: true
       buttons: [4]  # screenshot

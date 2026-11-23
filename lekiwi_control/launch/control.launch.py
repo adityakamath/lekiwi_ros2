@@ -49,9 +49,24 @@ def launch_setup(context):
     launch_joy   = _launch_arg_as_bool(context, 'joy')
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
     enable_odom_tf = _launch_arg_as_bool(context, 'enable_odom_tf')
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    ns_path = f'/{namespace}'.rstrip('/')  # '' for the empty namespace
+
+    def absolute(name):
+        # Names that must stay absolute (remaps, spawner targets) sit under the robot namespace.
+        return f'{ns_path}{name}'
+
     # A params file, not a dotted key: the controller reads its own base_controller.ros__parameters.
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_odom_tf_', delete=False) as f:
-        yaml.safe_dump({'base_controller': {'ros__parameters': {'enable_odom_tf': enable_odom_tf}}}, f)
+        # Sensor frames are named in control.yaml; each robot's must carry its own prefix.
+        controller_params = {
+            '/**/base_controller': {'ros__parameters': {'enable_odom_tf': enable_odom_tf}},
+            '/**/imu_sensor_broadcaster': {'ros__parameters': {'frame_id': f'{prefix}imu_frame'}},
+            '/**/gemini2_imu_broadcaster': {'ros__parameters': {
+                'frame_id': f'{prefix}gemini2_accel_gyro_optical_frame'}},
+        }
+        yaml.safe_dump(controller_params, f)
         odom_tf_params = f.name
     hw_type = LaunchConfiguration('ros2_control_hardware_type').perform(context)
     mujoco_model    = LaunchConfiguration('mujoco_model').perform(context)
@@ -80,6 +95,7 @@ def launch_setup(context):
             '--output', final_mujoco_model, '--absolute', '--scene', mujoco_scene,
             '--lidar', 'plugin',
             '--hardware-config', hardware_config,
+            '--frame-prefix', prefix,
         ], capture_output=True, text=True, check=True)
     else:
         final_mujoco_model = ''
@@ -118,7 +134,8 @@ def launch_setup(context):
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='log',
-        parameters=[robot_description, {'use_sim_time': use_sim_time}],
+        parameters=[robot_description, {'use_sim_time': use_sim_time},
+                    {'frame_prefix': prefix}],
         name='robot_state_publisher',
         emulate_tty=True,
         arguments=['--ros-args', '--log-level', 'WARN'],
@@ -154,6 +171,28 @@ def launch_setup(context):
             yaml.safe_dump(plugin_config, stream)
             sensor_plugins = stream.name
 
+    # The plugins publish absolute topics and take their frames from the model, so each robot
+    # names its own. Only the devices that are fitted are overridden.
+    sim_overrides = []
+    if hw_type == 'mujoco':
+        plugins = {'emergency_stop_plugin': {'service_name': absolute('/emergency_stop')}}
+        lidar_plugin = {}
+        if hardware['lidar']:
+            lidar_plugin['lidar'] = {'frame_name': f'{prefix}laser_frame', 'topic': absolute('/scan_raw')}
+        if hardware['sparkfun_sensor']:
+            lidar_plugin['tof'] = {'frame_name': f'{prefix}tof_frame', 'topic': absolute('/tof/pointcloud_raw')}
+        if lidar_plugin:
+            plugins['mujoco_3d_lidar_plugin'] = lidar_plugin
+        if enable_camera:
+            plugins['mujoco_camera_plugin'] = {'gemini2_rgb': {
+                'frame_name': f'{prefix}gemini2_color_optical_frame',
+                'info_topic': absolute('/gemini2/color/camera_info'),
+                'image_topic': absolute('/gemini2/color/image_raw'),
+                'depth_topic': absolute('/_gemini2/depth_raw')}}
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_sim_ns_', delete=False) as stream:
+            yaml.safe_dump({'/**': {'ros__parameters': {'mujoco_plugins': plugins}}}, stream)
+            sim_overrides = [stream.name]
+
     # mujoco_ros2_control hosts its own simulation + /scan publishing (base.control.xacro) -
     # use_sim_time:true is required regardless of the launch arg.
     mujoco_control_node = Node(
@@ -168,6 +207,7 @@ def launch_setup(context):
             *([f'{pkg_mujoco}/config/mujoco_camera_plugin.yaml',
                f'{pkg_mujoco}/config/mujoco_camera_gemini2.yaml']
               if enable_camera else []),
+            *sim_overrides,
             {'use_sim_time': True},
             odom_tf_params,
         ],
@@ -194,7 +234,8 @@ def launch_setup(context):
         if hardware['sparkfun_sensor']:
             sim_nodes.append(Node(
                 package='lekiwi_mujoco', executable='tof_pointcloud',
-                name='tof_pointcloud', output='log', parameters=[{'use_sim_time': True}],
+                name='tof_pointcloud', output='log',
+                parameters=[{'use_sim_time': True}, {'frame_id': f'{prefix}tof_frame'}],
             ))
         if enable_camera:
             sim_nodes.extend([
@@ -205,15 +246,15 @@ def launch_setup(context):
                 Node(
                     package='tf2_ros', executable='static_transform_publisher',
                     name='gemini2_imu_tf', output='log',
-                    arguments=['--frame-id', 'gemini2_color_optical_frame',
-                               '--child-frame-id', 'gemini2_accel_gyro_optical_frame'],
+                    arguments=['--frame-id', f'{prefix}gemini2_color_optical_frame',
+                               '--child-frame-id', f'{prefix}gemini2_accel_gyro_optical_frame'],
                     parameters=[{'use_sim_time': True}],
                 ),
                 Node(
                     package='tf2_ros', executable='static_transform_publisher',
                     name='gemini2_optical_frame_publisher', output='log',
-                    arguments=['--frame-id', 'gemini2_link',
-                               '--child-frame-id', 'gemini2_color_optical_frame',
+                    arguments=['--frame-id', f'{prefix}gemini2_link',
+                               '--child-frame-id', f'{prefix}gemini2_color_optical_frame',
                                '--roll', '-1.5707963', '--pitch', '0', '--yaw', '-1.5707963'],
                     parameters=[{'use_sim_time': True}],
                 ),
@@ -223,8 +264,8 @@ def launch_setup(context):
                 name='gemini2_rgb_compressor', output='log',
                 parameters=[{'in_transport': 'raw', 'out_transport': 'compressed',
                              'use_sim_time': True}],
-                remappings=[('in', '/gemini2/color/image_raw'),
-                            ('out/compressed', '/gemini2/color/image_raw/compressed')],
+                remappings=[('in', absolute('/gemini2/color/image_raw')),
+                            ('out/compressed', absolute('/gemini2/color/image_raw/compressed'))],
             ))
             if pointcloud:
                 sim_nodes.extend([
@@ -232,10 +273,10 @@ def launch_setup(context):
                         package='depth_image_proc', executable='point_cloud_xyzrgb_node',
                         name='gemini2_colored_pointcloud', output='log',
                         parameters=[{'use_sim_time': True}],
-                        remappings=[('rgb/image_rect_color', '/gemini2/color/image_raw'),
-                                    ('rgb/camera_info', '/gemini2/color/camera_info'),
-                                    ('depth_registered/image_rect', '/gemini2/depth/image_raw'),
-                                    ('points', '/_gemini2/registered_points')],
+                        remappings=[('rgb/image_rect_color', absolute('/gemini2/color/image_raw')),
+                                    ('rgb/camera_info', absolute('/gemini2/color/camera_info')),
+                                    ('depth_registered/image_rect', absolute('/gemini2/depth/image_raw')),
+                                    ('points', absolute('/_gemini2/registered_points'))],
                     ),
                     Node(
                         package='lekiwi_mujoco', executable='gemini2_cloud',
@@ -268,28 +309,31 @@ def launch_setup(context):
             f'{pkg_ctrl}/config/collision_toggle.yaml',
             {'use_sim_time': use_sim_time},
             # Without a LiDAR there is no collision monitor, so commands go straight to the base.
-            *([] if hardware['lidar'] else [{'output_topic': '/base_controller/cmd_vel'}]),
+            *([] if hardware['lidar'] else [{'output_topic': 'base_controller/cmd_vel'}]),
+            {'frame_id': f'{prefix}base_link'},
         ],
     )
 
     extra_spawner_nodes = [
         Node(package='controller_manager', executable='spawner',
-             arguments=['base_controller', '-c', '/controller_manager',
+             arguments=['base_controller', '-c', absolute('/controller_manager'),
                         '--controller-manager-timeout', '30'], output='both'),
     ]
     if hardware['imu']:
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
-                 arguments=['imu_sensor_broadcaster', '-c', '/controller_manager',
+                 arguments=['imu_sensor_broadcaster', '-c', absolute('/controller_manager'),
                             '--controller-manager-timeout', '30'], output='both'),
         )
     if hw_type == 'mujoco' and enable_camera:
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
-                 arguments=['gemini2_imu_broadcaster', '-c', '/controller_manager',
+                 arguments=['gemini2_imu_broadcaster', '-c', absolute('/controller_manager'),
                             '--controller-manager-timeout', '30',
                             '--param-file', f'{pkg_ctrl}/config/gemini2_imu_broadcaster.yaml',
-                            '--controller-ros-args', '--ros-args -r ~/imu:=/gemini2/gyro_accel/sample'],
+                            '--controller-ros-args',
+                            f"--ros-args -r ~/imu:={absolute('/gemini2/gyro_accel/sample')}"
+                            f' -p frame_id:={prefix}gemini2_accel_gyro_optical_frame'],
                  output='both'),
         )
     # Real-hardware motor health for motor_diagnostics_node (/dynamic_joint_states is gone on Lyrical);
@@ -297,19 +341,19 @@ def launch_setup(context):
     if diagnostics and hw_type != 'mujoco':
         sts_joints = ['left_wheel_joint', 'back_wheel_joint', 'right_wheel_joint']
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='lekiwi_state_ifaces_', delete=False) as f:
-            yaml.safe_dump({'state_interfaces_broadcaster': {'ros__parameters': {'interfaces': [
+            yaml.safe_dump({'/**/state_interfaces_broadcaster': {'ros__parameters': {'interfaces': [
                 f'{j}/{i}' for j in sts_joints
                 for i in ('effort', 'voltage', 'temperature', 'current', 'is_moving')]}}}, f)
         extra_spawner_nodes.append(
             Node(package='controller_manager', executable='spawner',
-                 arguments=['state_interfaces_broadcaster', '-c', '/controller_manager',
+                 arguments=['state_interfaces_broadcaster', '-c', absolute('/controller_manager'),
                             '--controller-manager-timeout', '30', '--param-file', f.name],
                  output='both'))
 
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['joint_state_broadcaster', '-c', '/controller_manager',
+        arguments=['joint_state_broadcaster', '-c', absolute('/controller_manager'),
                    '--controller-manager-timeout', '30'],
         output='both',
     )
@@ -322,10 +366,12 @@ def launch_setup(context):
           for done, nxt in zip(spawners, spawners[1:])],
     ]
 
+    # The diagnostics header names a frame; give it this robot's.
     motor_diagnostics = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([FindPackageShare('sts_hardware_interface'), 'launch', 'motor_diagnostics.launch.py'])
-        ])
+        ]),
+        launch_arguments={'frame_id': f'{prefix}base_link'}.items(),
     )
 
     actions = [

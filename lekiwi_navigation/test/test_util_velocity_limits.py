@@ -7,14 +7,14 @@ import unittest
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lekiwi_navigation.velocity_limits import velocity_overrides
+from lekiwi_navigation.util_velocity_limits import velocity_overrides
 
 
 class TestVelocityLimits(unittest.TestCase):
     def derive(self, scales, offset=0):
         axes = {name: {'scale': scale, 'offset': offset} for name, scale in zip(
             ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'), scales)}
-        config = {'joy_teleop': {'ros__parameters': {'teleop': {'axis_mappings': axes}}}}
+        config = {'/**/joy_teleop': {'ros__parameters': {'teleop': {'axis_mappings': axes}}}}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'teleop.yaml'
             path.write_text(yaml.safe_dump(config))
@@ -39,8 +39,8 @@ class TestVelocityLimits(unittest.TestCase):
             axes = {name: {'scale': scale, 'offset': 0} for name, scale in zip(
                 ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'), (.3, .4, .8))}
             teleop.write_text(yaml.safe_dump({
-                'joy_teleop': {'ros__parameters': {'teleop': {'axis_mappings': axes}}}}))
-            params.write_text(yaml.safe_dump({'controller_server': {'ros__parameters': {
+                '/**/joy_teleop': {'ros__parameters': {'teleop': {'axis_mappings': axes}}}}))
+            params.write_text(yaml.safe_dump({'/**/controller_server': {'ros__parameters': {
                 'controller_plugins': ['MyController'],
                 'MyController': {'plugin': 'nav2_mppi_controller::MPPIController'},
             }}}))
@@ -61,7 +61,7 @@ class TestVelocityLimits(unittest.TestCase):
         path = Path(__file__).resolve().parents[1] / 'launch/nav2.launch.py'
         text = path.read_text()
         for name in ('controller_server', 'behavior_server', 'velocity_smoother'):
-            self.assertIn(f"parameters=[configured_params, speed_limits['{name}']]", text, name)
+            self.assertIn(f"parameters=[*base_params, speed_limits['{name}']]", text, name)
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_services_default
 from slam_toolbox.srv import SaveMap, SerializePoseGraph
 from std_srvs.srv import SetBool
-from lekiwi_navigation.tf_on_demand import lookup_transform
+from lekiwi_navigation.util_tf_on_demand import lookup_transform
 
 
 class MapSaverNode(Node):
@@ -48,10 +48,12 @@ class MapSaverNode(Node):
         os.makedirs(self._maps_dir, exist_ok=True)
 
         self.declare_parameter('save_timeout', 15.0)
+        self.declare_parameter('map_frame', 'map')
+        self.declare_parameter('base_frame', 'base_footprint')
         self._save_timeout = self.get_parameter('save_timeout').value
 
-        self._save_client      = self.create_client(SaveMap, '/slam_toolbox/save_map')
-        self._serialize_client = self.create_client(SerializePoseGraph, '/slam_toolbox/serialize_map')
+        self._save_client      = self.create_client(SaveMap, 'slam_toolbox/save_map')
+        self._serialize_client = self.create_client(SerializePoseGraph, 'slam_toolbox/serialize_map')
 
 
         self._saving = False
@@ -60,7 +62,7 @@ class MapSaverNode(Node):
 
         # Introspection lets a listener (e.g. the audio indicator node) observe every
         # call's request+response on /save_map/_service_event, regardless of caller.
-        save_srv = self.create_service(SetBool, '/save_map', self._handle_save)
+        save_srv = self.create_service(SetBool, 'save_map', self._handle_save)
         save_srv.configure_introspection(
             self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
         self.get_logger().info(f'map_saver_node ready: /save_map -> {self._maps_dir!r}')
@@ -219,7 +221,7 @@ class MapSaverNode(Node):
         """Look up map→base_footprint and write starting_pose.yaml next to the map files."""
         save_dir = os.path.dirname(self._map_name)
         try:
-            tf_stamped = lookup_transform('map', 'base_footprint')
+            tf_stamped = lookup_transform(self.get_parameter('map_frame').value, self.get_parameter('base_frame').value)
             t = tf_stamped.transform.translation
             q = tf_stamped.transform.rotation
             theta = math.atan2(

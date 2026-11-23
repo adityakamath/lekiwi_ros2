@@ -42,23 +42,23 @@ class TestPhraseFilenameConsistency:
 class TestPhraseFor:
 
     def test_true_success_returns_configured_phrase(self, node):
-        assert node._phrase_for('/emergency_stop', True, True) == 'Emergency stop enabled'
+        assert node._phrase_for('emergency_stop', True, True) == 'Emergency stop enabled'
 
     def test_false_success_returns_configured_phrase(self, node):
-        assert node._phrase_for('/emergency_stop', False, True) == 'Emergency stop disabled'
+        assert node._phrase_for('emergency_stop', False, True) == 'Emergency stop disabled'
 
     def test_false_with_no_entry_is_silent(self, node):
         # /record_waypoint's false case is a deliberate no-op (confirmed in the
         # real handler) - no phrase configured, nothing should be announced.
-        assert node._phrase_for('/record_waypoint', False, True) is None
+        assert node._phrase_for('record_waypoint', False, True) is None
 
     def test_true_failure_falls_back_to_configured_error_phrase(self, node):
-        assert node._phrase_for('/record_waypoint', True, False) == 'Error'
+        assert node._phrase_for('record_waypoint', True, False) == 'Error'
 
     def test_true_failure_with_no_failure_entry_falls_back_to_generic_error(self, node):
         # /reset_waypoints has no explicit "failure" key in phrases.yaml -
         # should still announce something rather than go silent.
-        assert node._phrase_for('/reset_waypoints', True, False) == 'Error'
+        assert node._phrase_for('reset_waypoints', True, False) == 'Error'
 
     def test_unknown_service_is_silent(self, node):
         assert node._phrase_for('/not_a_real_service', True, True) is None
@@ -165,11 +165,11 @@ def test_nav2_submission_event_announcements(node, monkeypatch, value, success, 
     from std_srvs.srv import SetBool, SetBool_Event
     from lekiwi_audio.indicator_node import DEFAULT_SERVICES, DEFAULT_STATE_SERVICES
 
-    assert '/nav2_send_goal' in DEFAULT_SERVICES
-    assert '/nav2_send_goal' not in DEFAULT_STATE_SERVICES
+    assert 'nav2_send_goal' in DEFAULT_SERVICES
+    assert 'nav2_send_goal' not in DEFAULT_STATE_SERVICES
     spoken = []
     monkeypatch.setattr(node._speech, 'speak', spoken.append)
-    callback = node._make_callback('/nav2_send_goal')
+    callback = node._make_callback('nav2_send_goal')
     request = SetBool_Event()
     request.info.event_type = ServiceEventInfo.REQUEST_RECEIVED
     request.info.sequence_number = 42

@@ -1,4 +1,4 @@
-tof_imager:
+/**/tof_imager:
   ros__parameters:
     frame_id: tof_frame
     resolution: 8  # 4 (4x4) or 8 (8x8)

@@ -11,10 +11,10 @@ ROOT = Path(__file__).resolve().parents[2]
 class TestTargetAssets(unittest.TestCase):
     def test_button_is_one_shot_setbool(self):
         config = yaml.safe_load((ROOT / 'lekiwi_control/config/base_teleop.yaml').read_text())
-        commands = config['joy_teleop']['ros__parameters']
+        commands = config['/**/joy_teleop']['ros__parameters']
         button = commands['nav2_send_goal']
         self.assertEqual(button['buttons'], [8])
-        self.assertEqual(button['service_name'], '/nav2_send_goal')
+        self.assertEqual(button['service_name'], 'nav2_send_goal')
         for field in ('type', 'interface_type', 'service_request'):
             self.assertEqual(button[field], commands['reset_waypoints'][field])
         self.assertEqual(button['service_request'], {'data': True})
@@ -40,7 +40,7 @@ class TestTargetAssets(unittest.TestCase):
 
     def test_config_defaults_match(self):
         config = yaml.safe_load((ROOT / 'lekiwi_navigation/config/nav2/nav2_target.yaml').read_text())
-        params = config['nav2_target_node']['ros__parameters']
+        params = config['/**/nav2_target_node']['ros__parameters']
         tree = ast.parse((ROOT / 'lekiwi_navigation/lekiwi_navigation/nav2_target_node.py').read_text())
         defaults = next(ast.literal_eval(n.value) for n in ast.walk(tree)
                         if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name)
@@ -49,7 +49,7 @@ class TestTargetAssets(unittest.TestCase):
         self.assertGreater(params['marker_scale'], 0)
         self.assertEqual(params['marker_color'], [0.0, 1.0, 0.4, 0.9])
         teleop = yaml.safe_load((ROOT / 'lekiwi_control/config/base_teleop.yaml').read_text())
-        axes = teleop['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+        axes = teleop['/**/joy_teleop']['ros__parameters']['teleop']['axis_mappings']
         self.assertEqual(params['translation_scale'], 2.0)
         self.assertEqual(params['rotation_scale'], 2.0)
         self.assertEqual(params['translation_scale'] * axes['twist-linear-x']['scale'], 0.4)
@@ -58,7 +58,7 @@ class TestTargetAssets(unittest.TestCase):
 
     def test_audio_phrases(self):
         config = yaml.safe_load((ROOT / 'lekiwi_audio/config/phrases.yaml').read_text())
-        phrases = config['services']['/nav2_send_goal']
+        phrases = config['services']['nav2_send_goal']
         self.assertEqual(phrases['true']['success'], 'Sending navigation goal')
         self.assertEqual(phrases['true']['failure'], 'Navigation goal rejected')
         self.assertNotIn('false', phrases)

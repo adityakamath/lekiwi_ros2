@@ -7,7 +7,7 @@ import rclpy
 from geometry_msgs.msg import TransformStamped
 import tf2_ros
 
-from lekiwi_navigation.tf_on_demand import lookup_transform
+from lekiwi_navigation.util_tf_on_demand import lookup_transform
 
 
 def _broadcast(node, parent, child, x):

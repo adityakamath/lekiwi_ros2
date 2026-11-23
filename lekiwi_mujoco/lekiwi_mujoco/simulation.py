@@ -18,7 +18,7 @@ def _laser_filter_params():
     duplicating the threshold/mask numbers here and letting them drift out of sync."""
     name = 'mujoco_laser_filter.yaml'
     filters = yaml.safe_load((package_share('lekiwi_mujoco') / 'config' / name).read_text())
-    filters = filters['laser_scan_filter_chain']['ros__parameters']
+    filters = filters['/**/laser_scan_filter_chain']['ros__parameters']
     no_hit_threshold = None
     for value in filters.values():
         if not isinstance(value, dict) or 'type' not in value:

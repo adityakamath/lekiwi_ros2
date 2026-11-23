@@ -43,6 +43,8 @@ def launch_setup(context, *args, **kwargs):
     """Build the ekf_node Node for the selected fusion_mode config file."""
     fusion_mode  = LaunchConfiguration('fusion_mode').perform(context)
     use_sim_time = _launch_arg_as_bool(context, 'use_sim_time')
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
 
     config_file = _EKF_CONFIGS.get(fusion_mode)
     if config_file is None:
@@ -63,8 +65,11 @@ def launch_setup(context, *args, **kwargs):
                     'config', 'robot_localization', config_file,
                 ]),
                 {'use_sim_time': use_sim_time},
+                {'map_frame': f'{prefix}map', 'odom_frame': f'{prefix}odom',
+                 'base_link_frame': f'{prefix}base_footprint', 'world_frame': f'{prefix}odom'},
             ],
             arguments=['--ros-args', '--log-level', 'rclcpp:=ERROR'],
+            remappings=[('/diagnostics', 'diagnostics')],
         ),
     ]
 

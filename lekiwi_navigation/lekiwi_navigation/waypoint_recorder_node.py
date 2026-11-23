@@ -50,6 +50,7 @@ Parameters:
     number_of_loops  int  Total passes through the waypoint list per start
                           (default: 0, i.e. loop forever; N>0 = exactly N passes)
     frame_id         str  TF frame waypoints are recorded in (default: map)
+    base_frame       str  TF frame of the robot base (default: base_footprint)
     marker_topic     str  Topic for the waypoint MarkerArray (default: /waypoint_markers)
     diagnostics_topic str Topic for the patrol DiagnosticArray (default: /diagnostics)
     publish_diagnostics bool Publish patrol status at all (default: true) - the top-level
@@ -81,7 +82,7 @@ from nav2_msgs.action import FollowWaypoints, NavigateToPose
 from nav_msgs.msg import Path
 from std_srvs.srv import SetBool
 from visualization_msgs.msg import Marker, MarkerArray
-from lekiwi_navigation.tf_on_demand import lookup_transform
+from lekiwi_navigation.util_tf_on_demand import lookup_transform
 
 # /waypoint_follow reflects ongoing patrol state, not a one-shot action - late-joining
 # subscribers (audio indicator, bool_toggle_node) should learn current state on connect.
@@ -96,10 +97,10 @@ STATE_SERVICE_QOS = QoSProfile(
 # nav2's own plan-visualization topics - cleared explicitly on pause/reset (see
 # _clear_plan_visualizations), since nav2 leaves them showing a stale path after a cancel.
 _PLAN_TOPICS = [
-    '/plan',
-    '/unsmoothed_plan',
-    '/controller_server/transformed_global_plan',
-    '/controller_server/optimal_path',
+    'plan',
+    'unsmoothed_plan',
+    'controller_server/transformed_global_plan',
+    'controller_server/optimal_path',
 ]
 
 # FollowWaypoints.Goal.number_of_loops is a uint32 - this is its max value, used as the
@@ -116,13 +117,15 @@ class WaypointRecorderNode(Node):
 
         self.declare_parameter('number_of_loops', 0)
         self.declare_parameter('frame_id', 'map')
-        self.declare_parameter('marker_topic', '/waypoint_markers')
-        self.declare_parameter('diagnostics_topic', '/diagnostics')
+        self.declare_parameter('base_frame', 'base_footprint')
+        self.declare_parameter('marker_topic', 'waypoint_markers')
+        self.declare_parameter('diagnostics_topic', 'diagnostics')
         self.declare_parameter('publish_diagnostics', True)
         self.declare_parameter('max_retries', 3)
 
         self._number_of_loops = self.get_parameter('number_of_loops').value
         self._frame_id = self.get_parameter('frame_id').value
+        self._base_frame = self.get_parameter('base_frame').value
         marker_topic = self.get_parameter('marker_topic').value
         diagnostics_topic = self.get_parameter('diagnostics_topic').value
         self._publish_diagnostics_enabled = self.get_parameter('publish_diagnostics').value
@@ -148,25 +151,25 @@ class WaypointRecorderNode(Node):
         self._marker_pub = self.create_publisher(MarkerArray, marker_topic, 10)
         self._diagnostics_pub = self.create_publisher(DiagnosticArray, diagnostics_topic, 10)
         self._plan_pubs = [self.create_publisher(Path, topic, 10) for topic in _PLAN_TOPICS]
-        self._action_client = ActionClient(self, FollowWaypoints, '/follow_waypoints')
+        self._action_client = ActionClient(self, FollowWaypoints, 'follow_waypoints')
         self.create_subscription(
             NavigateToPose.Impl.FeedbackMessage,
-            '/navigate_to_pose/_action/feedback',
+            'navigate_to_pose/_action/feedback',
             self._on_nav_feedback,
             10,
         )
         self.create_subscription(
             GoalStatusArray,
-            '/navigate_to_pose/_action/status',
+            'navigate_to_pose/_action/status',
             self._on_nav_status,
             10,
         )
 
         # Introspection lets a listener (e.g. the audio indicator node) observe every
         # call's request+response on <service>/_service_event, regardless of caller.
-        record_srv = self.create_service(SetBool, '/record_waypoint', self._handle_record)
-        follow_srv = self.create_service(SetBool, '/waypoint_follow', self._handle_set_following)
-        reset_srv = self.create_service(SetBool, '/reset_waypoints', self._handle_reset)
+        record_srv = self.create_service(SetBool, 'record_waypoint', self._handle_record)
+        follow_srv = self.create_service(SetBool, 'waypoint_follow', self._handle_set_following)
+        reset_srv = self.create_service(SetBool, 'reset_waypoints', self._handle_reset)
         for srv in (record_srv, reset_srv):
             srv.configure_introspection(
                 self.get_clock(), qos_profile_services_default, ServiceIntrospectionState.CONTENTS)
@@ -187,7 +190,7 @@ class WaypointRecorderNode(Node):
             return response
 
         try:
-            tf = lookup_transform(self._frame_id, 'base_footprint')
+            tf = lookup_transform(self._frame_id, self._base_frame)
         except Exception as e:
             response.success = False
             response.message = f'TF lookup failed: {e}'

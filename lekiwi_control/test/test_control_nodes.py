@@ -175,7 +175,7 @@ class TestBoolToggleNodeConfig:
         )
         import yaml
         cfg = yaml.safe_load(open(params_file))
-        toggle_names = cfg['bool_toggle_node']['ros__parameters']['toggles']
+        toggle_names = cfg['/**/bool_toggle_node']['ros__parameters']['toggles']
         assert 'emergency_stop' in toggle_names
         assert 'twist_switch' in toggle_names
         assert 'waypoint_follow' in toggle_names

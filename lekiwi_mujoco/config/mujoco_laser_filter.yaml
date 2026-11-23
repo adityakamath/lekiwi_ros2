@@ -1,6 +1,6 @@
 # Sim /scan_raw -> /scan. The native lidar reports "no hit" as -1; REP-117 wants +inf so
 # Nav2/slam_toolbox can clear free space and viewers can draw the scan.
-laser_scan_filter_chain:
+/**/laser_scan_filter_chain:
   ros__parameters:
     qos_overrides:
       scan_filtered:

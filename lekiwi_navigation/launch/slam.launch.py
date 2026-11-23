@@ -69,6 +69,8 @@ def launch_setup(context, *args, **kwargs):
         slam_mode = 'amcl'
 
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
 
     if slam_mode in ('map', 'localize'):
         # ── slam_toolbox ────────────────────────────────────────────────────
@@ -84,6 +86,8 @@ def launch_setup(context, *args, **kwargs):
             'mode': _st_mode[slam_mode],
             'use_lifecycle_manager': True,
         }
+        extra_params.update({'odom_frame': f'{prefix}odom', 'map_frame': f'{prefix}map',
+                             'base_frame': f'{prefix}base_footprint'})
 
         if slam_mode == 'localize':
             # realpath resolves the --symlink-install symlink to the source tree, so this
@@ -119,6 +123,10 @@ def launch_setup(context, *args, **kwargs):
                 namespace='',
                 output='screen',
                 parameters=[slam_params, extra_params],
+                # slam_toolbox publishes the absolute /map, /map_metadata and /diagnostics; relative
+                # names are the same topics at the root and this robot's own under a namespace.
+                remappings=[('/map', 'map'), ('/map_metadata', 'map_metadata'),
+                            ('/diagnostics', 'diagnostics')],
             ),
             Node(
                 package='nav2_lifecycle_manager',
@@ -130,6 +138,7 @@ def launch_setup(context, *args, **kwargs):
                     'autostart': True,
                     'node_names': ['slam_toolbox'],
                 }],
+                remappings=[('/diagnostics', 'diagnostics')],
             ),
         ]
 
@@ -142,6 +151,7 @@ def launch_setup(context, *args, **kwargs):
             parameters=[
                 f'{pkg_nav}/config/nav2/map_saver.yaml',
                 {'use_sim_time': use_sim_time},
+                {'map_frame': f'{prefix}map', 'base_frame': f'{prefix}base_footprint'},
             ],
         ))
 
@@ -167,6 +177,8 @@ def launch_setup(context, *args, **kwargs):
         map_yaml = os.path.join(map_dir, map_yaml_files[0])
 
         amcl_extra_params = {'use_sim_time': use_sim_time}
+        amcl_extra_params.update({'base_frame_id': f'{prefix}base_footprint',
+                                  'odom_frame_id': f'{prefix}odom', 'global_frame_id': f'{prefix}map'})
         pose_file = os.path.join(_pkg_src, 'maps', map_name, 'starting_pose.yaml')
         if os.path.exists(pose_file):
             with open(pose_file) as f:
@@ -211,6 +223,7 @@ def launch_setup(context, *args, **kwargs):
                 executable='lifecycle_manager',
                 name='lifecycle_manager_localization',
                 output='screen',
+                remappings=[('/diagnostics', 'diagnostics')],
                 parameters=[{
                     'use_sim_time': use_sim_time,
                     'autostart': True,

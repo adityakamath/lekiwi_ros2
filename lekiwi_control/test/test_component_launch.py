@@ -110,7 +110,7 @@ def test_without_a_lidar_commands_go_straight_to_the_base(lidar, tmp_path, monke
     module.launch_setup(context)
     support = next(node for node in nodes if node.get('executable') == 'control_support_node')
     overrides = [p for p in support['parameters'] if isinstance(p, dict) and 'output_topic' in p]
-    assert overrides == ([] if lidar else [{'output_topic': '/base_controller/cmd_vel'}])
+    assert overrides == ([] if lidar else [{'output_topic': 'base_controller/cmd_vel'}])
 
 
 @pytest.mark.parametrize('imu', [True, False])
@@ -150,3 +150,14 @@ def test_simulation_does_not_start_physical_diagnostic_nodes(tmp_path, monkeypat
     assert not any(isinstance(action, TimerAction) for action in actions)
 
 
+
+
+@pytest.mark.parametrize('namespace,prefix', [('', ''), ('robot1', 'robot1/')])
+def test_model_builder_receives_the_frame_prefix(namespace, prefix, tmp_path, monkeypatch):
+    module, context, _ = _launch({}, tmp_path)
+    context.launch_configurations.update(ros2_control_hardware_type='mujoco', namespace=namespace)
+    commands = []
+    monkeypatch.setattr(module.subprocess, 'run', lambda command, **kwargs: commands.append(command))
+    module.launch_setup(context)
+    command = commands[0]
+    assert command[command.index('--frame-prefix') + 1] == prefix

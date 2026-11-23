@@ -50,6 +50,8 @@ Pass these to `xacro` as `name:=value`. `lekiwi_control` fills them in from its 
 
 ## Frames
 
+With `namespace:=robot1` on `lekiwi.launch.py`, `robot_state_publisher` publishes every frame below with a `robot1/` prefix (`robot1/base_footprint`, `robot1/laser_frame`, ...); the URDF itself is unchanged.
+
 ```text
 base_footprint
 └── base_link

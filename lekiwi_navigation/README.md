@@ -12,7 +12,9 @@ Navigation for LeKiwi: sensor fusion, mapping, localization, path planning and p
 | `launch/nav2.launch.py` | The Nav2 nodes, the waypoint nodes and the zone-filter mask servers |
 | `config/robot_localization/` | EKF settings, one file per fusion mode |
 | `config/nav2/` | Nav2 (`nav2.yaml`), AMCL, slam_toolbox, map saver, waypoint recorder and Nav2 target settings |
-| `lekiwi_navigation/` | `map_saver_node`, `waypoint_recorder_node` and `nav2_target_node`, plus `velocity_limits.py`, which derives the Nav2 speed limits from the teleop scales |
+| `lekiwi_navigation/` | `map_saver_node`, `waypoint_recorder_node` and `nav2_target_node` |
+| `lekiwi_navigation/util_velocity_limits.py` | Derives the Nav2 speed limits (MPPI, behavior server, velocity smoother) from the joystick axis scales in `lekiwi_control`'s `base_teleop.yaml`, so teleop and Nav2 share one set of numbers; `nav2.launch.py` applies them at launch |
+| `lekiwi_navigation/util_tf_on_demand.py` | `lookup_transform()`: one `map` <- `base_footprint` lookup through a short-lived TF listener, used by the map saver and waypoint recorder so idle nodes do not decode every `/tf` message (the EKF alone publishes at 30 Hz) |
 | `maps/` | Saved maps, one folder each (not committed) |
 
 ## Requirements

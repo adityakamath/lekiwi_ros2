@@ -1,4 +1,4 @@
-laser_node:
+/**/laser_node:
   ros__parameters:
     product_name: LDLiDAR_LD19
     laser_scan_topic_name: scan

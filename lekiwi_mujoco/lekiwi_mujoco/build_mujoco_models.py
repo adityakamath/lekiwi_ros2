@@ -52,7 +52,7 @@ def set_origin(element, origin):
 
 def expand_urdf(packages, control, hardware_config=None):
     """The robot URDF in mock mode, plus its controller geometry."""
-    config = yaml.safe_load((control / 'config/control.yaml').read_text())['base_controller']['ros__parameters']
+    config = yaml.safe_load((control / 'config/control.yaml').read_text())['/**/base_controller']['ros__parameters']
     motor = yaml.safe_load((control / 'config/urdf_config.yaml').read_text())
     hardware_config = hardware_config or package_share('lekiwi_bringup') / 'config/hardware.yaml'
     source = 'base.urdf.xacro'
@@ -308,7 +308,16 @@ def use_native_tof(xml):
     return ET.tostring(root, encoding='unicode')
 
 
-def build(output, absolute=False, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder', hardware_config=None):
+def prefix_frames(xml, prefix):
+    """Rename the bodies the lidar and ToF plugins publish their scans in, so each robot's frames are its own."""
+    root = ET.fromstring(xml)
+    for body in root.iter('body'):
+        if body.get('name') in ('laser_frame', 'tof_frame'):
+            body.set('name', prefix + body.get('name'))
+    return ET.tostring(root, encoding='unicode')
+
+
+def build(output, absolute=False, scene=True, *, control_dir=None, description_dir=None, lidar='rangefinder', hardware_config=None, frame_prefix=''):
     output = Path(output).resolve()
     spec = build_spec(scene=scene, control_dir=control_dir, description_dir=description_dir, hardware_config=hardware_config)
     for mesh in [*spec.meshes, *spec.textures]:
@@ -335,6 +344,8 @@ def build(output, absolute=False, scene=True, *, control_dir=None, description_d
         xml = use_native_tof(use_native_lidar(xml))
     elif lidar != 'rangefinder':
         raise ValueError("lidar must be 'rangefinder' or 'plugin'")
+    if frame_prefix:
+        xml = prefix_frames(xml, frame_prefix)
     output.write_text(content + xml)
     return output
 
@@ -349,13 +360,14 @@ def main():
     parser.add_argument('--lidar', choices=['rangefinder', 'plugin'], default='rangefinder',
                         help='plugin: one native mujoco.plugin.lidar sensor (ROS/mujoco_vendor only)')
     parser.add_argument('--hardware-config', type=Path, help='YAML file selecting optional hardware groups')
+    parser.add_argument('--frame-prefix', default='', help='Prefix for the lidar and ToF frame names, e.g. robot1/')
     args = parser.parse_args()
     hardware_config = args.hardware_config
     load_hardware_config(hardware_config)
     output = args.output or SIM_PACKAGE / 'mjcf/lekiwi_base.xml'
     print(build(output, args.absolute, scene=args.scene,
                 control_dir=args.control_package, description_dir=args.description_package,
-                lidar=args.lidar, hardware_config=hardware_config))
+                lidar=args.lidar, hardware_config=hardware_config, frame_prefix=args.frame_prefix))
 
 
 if __name__ == '__main__':

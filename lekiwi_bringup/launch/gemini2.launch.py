@@ -24,8 +24,10 @@ def _boolean(context, name):
 def launch_setup(context):
     if not _boolean(context, 'enable_camera'):
         return []
+    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
     config = Path(FindPackageShare('lekiwi_bringup').perform(context)) / 'config/gemini2.yaml'
-    rates = yaml.safe_load(config.read_text())['/gemini2/gemini2']['ros__parameters']
+    rates = yaml.safe_load(config.read_text())['/**/gemini2/gemini2']['ros__parameters']
     for stream in ('color_fps', 'depth_fps'):
         if type(rates[stream]) is not int or rates[stream] not in (5, 10, 15, 30):
             raise RuntimeError(f'{config}: {stream} must be 5, 10, 15, or 30; automatic FPS is disabled')
@@ -71,6 +73,9 @@ def launch_setup(context):
             'enable_point_cloud': 'false',
             'enable_colored_point_cloud': pointcloud,
             'publish_tf': 'true',
+            # Every frame the driver publishes (RGB, depth, cloud, IMU) gets this robot's prefix,
+            # rooted at the URDF's <prefix>gemini2_link.
+            'tf_prefix': prefix,
         }.items(),
     )
     # image_transport loads every installed plugin per topic; keep only the useful ones.

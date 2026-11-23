@@ -1,4 +1,4 @@
-nav2_target_node:
+/**/nav2_target_node:
   ros__parameters:
     map_frame: map
     base_frame: base_footprint

@@ -8,7 +8,7 @@ def velocity_overrides(teleop_path, params_path=None):
     """Return per-node parameter overrides; reject missing or unsafe axis scales."""
     with open(teleop_path) as stream:
         config = yaml.safe_load(stream)
-    axes = config['joy_teleop']['ros__parameters']['teleop']['axis_mappings']
+    axes = config['/**/joy_teleop']['ros__parameters']['teleop']['axis_mappings']
     limits = []
     for name in ('twist-linear-x', 'twist-linear-y', 'twist-angular-z'):
         scale = axes[name]['scale']
@@ -23,7 +23,7 @@ def velocity_overrides(teleop_path, params_path=None):
     plugin_ids = ['FollowPath']
     if params_path is not None:
         with open(params_path) as stream:
-            nav_params = yaml.safe_load(stream)['controller_server']['ros__parameters']
+            nav_params = yaml.safe_load(stream)['/**/controller_server']['ros__parameters']
         plugin_ids = [plugin_id for plugin_id in nav_params['controller_plugins']
                       if nav_params[plugin_id]['plugin'] == 'nav2_mppi_controller::MPPIController']
         if not plugin_ids:

@@ -1,5 +1,5 @@
 # Real Gemini 2 stream settings, read by gemini2.launch.py (every key is required).
-/gemini2/gemini2:
+/**/gemini2/gemini2:
   ros__parameters:
     color_fps: 15
     depth_fps: 5
@@ -16,10 +16,10 @@
     laser_energy_level: 2  # IR projector power; -1 = device default. Lower draws less (start-up USB disconnects); the driver logs the valid range at launch
 
 # Cloudini compression of the registered, colored Gemini 2 point cloud at 1 cm resolution (enough for visualization).
-/gemini2_cloudini_compressor:
+/**/gemini2_cloudini_compressor:
   ros__parameters:
     compressing: true
-    topic_input: "/gemini2/depth_registered/points"
-    topic_output: "/gemini2/depth_registered/points/compressed"
+    topic_input: "gemini2/depth_registered/points"
+    topic_output: "gemini2/depth_registered/points/compressed"
     resolution: 0.01
     filter_points: true  # drop invalid points and duplicates within a voxel

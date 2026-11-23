@@ -42,8 +42,8 @@ class GeminiCloud(Node):
     def __init__(self):
         super().__init__('gemini2_cloud')
         self.rgb_pub = self.create_publisher(
-            PointCloud2, '/gemini2/depth_registered/points', 5)
-        self.create_subscription(PointCloud2, '/_gemini2/registered_points',
+            PointCloud2, 'gemini2/depth_registered/points', 5)
+        self.create_subscription(PointCloud2, '_gemini2/registered_points',
                                  lambda msg: self.rgb_pub.publish(finite_cloud(msg)),
                                  qos_profile_sensor_data)
 

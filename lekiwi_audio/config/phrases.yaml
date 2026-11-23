@@ -1,56 +1,56 @@
 services:
-  /emergency_stop:
+  emergency_stop:
     "true":
       success: "Emergency stop enabled"
     "false":
       success: "Emergency stop disabled"
 
-  /twist_switch:
+  twist_switch:
     "true":
       success: "Autonomous mode"
     "false":
       success: "Tele-op mode"
 
-  /record_waypoint:
+  record_waypoint:
     "true":
       success: "Waypoint recorded"
       failure: "Error"
 
-  /nav2_send_goal:
+  nav2_send_goal:
     "true":
       success: "Sending navigation goal"
       failure: "Navigation goal rejected"
 
-  /reset_waypoints:
+  reset_waypoints:
     "true":
       success: "Waypoints reset"
 
-  /waypoint_follow:
+  waypoint_follow:
     "true":
       success: "Waypoint following enabled"
       failure: "No waypoints found"
     "false":
       success: "Waypoint following disabled"
 
-  /save_map:
+  save_map:
     "true":
       success: "Saving map"
       failure: "Error"
 
   # No "false" phrase - once-per-edge announcements only.
-  /battery_low:
+  battery_low:
     "true":
       success: "Battery low"
 
-  /battery_critical:
+  battery_critical:
     "true":
       success: "Battery critical"
 
-  /battery_full:
+  battery_full:
     "true":
       success: "Battery full"
 
-  /charger_connected:
+  charger_connected:
     "true":
       success: "Charger connected"
     "false":

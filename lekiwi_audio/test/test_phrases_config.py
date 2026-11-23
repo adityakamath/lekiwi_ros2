@@ -44,9 +44,9 @@ class TestPhrasesConfig:
         assert isinstance(self.services, dict)
         assert len(self.services) > 0
 
-    def test_service_names_start_with_slash(self):
+    def test_service_names_are_relative(self):
         for service in self.services:
-            assert service.startswith('/'), f'{service!r} should be a fully-qualified service name'
+            assert not service.startswith('/'), f'{service!r} must be relative so it follows the robot namespace'
 
     def test_request_keys_are_true_or_false(self):
         for service, state_map in self.services.items():

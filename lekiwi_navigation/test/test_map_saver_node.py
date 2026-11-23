@@ -82,3 +82,26 @@ class TestOnSerializeDoneGuard:
         node._on_serialize_done(future, gen=1)
         node._save_starting_pose.assert_called_once()
         assert node._saving is False
+
+
+class TestStartingPoseFrames:
+
+    def test_frames_default_to_the_unprefixed_names(self, node):
+        assert node.get_parameter('map_frame').value == 'map'
+        assert node.get_parameter('base_frame').value == 'base_footprint'
+
+    @pytest.mark.parametrize('prefix', ['', 'robot1/'])
+    def test_starting_pose_is_looked_up_between_the_configured_frames(self, node, tmp_path, prefix):
+        from geometry_msgs.msg import TransformStamped
+        from unittest.mock import patch
+        from rclpy.parameter import Parameter
+        node.set_parameters([Parameter('map_frame', value=f'{prefix}map'),
+                             Parameter('base_frame', value=f'{prefix}base_footprint')])
+        node._map_name = str(tmp_path / 'map')
+        pose = TransformStamped()
+        pose.transform.translation.x, pose.transform.translation.y = 1.0, 2.0
+        pose.transform.rotation.w = 1.0
+        with patch('lekiwi_navigation.map_saver_node.lookup_transform', return_value=pose) as lookup:
+            node._save_starting_pose()
+        lookup.assert_called_once_with(f'{prefix}map', f'{prefix}base_footprint')
+        assert (tmp_path / 'starting_pose.yaml').read_text().startswith('theta: 0.0')

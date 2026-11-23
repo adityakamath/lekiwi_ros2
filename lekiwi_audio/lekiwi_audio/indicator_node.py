@@ -41,23 +41,23 @@ import yaml
 DEFAULT_SPEAKER_DEVICE = 'plughw:CARD=C16K6Ch,DEV=0'
 
 DEFAULT_SERVICES = [
-    '/emergency_stop',
-    '/twist_switch',
-    '/record_waypoint',
-    '/reset_waypoints',
-    '/nav2_send_goal',
-    '/waypoint_follow',
-    '/save_map',
-    '/battery_low',
-    '/battery_critical',
-    '/battery_full',
-    '/charger_connected',
+    'emergency_stop',
+    'twist_switch',
+    'record_waypoint',
+    'reset_waypoints',
+    'nav2_send_goal',
+    'waypoint_follow',
+    'save_map',
+    'battery_low',
+    'battery_critical',
+    'battery_full',
+    'charger_connected',
 ]
 
 # Transient-local: late joiners get the last call replayed instead of silence.
 DEFAULT_STATE_SERVICES = [
-    '/emergency_stop', '/twist_switch', '/waypoint_follow',
-    '/battery_low', '/battery_critical', '/battery_full', '/charger_connected',
+    'emergency_stop', 'twist_switch', 'waypoint_follow',
+    'battery_low', 'battery_critical', 'battery_full', 'charger_connected',
 ]
 STATE_SERVICE_QOS = QoSProfile(
     depth=2,
@@ -70,7 +70,7 @@ STATE_SERVICE_QOS = QoSProfile(
 # Each name here gets a <name>.topic parameter (default below if listed, else required).
 # Add another action's status topic by extending this list - no code change needed.
 DEFAULT_GOAL_STATUS_WATCHERS = ['nav_goal']
-DEFAULT_GOAL_STATUS_TOPICS = {'nav_goal': '/navigate_to_pose/_action/status'}
+DEFAULT_GOAL_STATUS_TOPICS = {'nav_goal': 'navigate_to_pose/_action/status'}
 
 # Fixed by the action_msgs/GoalStatus wire format, not deployment-specific.
 _GOAL_OUTCOME_KEYS = {
