@@ -80,6 +80,15 @@ def test_generated_assets_are_current_and_portable(tmp_path):
         for node in root.iter():
             node.text = (node.text or '').strip()
             node.tail = ''
+    # Qhull's hull vertex order and last digits vary by SciPy version: compare shape and positions, not text.
+    for name, (want, have) in {m.get('name'): (m, a) for m, a in zip(expected.iter('mesh'), actual.iter('mesh'))
+                               if m.get('vertex')}.items():
+        points = [np.array(m.attrib.pop('vertex').split(), float).reshape(-1, 3) for m in (want, have)]
+        for m in (want, have):
+            m.attrib.pop('face')  # Triangulation of coplanar facets also varies; the hull points define the shape.
+        assert points[0].shape == points[1].shape, name
+        rows = [p[np.lexsort(p.round(4).T)] for p in points]
+        assert np.allclose(rows[0], rows[1], atol=1e-4), name
     assert ET.tostring(expected) == ET.tostring(actual)
     assert not actual.findall('.//include')
     mujoco.MjModel.from_xml_path(str(output))

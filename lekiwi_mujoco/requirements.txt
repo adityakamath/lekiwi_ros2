@@ -2,6 +2,6 @@
 mujoco==3.13.0
 numpy>=1.26,<3
 scipy>=1.11,<2
-opencv-python-headless>=4.8,<5
+opencv-python-headless>=4.8,<4.12  # 4.12+ requires numpy 2
 xacro>=2.0,<3
 PyYAML>=6,<7
