@@ -185,14 +185,14 @@ def test_submodule_headers_follow_the_frame_prefix(path, ns):
     spec = importlib.util.spec_from_file_location('submodule_launch', ROOT / path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    context = LaunchContext()
     try:
         description = module.generate_launch_description()
+        for entity in description.entities:
+            if isinstance(entity, DeclareLaunchArgument):
+                entity.execute(context)
     except PackageNotFoundError as error:
         pytest.skip(f'{error} (submodule package is not built in this environment)')
-    context = LaunchContext()
-    for entity in description.entities:
-        if isinstance(entity, DeclareLaunchArgument):
-            entity.execute(context)
     context.launch_configurations['frame_prefix'] = prefix(ns)
     node = next(e for e in description.entities if isinstance(e, Node))
     parameters = {}
