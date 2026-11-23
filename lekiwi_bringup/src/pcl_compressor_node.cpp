@@ -13,7 +13,7 @@
 
 namespace lekiwi_bringup {
 
-// Compresses a colored PointCloud2 with Cloudini so it can be streamed to Foxglove.
+// Compresses a colored PointCloud2 with Cloudini (V6 format, needs Cloudini 1.4+ readers) so it can be streamed to Foxglove.
 class PCLCompressorNode : public rclcpp::Node {
 public:
   explicit PCLCompressorNode(const rclcpp::NodeOptions& options)
@@ -94,14 +94,6 @@ private:
     try {
       auto info = Cloudini::ConvertToEncodingInfo(*msg, resolution_);
 
-      // Packed color is a float32 field: quantizing it would corrupt the colors
-      for (auto& field : info.fields) {
-        if (field.name == "rgb" || field.name == "rgba" ||
-            field.name == "bgr" || field.name == "bgra") {
-          field.resolution = std::nullopt;
-        }
-      }
-
       std::vector<uint8_t> filtered;
       const uint8_t* data = msg->data.data();
       size_t data_size = msg->data.size();
@@ -116,8 +108,6 @@ private:
         info.height = height;
       }
 
-      Cloudini::PointcloudEncoder encoder(info);
-
       point_cloud_interfaces::msg::CompressedPointCloud2 result;
       result.header = msg->header;
       result.width = width;
@@ -131,7 +121,7 @@ private:
 
       result.compressed_data.resize(data_size);
       Cloudini::ConstBufferView input(data, data_size);
-      auto compressed_size = encoder.encode(input, result.compressed_data);
+      auto compressed_size = encoder_cache_.get(info).encode(input, result.compressed_data);
       result.compressed_data.resize(compressed_size);
 
       pub_->publish(result);
@@ -143,6 +133,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
   rclcpp::Publisher<point_cloud_interfaces::msg::CompressedPointCloud2>::SharedPtr pub_;
 
+  Cloudini::PointcloudEncoderCache encoder_cache_;  // one encoder for the stream; it reuses its choices between clouds
   std::unordered_set<uint64_t> seen_;
   bool compressing_;
   bool filter_points_;

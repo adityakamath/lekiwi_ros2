@@ -21,7 +21,7 @@ The top-level launch files for LeKiwi. One command starts the whole system (cont
 
 ## Requirements
 
-Build the packages and drivers described in the [repository installation instructions](../README.md#installation). The C++ point-cloud compressor requires `cloudini_lib`, `cloudini_ros`, `point_cloud_interfaces`, `rclcpp` and `rclcpp_components`; make these packages available in the workspace or underlay before building bringup. The real Gemini 2 driver is built separately below.
+Build the packages and drivers described in the [repository installation instructions](../README.md#installation). The C++ point-cloud compressor requires `cloudini_lib`, `cloudini_ros`, `point_cloud_interfaces`, `rclcpp` and `rclcpp_components`; make these packages available in the workspace or underlay before building bringup. Use Cloudini 1.4.0 or newer: it writes the V6 wire format, so the Foxglove Cloudini extension must be 1.4.0 or newer too. The real Gemini 2 driver is built separately below.
 
 ## Stable device names (udev)
 
@@ -166,7 +166,7 @@ The Gemini 2 also has an accelerometer and gyroscope, off by default. Set `enabl
 `pointcloud:=true` enables `/gemini2/depth_registered/points`. On real hardware
 it also starts `PCLCompressorNode`, which drops invalid/duplicate voxel points,
 compresses XYZ at 1 cm resolution while preserving RGB, and publishes Cloudini
-messages on `/gemini2/depth_registered/points/compressed`. Its settings are in
+messages on `/gemini2/depth_registered/points/compressed`. One encoder serves the whole stream, so it reuses its choices between clouds. Its settings are in
 `config/gemini2.yaml`. Simulation publishes the raw colored cloud without
 this compressor. Direct `gemini2.launch.py` calls additionally accept
 `pointcloud_decimation` (default 2), `serial_number` and `usb_port`.
