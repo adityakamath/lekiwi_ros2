@@ -28,8 +28,7 @@ def launch_setup(context):
                 f"[laser.launch.py] custom_filter '{custom_filter_name}' not found: "
                 f"expected {filter_config_file}."
             )
-    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
-    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    prefix = LaunchConfiguration('frame_prefix').perform(context)
     laser_params = [config_file, {'frame_id': f'{prefix}laser_frame'}]
     laser_remappings = []
     if filter_config_file:
@@ -61,6 +60,8 @@ def launch_setup(context):
 def generate_launch_description():
     """Declare custom_filter and launch the laser stack via launch_setup."""
     declared_arguments = [
+        DeclareLaunchArgument('frame_prefix', default_value='',
+                              description='TF frame prefix, e.g. robot1/; set by lekiwi.launch.py.'),
         DeclareLaunchArgument(
             'custom_filter',
             default_value='',

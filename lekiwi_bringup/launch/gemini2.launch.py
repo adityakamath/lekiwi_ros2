@@ -24,8 +24,7 @@ def _boolean(context, name):
 def launch_setup(context):
     if not _boolean(context, 'enable_camera'):
         return []
-    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
-    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    prefix = LaunchConfiguration('frame_prefix').perform(context)
     config = Path(FindPackageShare('lekiwi_bringup').perform(context)) / 'config/gemini2.yaml'
     rates = yaml.safe_load(config.read_text())['/**/gemini2/gemini2']['ros__parameters']
     for stream in ('color_fps', 'depth_fps'):
@@ -115,6 +114,8 @@ def launch_setup(context):
 
 def generate_launch_description():
     return LaunchDescription([
+        DeclareLaunchArgument('frame_prefix', default_value='',
+                              description='TF frame prefix, e.g. robot1/; set by lekiwi.launch.py.'),
         DeclareLaunchArgument('enable_camera', default_value='true',
                               description='Start the camera driver and streaming helpers.'),
         DeclareLaunchArgument('pointcloud', default_value='false',

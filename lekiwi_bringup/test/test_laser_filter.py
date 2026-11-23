@@ -16,7 +16,7 @@ def _nodes(**arguments):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     context = LaunchContext()
-    context.launch_configurations.update({'custom_filter': '', **arguments})
+    context.launch_configurations.update({'custom_filter': '', 'frame_prefix': '', **arguments})
     return {node.node_executable: node for node in module.launch_setup(context) if isinstance(node, Node)}
 
 

@@ -12,8 +12,11 @@ contact:
   damping: 0.00002
   armature: 0.000001
   chassis_radius: 0.108
-  chassis_half_height: 0.0575
-  chassis_center: [0.0, 0.0, 0.05025]
+  chassis_half_height: 0.02985  # chassis mesh spans z -0.007 to 0.0525; the tray collides above it
+  chassis_center: [0.0, 0.0, 0.02285]
+tray:
+  plate_top: 0.0915  # m, height of the tray plate's top face; the rim above it is split into cells
+  rim_cell: 0.015  # m, the rim is cut into square cells this size, each its own convex piece
 actuators:
   wheel:
     velocity_gain: 5.0

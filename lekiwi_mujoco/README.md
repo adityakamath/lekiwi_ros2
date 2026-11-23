@@ -34,12 +34,17 @@ Only the wheel needs a separate simplified visual copy:
 
 `respeaker_board_assembly.stl` combines the control board and its mounts and is
 reduced to 150,000 faces. Both URDF and MuJoCo use that same file.
-`speaker_assembly.stl` and `tray_assembly.stl` combine the speaker/mount and
-tray/spacers respectively; both fit MuJoCo's limit without simplification.
+`speaker_assembly.stl` combines the speaker and mount; it and the shelf meshes fit
+MuJoCo's limit without simplification.
 
-The split CAD meshes remain visual only. Contacts still use the approximate
-chassis cylinder and passive rollers; removing assemblies does not change that
-coarse chassis collision envelope. Masses and inertia come from the selected
+Every part mesh (sensors, plates, case, spacers) is also its own collision shape, as in
+the URDF. MuJoCo collides meshes as convex hulls, so the concave tray's collision is
+generated from `shelf_tray.stl` itself: the mesh is cut at the plate's top and the rim
+into small cells (`tray` in `config/mujoco.yaml`), and each piece is a convex hull of the
+mesh inside it. The chassis cylinder covers only the chassis (z -0.007 to 0.0525 m), so
+the parts above it collide as themselves. The wheels keep their passive rollers. Part
+meshes collide with scene objects only, never with each other or the chassis. Masses and
+inertia come from the selected
 URDF, including its lumped base estimate.
 
 ## Optional hardware

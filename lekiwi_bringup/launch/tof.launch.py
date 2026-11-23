@@ -5,9 +5,9 @@ Starts tof_imager_ros's lifecycle node with config/tof.yaml and takes it through
 activate; its point cloud is published on tof/pointcloud in tof_frame."""
 
 from launch import LaunchDescription
-from launch.actions import EmitEvent, OpaqueFunction, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, EmitEvent, OpaqueFunction, RegisterEventHandler
 from launch.events import matches_action
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import LifecycleNode
 from launch_ros.event_handlers import OnStateTransition
 from launch_ros.events.lifecycle import ChangeState
@@ -17,8 +17,7 @@ from lifecycle_msgs.msg import Transition
 
 def launch_setup(context):
     """Launch tof_imager_publisher as a lifecycle node and configure then activate it."""
-    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
-    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    prefix = LaunchConfiguration('frame_prefix').perform(context)
     tof_node = LifecycleNode(
         package='tof_imager_ros',
         executable='tof_imager_publisher',
@@ -46,4 +45,8 @@ def launch_setup(context):
 
 def generate_launch_description():
     """Launch the ToF imager, with its frame prefixed when a robot namespace is set."""
-    return LaunchDescription([OpaqueFunction(function=launch_setup)])
+    return LaunchDescription([
+        DeclareLaunchArgument('frame_prefix', default_value='',
+                              description='TF frame prefix, e.g. robot1/; set by lekiwi.launch.py.'),
+        OpaqueFunction(function=launch_setup),
+    ])

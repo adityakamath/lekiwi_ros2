@@ -5,7 +5,7 @@
   ros__parameters:
     global_frame: map
     robot_base_frame: base_footprint
-    odom_topic: /odometry/filtered
+    odom_topic: odometry/filtered
     bt_loop_duration: 10
     default_server_timeout: 20
     wait_for_service_timeout: 1000
@@ -157,7 +157,7 @@
         enabled: true
         observation_sources: scan
         scan:
-          topic: /scan
+          topic: scan
           max_obstacle_height: 2.0
           clearing: true
           marking: true
@@ -196,7 +196,7 @@
         enabled: true
         observation_sources: scan
         scan:
-          topic: /scan
+          topic: scan
           max_obstacle_height: 2.0
           clearing: true
           marking: true
@@ -301,7 +301,7 @@
     feedback: "OPEN_LOOP"
     max_accel: [1.0, 0.85, 3.4]
     max_decel: [-1.0, -0.85, -3.4]
-    odom_topic: /odometry/filtered
+    odom_topic: odometry/filtered
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
@@ -331,5 +331,5 @@
     observation_sources: ["scan"]
     scan:
       type: "scan"
-      topic: "/scan"
+      topic: "scan"
       enabled: true

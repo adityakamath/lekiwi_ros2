@@ -2,6 +2,7 @@
 """Launch the LeKiwi base and the assemblies selected in hardware.yaml."""
 
 
+import os
 import re
 import tempfile
 
@@ -10,7 +11,8 @@ import yaml
 from lekiwi_mujoco.hardware_config import load_hardware_config
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction, SetLaunchConfiguration, TimerAction)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node, PushRosNamespace
@@ -31,18 +33,23 @@ def _launch_arg_as_bool(context, name: str) -> bool:
 
 def launch_setup(context):
     """Build the robot's actions, placed under the robot namespace when one is set."""
-    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
+    namespace = LaunchConfiguration('namespace').perform(context).strip('/')
     if not re.fullmatch(r'([A-Za-z][A-Za-z0-9_]*(/[A-Za-z][A-Za-z0-9_]*)*)?', namespace):
         raise RuntimeError(
             f"[lekiwi.launch.py] Launch argument 'namespace' must be a valid ROS name "
             f"such as robot1, got {namespace!r}."
         )
-    return [GroupAction([PushRosNamespace(namespace), *_launch_actions(context, namespace)])]
+    # The TF frame prefix is 'robot1/' for namespace robot1 and '' for none; included launch files read it.
+    frame_prefix = os.path.join(namespace, '')
+    return [GroupAction([
+        PushRosNamespace(namespace),
+        SetLaunchConfiguration('frame_prefix', frame_prefix),
+        *_launch_actions(context, frame_prefix),
+    ])]
 
 
-def _launch_actions(context, namespace):
+def _launch_actions(context, prefix):
     """Validate arguments and include control, navigation and the configured base sensors."""
-    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
     hardware_config = LaunchConfiguration('hardware_config').perform(context)
     hardware = load_hardware_config(hardware_config)
     enable_camera       = _launch_arg_as_bool(context, 'enable_camera')
@@ -186,7 +193,6 @@ def _launch_actions(context, namespace):
         pkg_ina260 = FindPackageShare('ina260_battery_monitor').perform(context)
         actions.append(include(pkg_ina260, 'launch/battery_monitor.launch.py', {
             'battery_overrides_file': f'{pkg_bringup}/config/battery_overrides.yaml',
-            'battery_frame_id': f'{prefix}base_link',
         }))
 
     # Start the fitted Gemini 2 via the local driver launch.

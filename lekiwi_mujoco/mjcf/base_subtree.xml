@@ -7,7 +7,7 @@
   <freejoint/>
   <!-- Coarse chassis collision envelope. Split CAD meshes are visual only;
        removing sensors does not change this contact approximation. -->
-  <geom name="base_link_collision" type="cylinder" size="0.108 0.0575" pos="0 0 0.05025" group="3" material="base_transparent"/>
+  <geom name="base_link_collision" type="cylinder" size="0.108 0.02985" pos="0 0 0.02285" group="3" material="base_transparent"/>
   <!-- quat = Rz(base_offset_rz), base_offset_rz = 3*pi/2 (base.common.xacro) - given as an
        explicit quat, not euler, per the mesh-geom euler-composition bug (see ld06_lidar's
        fix). Z-span checked against the collision cylinder above: matches within ~1mm. -->

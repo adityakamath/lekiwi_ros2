@@ -5,6 +5,7 @@ exactly the unprefixed names the robot always had and a named one must prefix ev
 """
 import importlib.util
 import json
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -14,7 +15,8 @@ import yaml
 
 from launch import LaunchContext
 from launch.actions import DeclareLaunchArgument, GroupAction
-from launch_ros.actions import PushRosNamespace
+from launch_ros.actions import Node, PushRosNamespace
+from launch_ros.utilities import evaluate_parameters
 
 from launch_snapshot import snapshot
 
@@ -41,8 +43,6 @@ CONFIGS = [
         'lekiwi_navigation/config/*/*.yaml', 'lekiwi_mujoco/config/mujoco_laser_filter.yaml')
         for p in ROOT.glob(pattern)),
 ]
-# These absolute names are given a namespaced value by the launch files instead.
-ABSOLUTE_ALLOWED = {'lekiwi_navigation/config/nav2/nav2.yaml'}
 
 
 @pytest.fixture(params=['', 'robot1'], ids=['no_namespace', 'robot1'])
@@ -60,7 +60,9 @@ def root(ns):
 
 def records(case, ns, **extra):
     path, overrides = CASES[case]
-    return snapshot(ROOT / path, {**overrides, 'namespace': ns, **extra})
+    # What lekiwi.launch.py and PushRosNamespace set for the files it includes.
+    context = {'namespace': ns, 'frame_prefix': prefix(ns), 'ros_namespace': os.path.join('/', ns)}
+    return snapshot(ROOT / path, {**overrides, **context, **extra})
 
 
 def nodes(case, ns, **extra):
@@ -118,8 +120,6 @@ def test_params_files_match_a_node_in_any_namespace(config):
 @pytest.mark.parametrize('config', CONFIGS)
 def test_configured_names_are_relative(config):
     """An absolute topic or service name ignores the robot namespace."""
-    if config in ABSOLUTE_ALLOWED:
-        return
     content = yaml.safe_load((ROOT / config).read_text())
     absolute = [(key, value) for key, value in walk(content)
                 if isinstance(value, str) and value.startswith('/')
@@ -176,22 +176,39 @@ def test_invalid_namespace_is_rejected(namespace):
         module.launch_setup(_lekiwi_context(module, namespace=namespace))
 
 
-def test_battery_header_frame(ns):
-    includes = [r for r in records('lekiwi', ns) if r['kind'] == 'IncludeLaunchDescription']
-    arguments = {key: value for r in includes for key, value in r['kwargs'].get('launch_arguments', [])}
-    assert arguments['battery_frame_id'] == f'{prefix(ns)}base_link'
+@pytest.mark.parametrize('path', [
+    'modules/ina260_battery_monitor/launch/battery_monitor.launch.py',
+    'modules/sts_hardware_interface/launch/motor_diagnostics.launch.py'])
+def test_submodule_headers_follow_the_frame_prefix(path, ns):
+    """The battery and motor diagnostics launches name their header frame from the shared frame_prefix."""
+    spec = importlib.util.spec_from_file_location('submodule_launch', ROOT / path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    description = module.generate_launch_description()
+    context = LaunchContext()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.execute(context)
+    context.launch_configurations['frame_prefix'] = prefix(ns)
+    node = next(e for e in description.entities if isinstance(e, Node))
+    parameters = {}
+    for item in evaluate_parameters(context, node._Node__parameters):
+        if isinstance(item, dict):
+            parameters.update(item)
+    assert parameters['frame_id'] == f'{prefix(ns)}base_link'
 
 
 # ── control.launch.py ────────────────────────────────────────────────────────────────
 
 def test_control_frames_and_controller_manager(ns):
-    p, r = prefix(ns), root(ns)
-    spawners = [n['arguments'] for n in nodes('control_sim', ns) if n.get('executable') == 'spawner']
+    p = prefix(ns)
+    spawners = [n for n in nodes('control_sim', ns) if n.get('executable') == 'spawner']
     assert spawners
-    assert all(args[args.index('-c') + 1] == f'{r}/controller_manager' for args in spawners)
-    imu = next(a for a in spawners if a[0] == 'gemini2_imu_broadcaster')
-    assert imu[imu.index('--controller-ros-args') + 1] == (
-        f'--ros-args -r ~/imu:={r}/gemini2/gyro_accel/sample -p frame_id:={p}gemini2_accel_gyro_optical_frame')
+    # They start outside the namespace scope, so each carries the namespace and names the manager relatively.
+    assert all(n['arguments'][n['arguments'].index('-c') + 1] == 'controller_manager' for n in spawners)
+    assert all(n['namespace'] == os.path.join('/', ns) for n in spawners)
+    imu = next(n['arguments'] for n in spawners if n['arguments'][0] == 'gemini2_imu_broadcaster')
+    assert imu[imu.index('--controller-ros-args') + 1] == '--ros-args -r ~/imu:=gemini2/gyro_accel/sample'
     assert dicts(node('control_sim', ns, 'robot_state_publisher')['parameters'])['frame_prefix'] == p
     assert dicts(node('control_sim', ns, 'tof_pointcloud')['parameters'])['frame_id'] == f'{p}tof_frame'
     assert dicts(node('control_sim', ns, 'control_support_node')['parameters'])['frame_id'] == f'{p}base_link'
@@ -225,11 +242,10 @@ def test_simulated_sensors_use_this_robots_topics_and_frames(ns):
 
 
 def test_simulated_camera_nodes(ns):
-    p, r = prefix(ns), root(ns)
-    compressor = node('control_sim', ns, 'gemini2_rgb_compressor')
-    assert ('in', f'{r}/gemini2/color/image_raw') in remaps(compressor)
+    p = prefix(ns)
+    assert 'republish' not in [n.get('executable') for n in nodes('control_sim', ns)]  # It aborts in a namespace.
     cloud = node('control_sim', ns, 'gemini2_colored_pointcloud')
-    assert ('points', f'{r}/_gemini2/registered_points') in remaps(cloud)
+    assert ('points', '_gemini2/registered_points') in remaps(cloud)
     optical = node('control_sim', ns, 'gemini2_optical_frame_publisher')['arguments']
     assert optical[:4] == ['--frame-id', f'{p}gemini2_link', '--child-frame-id', f'{p}gemini2_color_optical_frame']
     imu = node('control_sim', ns, 'gemini2_imu_tf')['arguments']
@@ -240,12 +256,6 @@ def test_controller_manager_is_not_remapped(ns):
     """ros2_control deprecates remapping arguments on the controller_manager node and warns about them."""
     for package, case in (('controller_manager', 'control'), ('mujoco_ros2_control', 'control_sim')):
         assert remaps(node(case, ns, 'ros2_control_node', package)) == []
-
-
-def test_motor_diagnostics_header_frame(ns):
-    includes = [r for r in records('control', ns) if r['kind'] == 'IncludeLaunchDescription']
-    arguments = {key: value for r in includes for key, value in r['kwargs'].get('launch_arguments', [])}
-    assert arguments['frame_id'] == f'{prefix(ns)}base_link'
 
 
 def test_teleop_header_frame(ns):
@@ -310,22 +320,18 @@ def test_nav2_frames_topics_and_tf(case, ns):
 
 
 def test_nav2_override_file_matches_this_robot(ns):
-    p, r = prefix(ns), root(ns)
+    p = prefix(ns)
     container = next(n for n in nodes('nav2', ns) if n.get('name') == 'nav2_container')
     overrides = next(item for item in container['parameters'] if isinstance(item, dict) and '<temp yaml>' in item
                      and '/**/bt_navigator' in item['<temp yaml>'])['<temp yaml>']
-    ros = lambda key: overrides[key]['ros__parameters']  # noqa: E731
-    scan = {'topic': f'{r}/scan'}
-    assert ros('/**/bt_navigator') == {
-        'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}map', 'odom_topic': f'{r}/odometry/filtered'}
-    assert ros('/**/behavior_server') == {
-        'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}map', 'local_frame': f'{p}odom'}
-    assert ros('/**/velocity_smoother') == {'odom_topic': f'{r}/odometry/filtered'}
-    assert ros('/**/collision_monitor') == {
-        'base_frame_id': f'{p}base_footprint', 'odom_frame_id': f'{p}odom', 'scan': scan}
-    local = overrides['/**/local_costmap']['local_costmap']['ros__parameters']
-    assert local == {'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}odom',
-                     'obstacle_layer': {'scan': scan}}
-    global_ = overrides['/**/global_costmap']['global_costmap']['ros__parameters']
-    assert global_ == {'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}map',
-                       'obstacle_layer': {'scan': scan}}
+    assert overrides == {
+        '/**/bt_navigator': {'ros__parameters': {'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}map'}},
+        '/**/behavior_server': {'ros__parameters': {
+            'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}map', 'local_frame': f'{p}odom'}},
+        '/**/collision_monitor': {'ros__parameters': {
+            'base_frame_id': f'{p}base_footprint', 'odom_frame_id': f'{p}odom'}},
+        '/**/local_costmap': {'local_costmap': {'ros__parameters': {
+            'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}odom'}}},
+        '/**/global_costmap': {'global_costmap': {'ros__parameters': {
+            'robot_base_frame': f'{p}base_footprint', 'global_frame': f'{p}map'}}},
+    }

@@ -19,7 +19,7 @@ def _launch(overrides, tmp_path):
             action.execute(context)
     config = tmp_path / 'hardware.yaml'
     config.write_text(yaml.safe_dump(overrides))
-    context.launch_configurations.update(use_mock='true', hardware_config=str(config))
+    context.launch_configurations.update(use_mock='true', hardware_config=str(config), frame_prefix='')
     return module, context, config
 
 
@@ -152,10 +152,10 @@ def test_simulation_does_not_start_physical_diagnostic_nodes(tmp_path, monkeypat
 
 
 
-@pytest.mark.parametrize('namespace,prefix', [('', ''), ('robot1', 'robot1/')])
-def test_model_builder_receives_the_frame_prefix(namespace, prefix, tmp_path, monkeypatch):
+@pytest.mark.parametrize('prefix', ['', 'robot1/'])
+def test_model_builder_receives_the_frame_prefix(prefix, tmp_path, monkeypatch):
     module, context, _ = _launch({}, tmp_path)
-    context.launch_configurations.update(ros2_control_hardware_type='mujoco', namespace=namespace)
+    context.launch_configurations.update(ros2_control_hardware_type='mujoco', frame_prefix=prefix)
     commands = []
     monkeypatch.setattr(module.subprocess, 'run', lambda command, **kwargs: commands.append(command))
     module.launch_setup(context)

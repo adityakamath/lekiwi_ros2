@@ -27,7 +27,7 @@ def _unwrapped(actions):
     from launch.actions import GroupAction
     if len(actions) != 1 or not isinstance(actions[0], GroupAction):
         return actions
-    return [a for a in actions[0].get_sub_entities() if not type(a).__name__.startswith(('Push', 'Pop'))]
+    return [a for a in actions[0].get_sub_entities() if not type(a).__name__.startswith(('Push', 'Pop', 'SetLaunchConfiguration'))]
 
 
 def _validate_setup(package, filename, overrides):
@@ -201,7 +201,7 @@ def test_gemini2_cloudini_compressor_only_with_pointcloud(monkeypatch):
 
     def setup(pointcloud):
         context = LaunchContext()
-        context.launch_configurations.update(enable_camera='true', pointcloud=pointcloud,
+        context.launch_configurations.update(enable_camera='true', pointcloud=pointcloud, frame_prefix='',
                                              pointcloud_decimation='2', serial_number='', usb_port='')
         return _unwrapped(module.launch_setup(context))
 

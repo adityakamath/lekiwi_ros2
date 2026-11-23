@@ -14,7 +14,7 @@ PACKAGE = Path(__file__).resolve().parents[1]
 DESCRIPTION = PACKAGE.parent / 'lekiwi_description'
 SPLIT_LINKS = ['rpi5_case_link', 'gemini2_mount_link',
                'respeaker_board_link', 'speaker_link', 'lidar_plate_link',
-               'tray_link']
+               'tray_link', 'shelf_spacers_link']
 
 
 def test_split_visuals_follow_urdf_and_fit_mesh_loader():
@@ -31,7 +31,8 @@ def test_split_visuals_follow_urdf_and_fit_mesh_loader():
         geom = next(iter(body.geoms))
         assert np.allclose(geom.pos, expected.pos) and np.allclose(geom.quat, expected.quat)
     assert Path(spec.mesh('lekiwi_base_visual').file).name == 'lekiwi_base.stl'
-    assert Path(spec.mesh('tray_assembly_visual').file).name == 'tray_assembly.stl'
+    assert Path(spec.mesh('shelf_tray_visual').file).name == 'shelf_tray.stl'
+    assert Path(spec.mesh('shelf_spacers_35mm_visual').file).name == 'shelf_spacers_35mm.stl'
     for mesh in spec.meshes:
         path = Path(mesh.file)
         if path.suffix == '.stl':
@@ -46,7 +47,7 @@ def test_split_visuals_follow_urdf_and_fit_mesh_loader():
     ({'rpi5': False}, ['rpi5_case_link'], ['base_link', 'tray_link']),
     ({'respeaker': False}, ['mic_link', 'respeaker_board_link',
                             'speaker_link'], ['laser_link', 'tof_link']),
-    ({'shelf': False}, ['tray_link'], ['laser_link']),
+    ({'shelf': False}, ['tray_link', 'shelf_spacers_link'], ['laser_link']),
     ({'gemini2': False},
      ['gemini2_link', 'gemini2_mount_link'], ['laser_frame', 'imu_link', 'imu_frame', 'rpi5_case_link']),
 ])
@@ -135,6 +136,41 @@ def test_disabling_all_optional_assemblies_keeps_only_the_base(tmp_path):
     config.write_text(yaml.safe_dump(dict.fromkeys(HARDWARE_DEFAULTS, False)))
     spec = builder.build_robot_spec(hardware_config=config)
     for name in ('lidar_plate_link', 'laser_link', 'laser_frame', 'imu_link', 'imu_frame', 'tof_link', 'mic_link', 'speaker_link', 'respeaker_board_link',
-                 'gemini2_link', 'gemini2_mount_link', 'tray_link', 'rpi5_case_link'):
+                 'gemini2_link', 'gemini2_mount_link', 'tray_link', 'shelf_spacers_link', 'rpi5_case_link'):
         assert spec.body(name) is None
     spec.compile()
+
+
+@pytest.mark.parametrize('x,y', [(0.05, 0.0), (0.1, 0.0), (0.02, 0.1)])
+def test_block_rests_on_the_tray_plate_inside_its_rim(x, y):
+    import mujoco
+    spec = builder.build_spec('flat')
+    block = spec.worldbody.add_body(name='block')
+    block.add_freejoint()
+    block.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[.015, .015, .015], mass=.05)
+    model = spec.compile()
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    base = model.body('base_link').id
+    rotation = data.xmat[base].reshape(3, 3)
+    start = model.jnt_qposadr[model.body_jntadr[model.body('block').id]]
+    data.qpos[start:start + 3] = data.xpos[base] + rotation @ [x, y, 0.3]
+    for _ in range(2000):
+        mujoco.mj_step(model, data)
+    rest = rotation.T @ (data.xpos[model.body('block').id] - data.xpos[base])
+    assert rest[2] == pytest.approx(0.0915 + 0.015, abs=2e-3)  # plate top plus half the block
+
+
+def test_tray_collision_pieces_follow_the_stl_volume():
+    from scipy.spatial import ConvexHull
+    model = builder.build_spec('flat').compile()
+    pieces = [geom for geom in range(model.ngeom) if (model.geom(geom).name or '').startswith('tray_link_collision')]
+    assert pieces
+    volume = 0
+    for geom in pieces:
+        mesh = model.geom_dataid[geom]
+        start = model.mesh_vertadr[mesh]
+        volume += ConvexHull(model.mesh_vert[start:start + model.mesh_vertnum[mesh]]).volume
+    triangles = builder.stl_triangles(DESCRIPTION / 'meshes/shelf_tray.stl')
+    stl_volume = abs(np.einsum('ij,ij->i', triangles[:, 0], np.cross(triangles[:, 1], triangles[:, 2])).sum() / 6)
+    assert stl_volume <= volume <= 1.15 * stl_volume  # Hulls only add material, within the cell chord error.

@@ -1,12 +1,13 @@
-"""Convert ideal rendered depth to the Orbbec registered-depth wire format."""
+"""Convert ideal rendered depth to the Orbbec registered-depth wire format, and JPEG-compress the color image."""
 import copy
 
+import cv2
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import CameraInfo, Image
+from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 
 
 def depth_millimeters(msg):
@@ -21,6 +22,23 @@ def depth_millimeters(msg):
     return result
 
 
+def jpeg_compressed(msg, quality=95):
+    """Encode an rgb8 or bgr8 color image as a JPEG CompressedImage, as image_transport's compressed plugin does."""
+    if msg.encoding not in ('rgb8', 'bgr8'):
+        raise ValueError(f'Expected rgb8 or bgr8 color, got {msg.encoding}')
+    rows = np.frombuffer(msg.data, np.uint8).reshape(msg.height, msg.step)
+    pixels = rows[:, :msg.width * 3].reshape(msg.height, msg.width, 3)
+    bgr = cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR) if msg.encoding == 'rgb8' else pixels
+    ok, jpeg = cv2.imencode('.jpg', bgr, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if not ok:
+        raise ValueError('JPEG encoding failed')
+    out = CompressedImage()
+    out.header = msg.header
+    out.format = 'jpeg'
+    out.data = jpeg.tobytes()
+    return out
+
+
 class GeminiDepth(Node):
     def __init__(self):
         super().__init__('gemini2_depth')
@@ -30,10 +48,16 @@ class GeminiDepth(Node):
                                  qos_profile_sensor_data)
         self.create_subscription(CameraInfo, 'gemini2/color/camera_info', self.on_info,
                                  qos_profile_sensor_data)
+        self.color_pub = self.create_publisher(CompressedImage, 'gemini2/color/image_raw/compressed', qos_profile_sensor_data)
+        self.create_subscription(Image, 'gemini2/color/image_raw', self.on_color, qos_profile_sensor_data)
 
     def on_info(self, msg):
         # D2C registration uses exactly the simulated color intrinsics and frame.
         self.info_pub.publish(msg)
+
+    def on_color(self, msg):
+        if self.color_pub.get_subscription_count():  # Encode only while someone is listening.
+            self.color_pub.publish(jpeg_compressed(msg))
 
     def on_depth(self, msg):
         out = copy.copy(msg)

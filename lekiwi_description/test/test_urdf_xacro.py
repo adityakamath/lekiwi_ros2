@@ -186,11 +186,11 @@ _CAMERA_LINKS = {'gemini2_link', 'gemini2_imu_frame', 'gemini2_link_model_origin
     ({'lidar': False, 'sparkfun_sensor': False}, _LASER_LINKS | _TOF_LINKS | {'lidar_plate_link'}, {'base_link'}),
     ({'respeaker': False}, _AUDIO_LINKS, _LASER_LINKS | _TOF_LINKS | _CAMERA_LINKS),
     ({'gemini2': False}, _CAMERA_LINKS, _AUDIO_LINKS | _TOF_LINKS),
-    ({'shelf': False}, {'tray_link'}, _AUDIO_LINKS | _LASER_LINKS),
+    ({'shelf': False}, {'tray_link', 'shelf_spacers_link'}, _AUDIO_LINKS | _LASER_LINKS),
     ({'sparkfun_sensor': False}, _TOF_LINKS, _AUDIO_LINKS | _LASER_LINKS),
     ({'respeaker': False, 'gemini2': False, 'shelf': False, 'sparkfun_sensor': False},
      _AUDIO_LINKS | _TOF_LINKS | _CAMERA_LINKS |
-     {'tray_link'},
+     {'tray_link', 'shelf_spacers_link'},
      _LASER_LINKS | {'imu_link', 'imu_frame', 'base_link', 'base_footprint', 'rpi5_case_link', 'left_wheel_link', 'back_wheel_link', 'right_wheel_link'}),
 ])
 def test_hardware_presence_removes_complete_assemblies(settings, removed, retained, tmp_path):
@@ -238,7 +238,8 @@ def test_tray_assembly_follows_shelf_setting(tmp_path, shelf):
     root = ET.fromstring(stdout)
     has_tray = shelf == 'true'
     meshes = {m.get('filename').split('/')[-1] for m in root.findall('.//visual/geometry/mesh')}
-    assert ('tray_assembly.stl' in meshes) == has_tray
+    assert ('shelf_tray.stl' in meshes) == has_tray
+    assert ('shelf_spacers_35mm.stl' in meshes) == has_tray
     plate = root.find("link[@name='tray_link']")
     assert (plate is not None) == has_tray
     if plate is not None:

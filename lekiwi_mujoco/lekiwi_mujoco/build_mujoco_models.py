@@ -9,9 +9,12 @@ from contextlib import contextmanager
 import os
 import math
 from pathlib import Path
+import struct
 import xml.etree.ElementTree as ET
 
 import mujoco
+import numpy as np
+from scipy.spatial import ConvexHull, QhullError
 from lekiwi_mujoco.hardware_config import load_hardware_config
 from lekiwi_mujoco.mujoco_parameters import positive, sync_robot_parameters
 import yaml
@@ -159,6 +162,94 @@ def configure_base_components(spec, urdf, packages):
             spec.delete(mesh)
 
 
+def stl_triangles(path):
+    """Triangles of a binary STL as an (n, 3, 3) array."""
+    data = Path(path).read_bytes()
+    count = struct.unpack('<I', data[80:84])[0]
+    records = np.frombuffer(data[84:84 + 50 * count], dtype=np.dtype([('n', '<f4', 3), ('v', '<f4', (3, 3)), ('a', '<u2')]))
+    return records['v'].astype(float)
+
+
+def clip_polygons(polygons, normal, offset):
+    """Clip convex polygons to the half-space normal . x <= offset (Sutherland-Hodgman)."""
+    clipped = []
+    for polygon in polygons:
+        result = []
+        for index, point in enumerate(polygon):
+            other = polygon[(index + 1) % len(polygon)]
+            d_point, d_other = np.dot(normal, point) - offset, np.dot(normal, other) - offset
+            if d_point <= 0:
+                result.append(point)
+            if d_point * d_other < 0:
+                result.append(point + (other - point) * d_point / (d_point - d_other))
+        if len(result) >= 3:
+            clipped.append(result)
+    return clipped
+
+
+def add_tray_collision(spec, packages):
+    """Tray collision generated from shelf_tray.stl: convex hulls of the mesh cut into pieces.
+
+    MuJoCo collides meshes as convex hulls, so the concave tray would be a solid block. The mesh is cut at the
+    plate's top, and the rim into small grid cells; each piece is the hull of the mesh inside it, so the pieces
+    follow the STL to within a cell's chord error.
+    """
+    body = spec.body('tray_link')
+    visual = next(iter(body.geoms), None) if body is not None else None
+    if visual is None:
+        return
+    settings = yaml.safe_load((SIM_PACKAGE / 'config/mujoco.yaml').read_text())['tray']
+    triangles = stl_triangles(packages['lekiwi_description'] / 'meshes/shelf_tray.stl')
+    low, high = triangles.reshape(-1, 3).min(axis=0), triangles.reshape(-1, 3).max(axis=0)
+    split, cell = settings['plate_top'], positive(settings['rim_cell'], 'tray rim_cell')
+    polygons = [list(triangle) for triangle in triangles]
+    pieces = [clip_polygons(polygons, [0, 0, 1], split)]
+    # The plate's top face lies on the cut; keeping it would hull each cell into a solid block.
+    rim = [polygon for polygon in clip_polygons(polygons, [0, 0, -1], -split) if np.ptp([point[2] for point in polygon]) > 1e-9]
+    for i in range(int(low[0] // cell), int(high[0] // cell) + 1):
+        for j in range(int(low[1] // cell), int(high[1] // cell) + 1):
+            region = rim
+            for axis, lower, upper in ((0, i * cell, (i + 1) * cell), (1, j * cell, (j + 1) * cell)):
+                unit = np.eye(3)[axis]
+                region = clip_polygons(clip_polygons(region, unit, upper), -unit, -lower)
+            pieces.append(region)
+    pieces = [np.array([point for polygon in piece for point in polygon]) for piece in pieces if piece]
+    for number, points in enumerate(pieces):
+        try:
+            hull = ConvexHull(points)
+        except QhullError:
+            continue  # Degenerate sliver with no volume.
+        vertices, faces = points[hull.vertices], ConvexHull(points[hull.vertices]).simplices
+        name = f'shelf_tray_collision_{number}'
+        spec.add_mesh(name=name, uservert=vertices.flatten().astype(np.float32), userface=faces.flatten().astype(np.int32))
+        geom = body.add_geom(name=f'tray_link_collision_{number}', type=mujoco.mjtGeom.mjGEOM_MESH, meshname=name,
+                             group=3, mass=0)
+        geom.pos, geom.quat = visual.pos, visual.quat
+
+
+COLLIDES_WITH_OBJECTS = 4  # Contacts with scene objects only (bit 1), never with other robot meshes or rollers.
+
+
+def enable_mesh_collisions(spec):
+    """Turn on convex-hull collisions for every robot mesh except the chassis and wheels, which have proxies.
+
+    Parts above the chassis are welded to it, so contacts with base_link are excluded.
+    """
+    proxied = {'lekiwi_base_visual', 'omni_wheel_visual'}
+    bodies = set()
+    for geom in spec.geoms:
+        if geom.type != mujoco.mjtGeom.mjGEOM_MESH or geom.meshname in proxied:
+            continue
+        if geom.parent.name == 'tray_link' and geom.group == 2:
+            continue  # Visual only; the tray collides through its plate and rim.
+        geom.contype, geom.conaffinity = COLLIDES_WITH_OBJECTS, 1
+        spec.mesh(geom.meshname).maxhullvert = 64
+        bodies.add(spec.body(geom.parent.name).name)
+    for name in sorted(bodies):
+        if name != 'base_link':
+            spec.add_exclude(bodyname1=name, bodyname2='base_link')
+
+
 def build_robot_spec(*, control_dir=None, description_dir=None, hardware_config=None):
     """Return an editable native spec with absolute assets for future scene composition."""
     control = Path(control_dir).resolve() if control_dir else control_package()
@@ -172,6 +263,8 @@ def build_robot_spec(*, control_dir=None, description_dir=None, hardware_config=
     if urdf.find("link[@name='gemini2_link']") is not None:
         add_static_camera(spec, urdf, packages)
     sync_velocity_limits(spec, urdf, config)
+    add_tray_collision(spec, packages)
+    enable_mesh_collisions(spec)
     configure_physics(spec)
     return spec
 
@@ -314,6 +407,10 @@ def prefix_frames(xml, prefix):
     for body in root.iter('body'):
         if body.get('name') in ('laser_frame', 'tof_frame'):
             body.set('name', prefix + body.get('name'))
+    for exclude in root.iter('exclude'):
+        for key in ('body1', 'body2'):
+            if exclude.get(key) in ('laser_frame', 'tof_frame'):
+                exclude.set(key, prefix + exclude.get(key))
     return ET.tostring(root, encoding='unicode')
 
 

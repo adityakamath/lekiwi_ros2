@@ -17,7 +17,7 @@ def _parameter_files(**arguments):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     context = LaunchContext()
-    context.launch_configurations.update({'use_sim_time': 'false', 'joy': 'false', **arguments})
+    context.launch_configurations.update({'use_sim_time': 'false', 'joy': 'false', 'frame_prefix': '', **arguments})
     node = next(a for a in module.launch_setup(context) if isinstance(a, Node) and a.node_executable == 'joy_teleop')
     return [Path(str(entry._ParameterFile__param_file[0].text)) for entry in node._Node__parameters
             if hasattr(entry, '_ParameterFile__param_file')]

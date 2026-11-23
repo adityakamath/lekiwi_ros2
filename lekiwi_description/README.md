@@ -71,7 +71,7 @@ base_footprint
 
 The split base components have fixed joints to `base_link`, with their CAD coordinates and the same mesh rotation as `lekiwi_base.stl`. The Gemini 2 mount is lowered by 7 mm to seat its underside on the base upper plate (`gemini2_mount_base_offset_z`). Their mass remains part of the existing lumped base inertia.
 
-The merged `tray_assembly.stl` includes the tray and spacers in one fixed link. `speaker_assembly.stl` combines the speaker and mount, and `respeaker_board_assembly.stl` combines the control board and its mounting parts. These meshes retain their CAD positions and base rotation. The board assembly is reduced to 150,000 faces and shared with MuJoCo.
+`shelf_tray.stl` (charcoal) and `shelf_spacers_35mm.stl` (light grey) are separate fixed links, `tray_link` and `shelf_spacers_link`. `speaker_assembly.stl` combines the speaker and mount, and `respeaker_board_assembly.stl` combines the control board and its mounting parts. These meshes retain their CAD positions and base rotation. The board assembly is reduced to 150,000 faces and shared with MuJoCo.
 
 ## ToF imager
 

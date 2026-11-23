@@ -32,6 +32,12 @@
         </geometry>
         <material name="gemini2_charcoal"><color rgba="${charcoal_rgba}"/></material>
       </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://lekiwi_description/meshes/gemini2.stl"/>
+        </geometry>
+      </collision>
     </link>
     <joint name="gemini2_link_model_origin_joint" type="fixed">
       <parent link="gemini2_link"/>

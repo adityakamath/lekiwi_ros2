@@ -62,6 +62,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import LoadComposableNodes, Node, SetParameter
 from launch_ros.descriptions import ComposableNode, ParameterFile
 from launch_ros.substitutions import FindPackageShare
+from launch_ros.utilities import make_namespace_absolute, prefix_namespace
 
 _VALID_LOG_LEVELS = {'info', 'debug', 'warn', 'error'}
 
@@ -124,9 +125,7 @@ def launch_setup(context, *args, **kwargs):
     keepout_lifecycle_nodes = ['keepout_filter_mask_server', 'keepout_costmap_filter_info_server']
     speed_lifecycle_nodes = ['speed_filter_mask_server', 'speed_costmap_filter_info_server']
 
-    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
-    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
-    ns_path = f'/{namespace}'.rstrip('/')  # '' for the empty namespace
+    prefix = LaunchConfiguration('frame_prefix').perform(context)
 
     # No /tf remap: all robots share the one global /tf and tell themselves apart by frame prefix.
     remappings = [('/diagnostics', 'diagnostics')]
@@ -135,29 +134,20 @@ def launch_setup(context, *args, **kwargs):
     # allow_substs=True enables $(find ...) substitutions inside it if ever needed.
     configured_params = ParameterFile(params_file, allow_substs=True)
 
-    # Overrides of what nav2.yaml writes unprefixed or absolute: the frames, and the scan and
-    # odometry topics that the costmap child nodes cannot resolve relatively.
-    base_params = [configured_params]
+    # nav2.yaml names the frames unprefixed; each robot's carry its prefix.
     frames = {'robot_base_frame': f'{prefix}base_footprint'}
-    scan = {'topic': f'{ns_path}/scan'}  # copied per use: YAML aliases are not valid parameter files
-    odom_topic = f'{ns_path}/odometry/filtered'
-    namespace_overrides = {
-        '/**/bt_navigator': {'ros__parameters': {
-            **frames, 'global_frame': f'{prefix}map', 'odom_topic': odom_topic}},
+    frame_overrides = {
+        '/**/bt_navigator': {'ros__parameters': {**frames, 'global_frame': f'{prefix}map'}},
         '/**/behavior_server': {'ros__parameters': {
             **frames, 'global_frame': f'{prefix}map', 'local_frame': f'{prefix}odom'}},
-        '/**/velocity_smoother': {'ros__parameters': {'odom_topic': odom_topic}},
         '/**/collision_monitor': {'ros__parameters': {
-            'base_frame_id': f'{prefix}base_footprint', 'odom_frame_id': f'{prefix}odom',
-            'scan': dict(scan)}},
-        '/**/local_costmap': {'local_costmap': {'ros__parameters': {
-            **frames, 'global_frame': f'{prefix}odom', 'obstacle_layer': {'scan': dict(scan)}}}},
-        '/**/global_costmap': {'global_costmap': {'ros__parameters': {
-            **frames, 'global_frame': f'{prefix}map', 'obstacle_layer': {'scan': dict(scan)}}}},
+            'base_frame_id': f'{prefix}base_footprint', 'odom_frame_id': f'{prefix}odom'}},
+        '/**/local_costmap': {'local_costmap': {'ros__parameters': {**frames, 'global_frame': f'{prefix}odom'}}},
+        '/**/global_costmap': {'global_costmap': {'ros__parameters': {**frames, 'global_frame': f'{prefix}map'}}},
     }
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as overrides:
-        yaml.dump(namespace_overrides, overrides)
-    base_params.append(ParameterFile(overrides.name))
+        yaml.dump(frame_overrides, overrides)
+    base_params = [configured_params, ParameterFile(overrides.name)]
 
     # realpath resolves the --symlink-install symlink to the source tree, so this always
     # points at the real maps/ directory rather than the install/build tree.
@@ -325,7 +315,8 @@ def launch_setup(context, *args, **kwargs):
                 remappings=remappings,
             ),
             LoadComposableNodes(
-                target_container=f'{ns_path}/{container_name}',
+                target_container=make_namespace_absolute(
+                    prefix_namespace(context.launch_configurations.get('ros_namespace'), container_name)),
                 composable_node_descriptions=[
                     ComposableNode(
                         package=n['package'], plugin=n['plugin'], name=n['name'],
@@ -353,6 +344,8 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     """Declare Nav2 launch arguments and launch via launch_setup."""
     return LaunchDescription([
+        DeclareLaunchArgument('frame_prefix', default_value='',
+                              description='TF frame prefix, e.g. robot1/; set by lekiwi.launch.py.'),
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1'),
         DeclareLaunchArgument(
             'params_file',

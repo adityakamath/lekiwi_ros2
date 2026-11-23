@@ -69,8 +69,7 @@ def launch_setup(context, *args, **kwargs):
         slam_mode = 'amcl'
 
     pkg_nav = FindPackageShare('lekiwi_navigation').perform(context)
-    namespace = str(context.launch_configurations.get('namespace', '')).strip('/')
-    prefix = f'{namespace}/'.lstrip('/')  # '' for the empty namespace
+    prefix = LaunchConfiguration('frame_prefix').perform(context)
 
     if slam_mode in ('map', 'localize'):
         # ── slam_toolbox ────────────────────────────────────────────────────
@@ -236,6 +235,8 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     """Declare mission/map_name/use_sim_time and launch via launch_setup."""
     return LaunchDescription([
+        DeclareLaunchArgument('frame_prefix', default_value='',
+                              description='TF frame prefix, e.g. robot1/; set by lekiwi.launch.py.'),
         DeclareLaunchArgument(
             'mission', default_value='',
             description=(

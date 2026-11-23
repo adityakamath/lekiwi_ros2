@@ -103,19 +103,23 @@
 
     <!-- Shelf and spacers -->
     <xacro:if value="${has_shelf}">
-      <!-- Top plate link (same CAD frame as lekiwi_base.stl) -->
+      <!-- Spacers between the chassis and the tray -->
+      <xacro:lekiwi_base_component name="shelf_spacers" mesh="shelf_spacers_35mm"
+                                   material="base_light_grey" rgba="${light_grey_rgba}"/>
+
+      <!-- Tray (same CAD frame as lekiwi_base.stl) -->
       <link name="tray_link">
         <visual>
           <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
           <geometry>
-            <mesh filename="package://lekiwi_description/meshes/tray_assembly.stl"/>
+            <mesh filename="package://lekiwi_description/meshes/shelf_tray.stl"/>
           </geometry>
           <material name="base_charcoal"><color rgba="${charcoal_rgba}"/></material>
         </visual>
         <collision>
           <origin xyz="0 0 0" rpy="0 0 ${base_offset_rz}"/>
           <geometry>
-            <mesh filename="package://lekiwi_description/meshes/tray_assembly.stl"/>
+            <mesh filename="package://lekiwi_description/meshes/shelf_tray.stl"/>
           </geometry>
         </collision>
         <inertial>
@@ -124,7 +128,7 @@
         </inertial>
       </link>
 
-      <!-- top plate fixed joint -->
+      <!-- tray fixed joint -->
       <joint name="tray_joint" type="fixed">
         <parent link="base_link"/>
         <child link="tray_link"/>

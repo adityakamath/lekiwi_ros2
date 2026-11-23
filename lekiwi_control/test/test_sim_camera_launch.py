@@ -20,7 +20,7 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch, tmp_path):
     for action in module.generate_launch_description().entities:
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
-    context.launch_configurations.update(enable_camera=enabled, pointcloud=cloud,
+    context.launch_configurations.update(frame_prefix='', enable_camera=enabled, pointcloud=cloud,
                                          ros2_control_hardware_type='mujoco',
                                          mujoco_model='/unused/model.xml')
     config = tmp_path / 'hardware.yaml'
@@ -41,8 +41,7 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch, tmp_path):
                     and f'{imu_name}_imu_broadcaster' in n.get('arguments', [])]
     assert bool(imu_spawners) == (enabled == 'true')
     if imu_spawners:
-        assert any(str(arg).endswith(f'{imu_name}_imu_broadcaster.yaml')
-                   for arg in imu_spawners[0]['arguments'])
+        assert '--param-file' not in imu_spawners[0]['arguments']  # The controller manager's own parameters carry it.
     remaps = [v for n in nodes for _, v in n.get('remappings', [])]
     control = next(n for n in nodes if n['package'] == 'mujoco_ros2_control')
     parameters = [str(p) for p in control['parameters']]
@@ -53,14 +52,14 @@ def test_sim_camera_pipeline(enabled, cloud, monkeypatch, tmp_path):
         assert not any('camera_gemini2.yaml' in p for p in parameters)
         assert not any(name and 'gemini2' in name for name in names)
         return
-    assert 'gemini2_rgb_compressor' in names
+    assert 'gemini2_rgb_compressor' not in names  # gemini2_depth compresses the color image.
     assert 'gemini2_mount_tf' not in names
     assert {'gemini2_depth'} <= names
-    assert '/_gemini2/depth_raw' not in remaps  # It is configured on the camera plugin.
+    assert '_gemini2/depth_raw' not in remaps  # It is configured on the camera plugin.
     assert any(p.endswith('mujoco_camera_gemini2.yaml') for p in parameters)
     assert ('gemini2_colored_pointcloud' in names) == (cloud == 'true')
     assert ('gemini2_cloud' in names) == (cloud == 'true')
-    assert ('/_gemini2/registered_points' in remaps) == (cloud == 'true')
+    assert ('_gemini2/registered_points' in remaps) == (cloud == 'true')
     assert 'gemini2_pointcloud' not in names
     assert 'gemini2_pointcloud_to_scan' not in names
 
@@ -79,7 +78,7 @@ def test_state_interfaces_broadcaster_for_motor_diagnostics(
     for action in module.generate_launch_description().entities:
         if isinstance(action, DeclareLaunchArgument):
             action.execute(context)
-    context.launch_configurations.update(diagnostics=diagnostics,
+    context.launch_configurations.update(frame_prefix='', diagnostics=diagnostics,
                                          enable_camera='false',
                                          ros2_control_hardware_type=hw_type,
                                          mujoco_model='/unused/model.xml')

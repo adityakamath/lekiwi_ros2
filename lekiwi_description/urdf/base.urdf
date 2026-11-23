@@ -391,12 +391,34 @@
     <child link="tof_frame"/>
     <origin rpy="0 0 1.5707963267948966" xyz="0.0127 0.0127 0.0031"/>
   </joint>
-  <!-- Top plate link (same CAD frame as lekiwi_base.stl) -->
+  <link name="shelf_spacers_link">
+    <visual>
+      <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/shelf_spacers_35mm.stl"/>
+      </geometry>
+      <material name="base_light_grey">
+        <color rgba="0.8 0.8 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/shelf_spacers_35mm.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="shelf_spacers_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="shelf_spacers_link"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <!-- Tray (same CAD frame as lekiwi_base.stl) -->
   <link name="tray_link">
     <visual>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/tray_assembly.stl"/>
+        <mesh filename="../meshes/shelf_tray.stl"/>
       </geometry>
       <material name="base_charcoal">
         <color rgba="0.15 0.15 0.15 1.0"/>
@@ -405,7 +427,7 @@
     <collision>
       <origin rpy="0 0 4.71238898038469" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="../meshes/tray_assembly.stl"/>
+        <mesh filename="../meshes/shelf_tray.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -413,7 +435,7 @@
       <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
     </inertial>
   </link>
-  <!-- top plate fixed joint -->
+  <!-- tray fixed joint -->
   <joint name="tray_joint" type="fixed">
     <parent link="base_link"/>
     <child link="tray_link"/>
@@ -627,6 +649,12 @@
         <color rgba="0.15 0.15 0.15 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/gemini2.stl"/>
+      </geometry>
+    </collision>
   </link>
   <joint name="gemini2_link_model_origin_joint" type="fixed">
     <parent link="gemini2_link"/>

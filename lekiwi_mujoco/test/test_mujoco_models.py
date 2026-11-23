@@ -74,6 +74,8 @@ def test_generated_assets_are_current_and_portable(tmp_path):
     actual = ET.parse(PACKAGE / 'mjcf' / MODEL_FILENAME).getroot()
     for root, directory in [(expected, tmp_path), (actual, PACKAGE / 'mjcf')]:
         for mesh in root.iter('mesh'):
+            if 'file' not in mesh.attrib:
+                continue  # Generated collision pieces carry their vertices inline.
             mesh.set('file', str((directory / mesh.attrib['file']).resolve()))
         for node in root.iter():
             node.text = (node.text or '').strip()
