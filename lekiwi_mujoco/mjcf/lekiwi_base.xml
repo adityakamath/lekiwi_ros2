@@ -737,50 +737,50 @@
         <body name="tray_link">
           <inertial pos="0 0 0" mass="0.05" diaginertia="0.0001 0.0001 0.0001"/>
           <geom name="tray_link_visual" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" group="2" rgba="0.15 0.15 0.15 1" mass="0" mesh="shelf_tray_visual"/>
-          <geom name="tray_link_collision_0" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_0"/>
+          <geom name="tray_link_collision_0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_0"/>
           <geom name="tray_link_collision_1" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_1"/>
           <geom name="tray_link_collision_2" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_2"/>
-          <geom name="tray_link_collision_3" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_3"/>
+          <geom name="tray_link_collision_3" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_3"/>
           <geom name="tray_link_collision_4" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_4"/>
           <geom name="tray_link_collision_5" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_5"/>
           <geom name="tray_link_collision_6" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_6"/>
-          <geom name="tray_link_collision_7" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_7"/>
+          <geom name="tray_link_collision_7" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_7"/>
           <geom name="tray_link_collision_8" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_8"/>
           <geom name="tray_link_collision_9" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_9"/>
           <geom name="tray_link_collision_10" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_10"/>
-          <geom name="tray_link_collision_11" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_11"/>
+          <geom name="tray_link_collision_11" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_11"/>
           <geom name="tray_link_collision_12" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_12"/>
-          <geom name="tray_link_collision_13" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_13"/>
-          <geom name="tray_link_collision_14" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_14"/>
+          <geom name="tray_link_collision_13" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_13"/>
+          <geom name="tray_link_collision_14" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_14"/>
           <geom name="tray_link_collision_15" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_15"/>
-          <geom name="tray_link_collision_16" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_16"/>
-          <geom name="tray_link_collision_17" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_17"/>
-          <geom name="tray_link_collision_18" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_18"/>
-          <geom name="tray_link_collision_19" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_19"/>
-          <geom name="tray_link_collision_20" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_20"/>
+          <geom name="tray_link_collision_16" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_16"/>
+          <geom name="tray_link_collision_17" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_17"/>
+          <geom name="tray_link_collision_18" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_18"/>
+          <geom name="tray_link_collision_19" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_19"/>
+          <geom name="tray_link_collision_20" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_20"/>
           <geom name="tray_link_collision_21" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_21"/>
-          <geom name="tray_link_collision_22" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_22"/>
-          <geom name="tray_link_collision_23" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_23"/>
-          <geom name="tray_link_collision_24" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_24"/>
-          <geom name="tray_link_collision_25" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_25"/>
-          <geom name="tray_link_collision_26" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_26"/>
-          <geom name="tray_link_collision_27" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_27"/>
-          <geom name="tray_link_collision_28" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_28"/>
-          <geom name="tray_link_collision_29" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_29"/>
+          <geom name="tray_link_collision_22" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_22"/>
+          <geom name="tray_link_collision_23" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_23"/>
+          <geom name="tray_link_collision_24" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_24"/>
+          <geom name="tray_link_collision_25" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_25"/>
+          <geom name="tray_link_collision_26" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_26"/>
+          <geom name="tray_link_collision_27" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_27"/>
+          <geom name="tray_link_collision_28" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_28"/>
+          <geom name="tray_link_collision_29" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_29"/>
           <geom name="tray_link_collision_30" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_30"/>
-          <geom name="tray_link_collision_31" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_31"/>
-          <geom name="tray_link_collision_32" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_32"/>
-          <geom name="tray_link_collision_33" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_33"/>
+          <geom name="tray_link_collision_31" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_31"/>
+          <geom name="tray_link_collision_32" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_32"/>
+          <geom name="tray_link_collision_33" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_33"/>
           <geom name="tray_link_collision_34" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_34"/>
-          <geom name="tray_link_collision_35" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_35"/>
-          <geom name="tray_link_collision_36" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_36"/>
+          <geom name="tray_link_collision_35" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_35"/>
+          <geom name="tray_link_collision_36" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_36"/>
           <geom name="tray_link_collision_37" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_37"/>
-          <geom name="tray_link_collision_38" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_38"/>
-          <geom name="tray_link_collision_39" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_39"/>
+          <geom name="tray_link_collision_38" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_38"/>
+          <geom name="tray_link_collision_39" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_39"/>
           <geom name="tray_link_collision_40" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_40"/>
           <geom name="tray_link_collision_41" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_41"/>
           <geom name="tray_link_collision_42" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_42"/>
-          <geom name="tray_link_collision_43" pos="0 0 0" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_43"/>
+          <geom name="tray_link_collision_43" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_43"/>
           <geom name="tray_link_collision_44" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_44"/>
           <geom name="tray_link_collision_45" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_45"/>
           <geom name="tray_link_collision_46" quat="-0.707107 0 0 0.707107" type="mesh" contype="4" group="3" mass="0" mesh="shelf_tray_collision_46"/>
