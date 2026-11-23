@@ -15,7 +15,7 @@
 	url = https://github.com/adityakamath/mujoco_ros2_plugins.git
 [submodule "modules/OrbbecSDK_ROS2"]
 	path = modules/OrbbecSDK_ROS2
-	url = https://github.com/orbbec/OrbbecSDK_ROS2.git
+	url = https://github.com/adityakamath/OrbbecSDK_ROS2.git
 	ignore = dirty
 [submodule "modules/tof_imager_ros"]
 	path = modules/tof_imager_ros
