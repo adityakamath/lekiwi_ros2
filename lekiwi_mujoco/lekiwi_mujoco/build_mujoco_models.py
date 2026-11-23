@@ -243,7 +243,6 @@ def enable_mesh_collisions(spec):
         if geom.parent.name == 'tray_link' and geom.group == 2:
             continue  # Visual only; the tray collides through its plate and rim.
         geom.contype, geom.conaffinity = COLLIDES_WITH_OBJECTS, 1
-        spec.mesh(geom.meshname).maxhullvert = 64
         bodies.add(spec.body(geom.parent.name).name)
     for name in sorted(bodies):
         if name != 'base_link':
