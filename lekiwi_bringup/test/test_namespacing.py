@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from ament_index_python.packages import PackageNotFoundError
 import yaml
 
 from launch import LaunchContext
@@ -184,7 +185,10 @@ def test_submodule_headers_follow_the_frame_prefix(path, ns):
     spec = importlib.util.spec_from_file_location('submodule_launch', ROOT / path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    description = module.generate_launch_description()
+    try:
+        description = module.generate_launch_description()
+    except PackageNotFoundError as error:
+        pytest.skip(f'{error} (submodule package is not built in this environment)')
     context = LaunchContext()
     for entity in description.entities:
         if isinstance(entity, DeclareLaunchArgument):
