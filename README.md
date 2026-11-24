@@ -6,7 +6,7 @@
 
 ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot. It provides holonomic drive with odometry, joystick teleoperation, SLAM and Nav2 navigation, motor diagnostics, battery monitoring, spoken status announcements and a MuJoCo simulation.
 
-<img width="721" height="479" alt="Screenshot 2026-11-21 at 23 42 35" src="https://github.com/user-attachments/assets/ea2a83f2-9d5f-41e8-9401-71d65194e51e" />
+<img width="1008" height="629" alt="Screenshot 2026-11-24 at 02 19 50" src="https://github.com/user-attachments/assets/4ddb07ce-d0cd-4c84-a147-4717f0dbadfc" />
 
 ## ⚠️ Safety and Warnings
 
