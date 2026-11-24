@@ -22,6 +22,7 @@
     transform_publish_period: 0.05  # s (20 Hz)
     map_update_interval: 2.0        # s
     resolution: 0.05                # m/cell
+    min_laser_range: 0.02           # m, keep equal to the LiDAR's range_min in laser.yaml (the 0.0 default logs a warning)
     max_laser_range: 8.0            # m
     minimum_time_interval: 0.2      # s
     transform_timeout: 0.2          # s

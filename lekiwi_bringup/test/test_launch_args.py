@@ -542,3 +542,31 @@ def test_orbbec_component_receives_configured_camera_rates():
     assert parameters['depth_fps'] == configured['depth_fps'] == 5
     assert parameters['enable_colored_point_cloud'] is False
     assert parameters['enable_point_cloud'] is False
+
+
+def test_gemini2_checks_depth_at_startup_and_reboots_the_camera(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    from launch import LaunchContext
+    from launch.actions import ExecuteProcess
+    from launch_ros.substitutions import FindPackageShare
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location('lekiwi_gemini2_depth_check', root / 'launch/gemini2.launch.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(FindPackageShare, 'find', lambda self, package: str(root) if package == 'lekiwi_bringup' else '/unused/' + package)
+    context = LaunchContext()
+    context.launch_configurations.update(enable_camera='true', pointcloud='false', frame_prefix='',
+                                         pointcloud_decimation='2', serial_number='', usb_port='',
+                                         ros_namespace='robot1')
+    watchers = [a for a in module.launch_setup(context) if isinstance(a, ExecuteProcess)]
+    assert len(watchers) == 1
+    command = ''.join(p.text for arg in watchers[0].cmd[2:] for p in arg)
+    assert '/robot1/gemini2/depth/image_raw' in command and '/robot1/gemini2/reboot_device' in command
+    assert 'timeout -s KILL 10' in command and 'while' not in command  # one check at start-up
+    context.launch_configurations['ros_namespace'] = ''
+    command = ''.join(p.text for arg in [a for a in module.launch_setup(context) if isinstance(a, ExecuteProcess)][0].cmd[2:] for p in arg)
+    assert ' /gemini2/depth/image_raw ' in command  # no namespace: unprefixed names
+    context.launch_configurations['enable_camera'] = 'false'
+    assert module.launch_setup(context) == []

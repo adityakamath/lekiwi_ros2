@@ -12,7 +12,7 @@ ROS 2 software stack for the LeKiwi 3-wheel omnidirectional mobile robot. It pro
 
 **This is a real, motorized robot with no hardwired physical emergency stop.** `/emergency_stop` is a software service call (toggled via joystick button or Foxglove) that tells the hardware interface to stop issuing motor commands. It is not a hardware kill switch, and it will not help if the software stack itself has hung, crashed, or lost connection to the joystick.
 
-This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes. Simulation (`sim:=true`) is not validated against real hardware. No warranty, express or implied — see [LICENSE](LICENSE).
+This repository is a work in progress and includes experimental and AI-generated content. Expect breaking changes. No warranty, express or implied — see [LICENSE](LICENSE).
 
 The supported robot is the mobile base with its tray, fixed Gemini 2 and optional
 sensor assemblies. The default hardware profile enables every assembly.

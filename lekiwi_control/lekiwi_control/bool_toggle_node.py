@@ -47,6 +47,10 @@ STATE_SERVICE_QOS = QoSProfile(
 )
 
 
+INITIAL_STATE_POLL_S = 1.0     # how often to check whether the target service is up
+INITIAL_STATE_MAX_TRIES = 30   # give up after ~30 s (target never came up)
+
+
 class BoolToggle:
     """One configured toggle: owns a Trigger server and a SetBool client."""
 
@@ -83,13 +87,44 @@ class BoolToggle:
             STATE_SERVICE_QOS,
         )
 
+        # Call the target once with initial_state if nothing has called it, so its state is readable from introspection.
+        self._synced = False
+        self._initial_sent = False
+        self._initial_tries = 0
+        self._initial_timer = node.create_timer(INITIAL_STATE_POLL_S, self._publish_initial_state)
+
         node.get_logger().info(
             f"toggle '{name}' ready: {trigger_service} -> {target_service} "
             f'(initial_state={initial_state})'
         )
 
+    def _publish_initial_state(self) -> None:
+        """Send initial_state to the target once it is up, unless an event shows it was already set."""
+        if self._synced or self._initial_sent or self._initial_tries >= INITIAL_STATE_MAX_TRIES:
+            self._initial_timer.cancel()
+            if not (self._synced or self._initial_sent):
+                self._node.get_logger().warn(f"toggle '{self._name}': {self._target_service} never came up; initial state not sent")
+            return
+        self._initial_tries += 1
+        if not self._client.service_is_ready():
+            return
+        self._initial_timer.cancel()
+        self._initial_sent = True
+        req = SetBool.Request()
+        req.data = self._active
+        self._client.call_async(req).add_done_callback(self._on_initial_state_sent)
+
+    def _on_initial_state_sent(self, future) -> None:
+        """Log the outcome of the initial-state call."""
+        result = future.result()
+        if result is not None and result.success:
+            self._node.get_logger().info(f"toggle '{self._name}': announced initial state {self._target_service}={self._active}")
+        else:
+            self._node.get_logger().error(f"toggle '{self._name}': initial state rejected by {self._target_service}")
+
     def _on_target_service_event(self, msg: SetBool_Event) -> None:
         """Sync _active to every successful call to target_service, from any caller."""
+        self._synced = True  # the target has already been called (or replayed its last call)
         key = (bytes(msg.info.client_gid), msg.info.sequence_number)
 
         if msg.info.event_type == ServiceEventInfo.REQUEST_RECEIVED:

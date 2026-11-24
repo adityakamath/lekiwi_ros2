@@ -163,6 +163,56 @@ class TestBoolToggleState:
             node.destroy_node()
 
 
+class TestBoolToggleInitialState:
+    """The toggle announces its initial state once, so introspection has something to replay."""
+
+    class _Client:
+        def __init__(self, ready):
+            self.ready, self.calls = ready, []
+
+        def service_is_ready(self):
+            return self.ready
+
+        def call_async(self, req):
+            self.calls.append(req.data)
+            return type('F', (), {'add_done_callback': lambda self, cb: None})()
+
+    def _toggle(self, name, initial_state, ready=True):
+        node = rclpy.create_node(f'test_initial_{name}')
+        toggle = BoolToggle(node, name, f'/{name}_trigger', f'/{name}_target', initial_state=initial_state)
+        toggle._client = self._Client(ready)
+        return node, toggle
+
+    def test_sends_initial_state_once_when_target_is_up(self):
+        node, toggle = self._toggle('up', True)
+        try:
+            toggle._publish_initial_state()
+            toggle._publish_initial_state()
+            assert toggle._client.calls == [True]
+        finally:
+            node.destroy_node()
+
+    def test_waits_until_target_is_ready(self):
+        node, toggle = self._toggle('wait', False, ready=False)
+        try:
+            toggle._publish_initial_state()
+            assert toggle._client.calls == []
+            toggle._client.ready = True
+            toggle._publish_initial_state()
+            assert toggle._client.calls == [False]
+        finally:
+            node.destroy_node()
+
+    def test_skips_when_an_event_shows_the_target_was_already_called(self):
+        node, toggle = self._toggle('seen', False)
+        try:
+            toggle._synced = True
+            toggle._publish_initial_state()
+            assert toggle._client.calls == []
+        finally:
+            node.destroy_node()
+
+
 class TestBoolToggleNodeConfig:
     """Tests that BoolToggleNode reads toggles config correctly."""
 

@@ -2,11 +2,12 @@
 """Launch the base Orbbec Gemini 2 driver and optional cloud compressor."""
 
 from pathlib import Path
+import shlex
 
 import yaml
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, LogInfo, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer, SetParameter
@@ -25,6 +26,8 @@ def launch_setup(context):
     if not _boolean(context, 'enable_camera'):
         return []
     prefix = LaunchConfiguration('frame_prefix').perform(context)
+    ns = '/' + context.launch_configurations.get('ros_namespace', '').strip('/')
+    ns = '' if ns == '/' else ns
     config = Path(FindPackageShare('lekiwi_bringup').perform(context)) / 'config/gemini2.yaml'
     rates = yaml.safe_load(config.read_text())['/**/gemini2/gemini2']['ros__parameters']
     for stream in ('color_fps', 'depth_fps'):
@@ -92,6 +95,12 @@ def launch_setup(context):
         SetParameter('depth.image_raw.enable_pub_plugins',
                      ['image_transport/raw', 'image_transport/compressedDepth']),
         driver,
+        # Reboot the camera if no depth frame arrives within 10 s of start-up (`-s KILL`: SIGTERM does not stop a hung echo).
+        ExecuteProcess(
+            cmd=['bash', '-c',
+                 f'timeout -s KILL 10 ros2 topic echo --once --no-arr {shlex.quote(ns + "/gemini2/depth/image_raw")} sensor_msgs/msg/Image '
+                 f'>/dev/null 2>&1 || timeout -s KILL 30 ros2 service call {shlex.quote(ns + "/gemini2/reboot_device")} std_srvs/srv/Empty'],
+            output='screen'),
     ]
     if pointcloud == 'true':
         actions.append(ComposableNodeContainer(

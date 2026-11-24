@@ -9,7 +9,7 @@ The top-level launch files for LeKiwi. One command starts the whole system (cont
 | `launch/lekiwi.launch.py` | The whole system; includes the other packages' launch files |
 | `launch/laser.launch.py` | The LD06 LiDAR driver, with an optional custom scan filter |
 | `launch/tof.launch.py` | The VL53L5CX ToF imager (`tof_imager_ros`), configured and activated on start (`lekiwi.launch.py` starts it 20 s after launch) |
-| `launch/gemini2.launch.py` | The Orbbec Gemini 2 driver for the base |
+| `launch/gemini2.launch.py` | The Orbbec Gemini 2 driver for the base (calls the driver's `reboot_device` if no depth frame arrives within 10 s of start) |
 | `patches/orbbec-kilted-*.patch` | Two patches for building the Orbbec driver on Kilted: QoS API and `-Werror` ([build steps](#gemini-2-driver-real-robot-only)) |
 | `config/hardware.yaml` | Fitted assemblies and sensor switches |
 | `config/laser.yaml` | LiDAR serial port and settings |
@@ -171,7 +171,7 @@ messages on `/gemini2/depth_registered/points/compressed`. One encoder serves th
 this compressor. Direct `gemini2.launch.py` calls additionally accept
 `pointcloud_decimation` (default 2), `serial_number` and `usb_port`.
 
-If the depth stream never appears, check the Orbbec SDK log in `~/.ros/Log/gemini2/`: a healthy start logs `Stream state changed from STARTING to STREAMING@Depth`, and a stalled one stays at `STARTING` while color slows to about half rate. `dmesg` then usually shows the camera resetting or disconnecting. Stop the launch with a single Ctrl-C and let it exit; a hard kill can leave the camera streaming, so reconnect it before the next start. The driver lists 1280×800, 640×400, 424×266 and 320×200 as depth sizes, and the published depth is the color size either way.
+Stop the launch with a single Ctrl-C and let it exit. The driver lists 1280×800, 640×400, 424×266 and 320×200 as depth sizes, and the published depth is the color size either way.
 
 To run LeKiwi with the default Gemini 2 geometry but no real camera streaming:
 

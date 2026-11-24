@@ -80,7 +80,7 @@ Velocity commands take one path: `joy_teleop` publishes on `/cmd_vel_teleop`, Na
 | Node | What it does |
 |------|--------------|
 | `twist_switch_node` | Selects between teleop and Nav2 commands through the `/twist_switch` service |
-| `bool_toggle_node` | Turns a joystick button press into a toggle: `/emergency_stop`, `/twist_switch` and `/waypoint_follow` flip on each press, and stay in sync when the services are called from elsewhere |
+| `bool_toggle_node` | Turns a joystick button press into a toggle: `/emergency_stop`, `/twist_switch` and `/waypoint_follow` flip on each press, and stay in sync when the services are called from elsewhere. Once a target service is up and has not been called, it sends its `initial_state` once, so the state is readable at start-up (`<service>/_service_event` replays it) |
 | `collision_toggle_node` | While the R1 button is held, disables the collision monitor's predictive stop; releasing it re-enables it |
 
 In `mujoco` mode the launch file uses `mujoco_ros2_control`'s own control node, which runs the simulation in the same process, generates the model with `lekiwi_mujoco` and adds the simulated LiDAR filter, the ToF cloud rotation, the camera helpers and the ground-truth pose. See the [`lekiwi_mujoco` README](../lekiwi_mujoco/README.md).
